@@ -1,10 +1,10 @@
 'use client';
 
 import React from 'react';
-import { Container } from '@mui/material';
-import { CoursePlayer, mockCourse } from './components/CoursePlayer';
+import { Box, Container, Typography, Paper } from '@mui/material';
+import { CoursePlayer, mockCourse } from '../CoursePlayer';
 
-export default function Home() {
+export default function VideoPlayerPage() {
   const handleVideoComplete = (videoId: string) => {
     console.log('Video completed:', videoId);
   };
