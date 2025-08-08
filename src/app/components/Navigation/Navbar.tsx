@@ -97,13 +97,23 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             Cursos
           </Button>
-          <Button
-            color={currentPage === 'teacher' ? 'primary' : 'inherit'}
-            onClick={() => handleNavigation('/teacher')}
-            startIcon={<Person />}
-          >
-            Maestro
-          </Button>
+          {user?.role === 'maestro' ? (
+            <Button
+              color={currentPage === 'teacher' ? 'primary' : 'inherit'}
+              onClick={() => handleNavigation('/teacher')}
+              startIcon={<Person />}
+            >
+              Mi Perfil
+            </Button>
+          ) : (
+            <Button
+              color={currentPage === 'teacher' ? 'primary' : 'inherit'}
+              onClick={() => handleNavigation('/teacher')}
+              startIcon={<Person />}
+            >
+              Maestro
+            </Button>
+          )}
         </Box>
 
         {/* Notificaciones - Solo para usuarios autenticados */}
@@ -193,14 +203,29 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Book sx={{ mr: 2 }} />
             Mis Cursos
           </MenuItem>
-          <MenuItem onClick={() => handleNavigation('/profile')}>
-            <Person sx={{ mr: 2 }} />
-            Perfil
-          </MenuItem>
-          <MenuItem onClick={() => handleNavigation('/teacher')}>
-            <ContactSupport sx={{ mr: 2 }} />
-            Contactar Maestro
-          </MenuItem>
+          {user?.role === 'maestro' ? (
+            [
+              <MenuItem key="manage-courses" onClick={() => handleNavigation('/teacher/courses')}>
+                <Book sx={{ mr: 2 }} />
+                Gestionar Cursos
+              </MenuItem>,
+              <MenuItem key="edit-profile" onClick={() => handleNavigation('/teacher/edit')}>
+                <Person sx={{ mr: 2 }} />
+                Editar Perfil
+              </MenuItem>
+            ]
+          ) : (
+            [
+              <MenuItem key="profile" onClick={() => handleNavigation('/profile')}>
+                <Person sx={{ mr: 2 }} />
+                Perfil
+              </MenuItem>,
+              <MenuItem key="contact-teacher" onClick={() => handleNavigation('/teacher')}>
+                <ContactSupport sx={{ mr: 2 }} />
+                Contactar Maestro
+              </MenuItem>
+            ]
+          )}
           <Divider />
           <MenuItem onClick={handleLogout}>
             <ExitToApp sx={{ mr: 2 }} />

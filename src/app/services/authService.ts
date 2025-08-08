@@ -1,8 +1,8 @@
-import { log } from 'console';
+
 import { apiService } from './api';
 
 export interface User {
-  id: string;
+  _id: string;
   email: string;
   role: 'estudiante' | 'maestro';
   name?: string;
@@ -27,9 +27,8 @@ class AuthService {
   async login(credentials: LoginRequest): Promise<{ user: User; token: string }> {
     const response = await apiService.post<AuthResponse>('/auth/login', credentials);
     
-    // Según la respuesta real: { success: boolean, message: string, data: { user, token } }
-    if (response.data) {
-      console.log(response.data)
+    // La API devuelve: { success: boolean, message: string, data: { user, token } }
+    if (response.data && response.data && response.data.user && response.data.token) {
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
       return { user: response.data.user, token: response.data.token };
@@ -42,7 +41,7 @@ class AuthService {
   async register(userData: RegisterRequest): Promise<{ user: User; token: string }> {
     const response = await apiService.post<AuthResponse>('/auth/register', userData);
     
-    // Según la respuesta real: { success: boolean, message: string, data: { user, token } }
+    // La API devuelve: { success: boolean, message: string, data: { user, token } }
     if (response.data && response.data && response.data.user && response.data.token) {
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
@@ -59,11 +58,13 @@ class AuthService {
   }
 
   getCurrentUser(): User | null {
+    if (typeof window === 'undefined') return null;
     const userStr = localStorage.getItem('user');
     return userStr ? JSON.parse(userStr) : null;
   }
 
   getToken(): string | null {
+    if (typeof window === 'undefined') return null;
     return localStorage.getItem('token');
   }
 

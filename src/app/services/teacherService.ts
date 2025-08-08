@@ -1,7 +1,7 @@
 import { apiService } from './api';
 
 export interface Teacher {
-  id: string;
+  _id: string;
   userId: string;
   name: string;
   title: string;
@@ -47,26 +47,38 @@ export interface UpdateTeacherRequest {
 class TeacherService {
   // Obtener información del maestro (público) - GET /api/teachers
   async getTeacher(): Promise<Teacher> {
-    const response = await apiService.get<Teacher>('/teachers');
-    return response.data!;
+    const response = await apiService.get<{teacher: Teacher}>('/teachers');
+    if (!response.data?.teacher) {
+      throw new Error('No se pudo obtener la información del maestro');
+    }
+    return response.data.teacher;
   }
 
   // Obtener perfil del maestro (solo maestros) - GET /api/teachers/me
   async getTeacherProfile(): Promise<Teacher> {
     const response = await apiService.get<Teacher>('/teachers/me');
-    return response.data!;
+    if (!response.data) {
+      throw new Error('No se pudo obtener el perfil del maestro');
+    }
+    return response.data;
   }
 
   // Actualizar perfil del maestro (solo maestros) - PUT /api/teachers/me
   async updateTeacher(data: UpdateTeacherRequest): Promise<Teacher> {
     const response = await apiService.put<Teacher>('/teachers/me', data);
-    return response.data!;
+    if (!response.data) {
+      throw new Error('No se pudo actualizar el perfil del maestro');
+    }
+    return response.data;
   }
 
-  // Obtener estadísticas del maestro (solo maestros) - GET /api/teachers/{id}/stats
-  async getTeacherStats(id: string): Promise<TeacherStats> {
-    const response = await apiService.get<TeacherStats>(`/teachers/${id}/stats`);
-    return response.data!;
+  // Obtener estadísticas del maestro autenticado - GET /api/teachers/stats
+  async getTeacherStats(): Promise<TeacherStats> {
+    const response = await apiService.get<TeacherStats>('/teachers/stats');
+    if (!response.data) {
+      throw new Error('No se pudieron obtener las estadísticas del maestro');
+    }
+    return response.data;
   }
 }
 

@@ -42,7 +42,7 @@ export default function CoursePage() {
     if (!isAuthenticated || !course) return;
 
     try {
-      await progressService.markVideoCompleted(course.id, videoId);
+      await progressService.markVideoCompleted(course._id, videoId);
       console.log('Video completed:', videoId);
     } catch (error) {
       console.error('Error marking video as completed:', error);
@@ -53,7 +53,7 @@ export default function CoursePage() {
     if (!isAuthenticated || !course) return;
 
     try {
-      await progressService.updateVideoProgress(course.id, videoId, progress);
+      await progressService.updateVideoProgress(course._id, videoId, progress);
       console.log('Video progress:', videoId, progress);
     } catch (error) {
       console.error('Error updating video progress:', error);

@@ -51,11 +51,18 @@ export default function TeacherPage() {
         setIsLoading(true);
         // Obtener información del maestro (público)
         const teacherData = await teacherService.getTeacher();
-        // Obtener estadísticas del maestro (solo maestros)
-        const statsData = await teacherService.getTeacherStats(teacherData.id);
-        
         setTeacher(teacherData);
-        setStats(statsData);
+        
+        // Obtener estadísticas solo si el usuario es maestro autenticado
+        if (user?.role === 'maestro') {
+          try {
+            const statsData = await teacherService.getTeacherStats();
+            setStats(statsData);
+          } catch (statsError) {
+            console.error('Error fetching teacher stats:', statsError);
+            // Las estadísticas fallan pero la información pública funciona
+          }
+        }
       } catch (error) {
         console.error('Error fetching teacher data:', error);
       } finally {
@@ -64,7 +71,7 @@ export default function TeacherPage() {
     };
 
     fetchTeacherData();
-  }, []);
+  }, [user]);
 
   const handleContact = (type: string) => {
     if (!teacher) return;

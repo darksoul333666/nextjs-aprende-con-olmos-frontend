@@ -1,7 +1,7 @@
 import { apiService } from './api';
 
 export interface Video {
-  id: string;
+  _id: string;
   title: string;
   description: string;
   url: string;
@@ -13,7 +13,7 @@ export interface Video {
 }
 
 export interface Section {
-  id: string;
+  _id: string;
   title: string;
   description?: string;
   order: number;
@@ -21,12 +21,12 @@ export interface Section {
 }
 
 export interface Course {
-  id: string;
+  _id: string;
   title: string;
   description: string;
   instructorId?: string;
   instructor?: {
-    id: string;
+    _id: string;
     name: string;
     title: string;
   };
@@ -47,6 +47,7 @@ export interface CourseFilters {
   maxPrice?: number;
   page?: number;
   limit?: number;
+  [key: string]: unknown;
 }
 
 export interface CreateCourseRequest {
@@ -54,19 +55,19 @@ export interface CreateCourseRequest {
   description: string;
   thumbnail?: string;
   price: number;
-  sections: Omit<Section, 'id'>[];
+  sections: Omit<Section, '_id'>[];
 }
 
 class CourseService {
-  private ensureArray<T>(data: any): T[] {
+  private ensureArray<T>(data: unknown): T[] {
     if (Array.isArray(data)) {
       return data;
     }
-    if (data && typeof data === 'object' && Array.isArray(data.data)) {
-      return data.data;
+    if (data && typeof data === 'object' && 'data' in data && Array.isArray((data as Record<string, unknown>).data)) {
+      return (data as Record<string, unknown>).data as T[];
     }
-    if (data && typeof data === 'object' && Array.isArray(data.courses)) {
-      return data.courses;
+    if (data && typeof data === 'object' && 'courses' in data && Array.isArray((data as Record<string, unknown>).courses)) {
+      return (data as Record<string, unknown>).courses as T[];
     }
     return [];
   }
@@ -87,8 +88,54 @@ class CourseService {
   // Obtener detalles de un curso - GET /api/courses/{id}
   async getCourse(id: string): Promise<Course | null> {
     try {
-      const response = await apiService.get<Course>(`/courses/${id}`);
-      return response.data || null;
+      const response = await apiService.get<unknown>(`/courses/${id}`);
+      
+      // La API devuelve { success: true, data: { course: Course, canViewVideos: boolean } }
+      const responseData = response.data as {course: Record<string, unknown>, canViewVideos: boolean};
+      if (responseData?.course) {
+        const courseData = responseData.course;
+        
+        // Mapear la estructura del backend a la estructura del frontend
+        const mappedCourse: Course = {
+          _id: courseData._id as string,
+          title: courseData.title as string,
+          description: courseData.description as string,
+          instructorId: typeof courseData.instructorId === 'object' ? (courseData.instructorId as Record<string, unknown>)._id as string : courseData.instructorId as string,
+          instructor: typeof courseData.instructorId === 'object' ? {
+            _id: (courseData.instructorId as Record<string, unknown>)._id as string,
+            name: (courseData.instructorId as Record<string, unknown>).name as string,
+            title: (courseData.instructorId as Record<string, unknown>).title as string
+          } : undefined,
+          thumbnail: courseData.thumbnail as string,
+          rating: (courseData.rating as number) || 0,
+          totalStudents: (courseData.totalStudents as number) || 0,
+          totalDuration: (courseData.totalDuration as number) || 0,
+          sections: ((courseData.sections as Record<string, unknown>[]) || []).map((section) => ({
+            _id: (section.id || section._id) as string, // Backend usa 'id' para sections
+            title: section.title as string,
+            description: section.description as string,
+            order: (section.order as number),
+            videos: ((section.videos as Record<string, unknown>[]) || []).map((video) => ({
+              _id: (video.id || video._id) as string, // Backend usa 'id' para videos
+              title: video.title as string,
+              description: video.description as string,
+              url: video.url as string,
+              duration: video.duration as number,
+              thumbnail: video.thumbnail as string,
+              order: video.order as number,
+              isCompleted: (video.isCompleted as boolean) || false,
+              isLocked: (video.isLocked as boolean) || !responseData.canViewVideos
+            }))
+          })),
+          price: courseData.price as number,
+          isVisible: courseData.isVisible as boolean,
+          isPurchased: responseData.canViewVideos || false
+        };
+        
+        return mappedCourse;
+      }
+      
+      return null;
     } catch (error) {
       console.error('Error fetching course:', error);
       return null;
@@ -128,15 +175,38 @@ class CourseService {
     }
   }
 
-  // Obtener cursos del usuario (si existe el endpoint)
-  async getUserCourses(): Promise<Course[]> {
+  // Obtener cursos comprados por el usuario autenticado
+  async getPurchasedCourses(): Promise<Course[]> {
     try {
-      const response = await apiService.get<Course[]>('/courses', { purchased: true });
+      const response = await apiService.get<Course[]>('/courses/purchased');
       const courses = this.ensureArray<Course>(response.data || response);
       return courses;
     } catch (error) {
-      console.error('Error fetching user courses:', error);
+      console.error('Error fetching purchased courses:', error);
       return [];
+    }
+  }
+
+  // Obtener cursos del maestro autenticado
+  async getTeacherCourses(): Promise<Course[]> {
+    try {
+      const response = await apiService.get<Course[]>('/courses/teacher');
+      const courses = this.ensureArray<Course>(response.data || response);
+      return courses;
+    } catch (error) {
+      console.error('Error fetching teacher courses:', error);
+      return [];
+    }
+  }
+
+  // Comprar un curso
+  async purchaseCourse(courseId: string): Promise<boolean> {
+    try {
+      await apiService.post(`/purchases/${courseId}`);
+      return true;
+    } catch (error) {
+      console.error('Error purchasing course:', error);
+      return false;
     }
   }
 }

@@ -51,6 +51,8 @@ export default function CoursesPage() {
       try {
         setIsLoading(true);
         const coursesData = await courseService.getCourses();
+        console.log('Cursos obtenidos:', coursesData);
+        console.log('Estructura del primer curso:', coursesData[0]);
         const coursesArray = Array.isArray(coursesData) ? coursesData : [];
         setCourses(coursesArray);
         setFilteredCourses(coursesArray);
@@ -125,6 +127,11 @@ export default function CoursesPage() {
   };
 
   const handleCourseClick = (courseId: string) => {
+    if (!courseId) {
+      console.error('Error: El curso no tiene un ID válido');
+      alert('Error: El curso no tiene un ID válido');
+      return;
+    }
     router.push(`/course/${courseId}`);
   };
 
@@ -234,7 +241,7 @@ export default function CoursesPage() {
         ) : (
           <Box display="flex" flexDirection="column" gap={3}>
             {filteredCourses.map((course) => (
-              <Card key={course.id} sx={{ 
+              <Card key={course._id} sx={{ 
                 transition: 'transform 0.2s, box-shadow 0.2s',
                 '&:hover': {
                   transform: 'translateY(-2px)',
@@ -343,7 +350,11 @@ export default function CoursesPage() {
                     <CardActions sx={{ p: 2, pt: 0 }}>
                       <Button
                         variant="outlined"
-                        onClick={() => handleCourseClick(course.id)}
+                        onClick={() => {
+                          console.log('Curso clickeado:', course);
+                          console.log('ID del curso:', course._id);
+                          handleCourseClick(course._id);
+                        }}
                         sx={{ flex: 1 }}
                       >
                         Ver Detalles
@@ -351,7 +362,7 @@ export default function CoursesPage() {
                       <Button
                         variant="contained"
                         startIcon={<ShoppingCart />}
-                        onClick={() => handlePurchase(course.id)}
+                        onClick={() => handlePurchase(course._id)}
                         sx={{ flex: 1 }}
                       >
                         Comprar ${course.price || 0}
@@ -360,7 +371,7 @@ export default function CoursesPage() {
                         <Button
                           variant="outlined"
                           startIcon={<Edit />}
-                          onClick={() => router.push(`/courses/edit/${course.id}`)}
+                          onClick={() => router.push(`/courses/edit/${course._id}`)}
                           sx={{ flex: 1 }}
                         >
                           Editar

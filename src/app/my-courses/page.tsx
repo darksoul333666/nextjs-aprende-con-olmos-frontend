@@ -46,17 +46,17 @@ export default function MyCoursesPage() {
 
       try {
         setIsLoading(true);
-        const courses = await courseService.getUserCourses();
+        const courses = await courseService.getPurchasedCourses();
         setUserCourses(courses);
 
         // Obtener progreso para cada curso
         const progressData: Record<string, CourseProgress> = {};
         for (const course of courses) {
           try {
-            const progress = await progressService.getCourseProgress(course.id);
-            progressData[course.id] = progress;
+            const progress = await progressService.getCourseProgress(course._id);
+            progressData[course._id] = progress;
           } catch (error) {
-            console.error(`Error fetching progress for course ${course.id}:`, error);
+            console.error(`Error fetching progress for course ${course._id}:`, error);
           }
         }
         setCourseProgress(progressData);
@@ -80,7 +80,7 @@ export default function MyCoursesPage() {
   };
 
   const calculateProgress = (course: Course): number => {
-    const progress = courseProgress[course.id];
+    const progress = courseProgress[course._id];
     if (!progress) return 0;
     return progress.progress;
   };
@@ -214,7 +214,7 @@ export default function MyCoursesPage() {
                 const isCompleted = progress === 100;
                 
                 return (
-                  <Card key={course.id} sx={{ 
+                  <Card key={course._id} sx={{ 
                     transition: 'transform 0.2s, box-shadow 0.2s',
                     '&:hover': {
                       transform: 'translateY(-2px)',
@@ -313,7 +313,7 @@ export default function MyCoursesPage() {
                           <Button
                             variant="contained"
                             startIcon={isCompleted ? <CheckCircle /> : <PlayArrow />}
-                            onClick={() => handleContinueCourse(course.id)}
+                            onClick={() => handleContinueCourse(course._id)}
                             fullWidth
                           >
                             {isCompleted ? 'Repasar Curso' : 'Continuar'}

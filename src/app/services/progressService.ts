@@ -1,7 +1,7 @@
 import { apiService } from './api';
 
 export interface CourseProgress {
-  id: string;
+  _id: string;
   userId: string;
   courseId: string;
   completedVideos: string[];

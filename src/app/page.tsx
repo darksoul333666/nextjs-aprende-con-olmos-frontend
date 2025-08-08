@@ -44,7 +44,7 @@ export default function Home() {
         setIsLoading(true);
         const [courses, userCoursesData] = await Promise.all([
           courseService.getCourses(),
-          isAuthenticated ? courseService.getUserCourses() : Promise.resolve([])
+          isAuthenticated ? courseService.getPurchasedCourses() : Promise.resolve([])
         ]);
         
         // Asegurar que los datos sean arrays
@@ -169,7 +169,7 @@ export default function Home() {
             </Box>
             <Box display="flex" flexDirection={{ xs: 'column', md: 'row' }} gap={3}>
               {userCourses.map((course) => (
-                <Box key={course.id} flex={1}>
+                <Box key={course._id} flex={1}>
                   <Card 
                     sx={{ 
                       height: '100%',
@@ -180,7 +180,7 @@ export default function Home() {
                         boxShadow: 4,
                       }
                     }}
-                    onClick={() => handleCourseClick(course.id)}
+                    onClick={() => handleCourseClick(course._id)}
                   >
                     <CardMedia
                       component="div"
@@ -257,7 +257,7 @@ export default function Home() {
           ) : (
             <Box display="flex" flexDirection="column" gap={3}>
               {availableCourses.map((course) => (
-                <Box key={course.id} flex={1}>
+                <Box key={course._id} flex={1}>
                   <Card 
                     sx={{ 
                       height: '100%',
@@ -268,7 +268,7 @@ export default function Home() {
                         boxShadow: 4,
                       }
                     }}
-                    onClick={() => handleCourseClick(course.id)}
+                    onClick={() => handleCourseClick(course._id)}
                   >
                     <Box display="flex" flexDirection={{ xs: 'column', md: 'row' }}>
                       {/* Imagen del Curso */}

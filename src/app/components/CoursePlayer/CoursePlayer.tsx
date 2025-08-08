@@ -30,7 +30,7 @@ import {
   KeyboardArrowUp,
 } from '@mui/icons-material';
 import { VideoPlayer } from '../VideoPlayer/components/VideoPlayer';
-import { Course, Video, Section } from './types';
+import { Course, Video, Section } from '../../services/courseService';
 
 interface CoursePlayerProps {
   course: Course;
@@ -51,20 +51,23 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
 
   // Get all videos from all sections
   const allVideos = useMemo(() => {
-    return course.sections.flatMap(section => section.videos);
-  }, [course.sections]);
+    if (!course?.sections || !Array.isArray(course.sections)) {
+      return [];
+    }
+    return course.sections.flatMap(section => section.videos || []);
+  }, [course?.sections]);
 
   // Get current video
   const currentVideo = useMemo(() => {
     if (!currentVideoId) {
       return allVideos[0];
     }
-    return allVideos.find(video => video.id === currentVideoId) || allVideos[0];
+    return allVideos.find(video => video._id === currentVideoId) || allVideos[0];
   }, [currentVideoId, allVideos]);
 
   // Get current video index
   const currentVideoIndex = useMemo(() => {
-    return allVideos.findIndex(video => video.id === currentVideo?.id);
+    return allVideos.findIndex(video => video._id === currentVideo?._id);
   }, [currentVideo, allVideos]);
 
   // Get next and previous videos
@@ -91,7 +94,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
   // Calculate total watched time
   const totalWatchedTime = useMemo(() => {
     return allVideos.reduce((total, video) => {
-      const progress = videoProgress[video.id] || 0;
+      const progress = videoProgress[video._id] || 0;
       return total + (video.duration * progress);
     }, 0);
   }, [allVideos, videoProgress]);
@@ -111,7 +114,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
     if (video.isLocked) {
       return; // Show purchase prompt or unlock message
     }
-    setCurrentVideoId(video.id);
+    setCurrentVideoId(video._id);
   }, []);
 
   // Handle section expansion
@@ -130,14 +133,14 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
   // Handle next video
   const handleNextVideo = useCallback(() => {
     if (nextVideo && !nextVideo.isLocked) {
-      setCurrentVideoId(nextVideo.id);
+      setCurrentVideoId(nextVideo._id);
     }
   }, [nextVideo]);
 
   // Handle previous video
   const handlePreviousVideo = useCallback(() => {
     if (previousVideo) {
-      setCurrentVideoId(previousVideo.id);
+      setCurrentVideoId(previousVideo._id);
     }
   }, [previousVideo]);
 
@@ -146,9 +149,9 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
     if (currentVideo) {
       setVideoProgress(prev => ({
         ...prev,
-        [currentVideo.id]: progress,
+        [currentVideo._id]: progress,
       }));
-      onVideoProgress?.(currentVideo.id, progress);
+      onVideoProgress?.(currentVideo._id, progress);
     }
   }, [currentVideo, onVideoProgress]);
 
@@ -157,7 +160,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
     if (currentVideo) {
       // Mark video as completed
       currentVideo.isCompleted = true;
-      onVideoComplete?.(currentVideo.id);
+      onVideoComplete?.(currentVideo._id);
       
       // Auto-advance to next video after a delay
       setTimeout(() => {
@@ -170,8 +173,10 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
 
   // Expand all sections initially
   React.useEffect(() => {
-    setExpandedSections(new Set(course.sections.map(section => section.id)));
-  }, [course.sections]);
+    if (course?.sections && Array.isArray(course.sections)) {
+      setExpandedSections(new Set(course.sections.map(section => section._id)));
+    }
+  }, [course?.sections]);
 
   return (
     <Box className={className} sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -312,11 +317,11 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
 
           {/* Course Sections */}
           <Box sx={{ flex: 1, overflow: 'auto' }}>
-            {course.sections.map((section) => (
+            {course?.sections && Array.isArray(course.sections) ? course.sections.map((section) => (
               <Accordion
-                key={section.id}
-                expanded={expandedSections.has(section.id)}
-                onChange={() => handleSectionToggle(section.id)}
+                key={section._id}
+                expanded={expandedSections.has(section._id)}
+                onChange={() => handleSectionToggle(section._id)}
                 sx={{
                   '&:before': { display: 'none' },
                   boxShadow: 'none',
@@ -339,20 +344,20 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
                         {section.title}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {section.videos.length} lecciones • {formatDuration(section.videos.reduce((sum, v) => sum + v.duration, 0))}
+                        {(section.videos || []).length} lecciones • {formatDuration((section.videos || []).reduce((sum, v) => sum + v.duration, 0))}
                       </Typography>
                     </Box>
                   </Box>
                 </AccordionSummary>
                 <AccordionDetails sx={{ p: 0 }}>
                   <List dense sx={{ p: 0 }}>
-                    {section.videos.map((video) => {
-                      const isCurrentVideo = video.id === currentVideo?.id;
-                      const progress = videoProgress[video.id] || 0;
+                    {(section.videos || []).map((video) => {
+                      const isCurrentVideo = video._id === currentVideo?._id;
+                      const progress = videoProgress[video._id] || 0;
                       
                       return (
                         <ListItem
-                          key={video.id}
+                          key={video._id}
                           disablePadding
                           sx={{
                             backgroundColor: isCurrentVideo ? 'action.selected' : 'transparent',
@@ -409,7 +414,13 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
                   </List>
                 </AccordionDetails>
               </Accordion>
-            ))}
+            )) : (
+              <Box sx={{ p: 3, textAlign: 'center' }}>
+                <Typography variant="body2" color="text.secondary">
+                  No hay contenido disponible para este curso
+                </Typography>
+              </Box>
+            )}
           </Box>
 
           {/* Sidebar Footer */}
