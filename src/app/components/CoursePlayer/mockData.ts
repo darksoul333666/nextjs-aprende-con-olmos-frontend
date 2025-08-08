@@ -4,7 +4,6 @@ export const mockCourse: Course = {
   id: 'ios-swift-complete-bootcamp',
   title: 'iOS & Swift - The Complete iOS App Development Bootcamp',
   description: 'From Beginner to iOS App Developer with Just One Course! Fully Updated with a Comprehensive Module Dedicated to SwiftUI!',
-  instructor: 'Dr. Angela Yu',
   rating: 4.7,
   totalStudents: 408351,
   totalDuration: 217800, // 60.5 hours in seconds

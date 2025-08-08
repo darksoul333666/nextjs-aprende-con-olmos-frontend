@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   Box,
-  Grid,
   Paper,
   Typography,
   List,
@@ -9,38 +8,22 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  Collapse,
   IconButton,
-  Chip,
-  Divider,
-  Avatar,
-  Rating,
   Button,
   Accordion,
   AccordionSummary,
   AccordionDetails,
   LinearProgress,
-  Tooltip,
-  Badge,
-  Card,
-  CardContent,
-  CardActions,
 } from '@mui/material';
 import {
   PlayArrow,
-  Pause,
   CheckCircle,
   Lock,
   ExpandMore,
-  Star,
   People,
   AccessTime,
-  School,
   Book,
   VideoLibrary,
-  Notes,
-  Chat,
-  Announcement,
   Assessment,
   Search,
   KeyboardArrowDown,
@@ -202,51 +185,25 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
           backgroundColor: 'background.paper'
         }}
       >
-        <Grid container alignItems="center" spacing={2}>
-          <Grid item xs={12} md={8}>
-            <Typography variant="h5" component="h1" gutterBottom>
-              {course.title}
-            </Typography>
-            <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
-              <Box display="flex" alignItems="center" gap={1}>
-                <Rating value={course.rating} precision={0.1} size="small" readOnly />
-                <Typography variant="body2" color="text.secondary">
-                  {course.rating} ({course.totalStudents.toLocaleString()} estudiantes)
-                </Typography>
-              </Box>
-              <Box display="flex" alignItems="center" gap={1}>
-                <AccessTime fontSize="small" />
-                <Typography variant="body2" color="text.secondary">
-                  {formatDuration(course.totalDuration)}
-                </Typography>
-              </Box>
-              <Box display="flex" alignItems="center" gap={1}>
-                <School fontSize="small" />
-                <Typography variant="body2" color="text.secondary">
-                  {course.instructor}
-                </Typography>
-              </Box>
+        <Box>
+          <Typography variant="h5" component="h1" gutterBottom>
+            {course.title}
+          </Typography>
+          <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
+            <Box display="flex" alignItems="center" gap={1}>
+              <AccessTime fontSize="small" />
+              <Typography variant="body2" color="text.secondary">
+                {formatDuration(course.totalDuration)}
+              </Typography>
             </Box>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Box display="flex" gap={1} justifyContent="flex-end">
-              <Button
-                variant="outlined"
-                startIcon={<Notes />}
-                size="small"
-              >
-                Notas
-              </Button>
-              <Button
-                variant="outlined"
-                startIcon={<Chat />}
-                size="small"
-              >
-                Q&A
-              </Button>
+            <Box display="flex" alignItems="center" gap={1}>
+              <People fontSize="small" />
+              <Typography variant="body2" color="text.secondary">
+                {course.totalStudents.toLocaleString()} estudiantes
+              </Typography>
             </Box>
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </Paper>
 
       {/* Main Content */}

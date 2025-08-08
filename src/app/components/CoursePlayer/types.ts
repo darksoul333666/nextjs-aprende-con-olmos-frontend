@@ -22,7 +22,7 @@ export interface Course {
   id: string;
   title: string;
   description: string;
-  instructor: string;
+  instructor?: string;
   thumbnail?: string;
   rating: number;
   totalStudents: number;
