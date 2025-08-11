@@ -170,6 +170,8 @@ export default function TeacherCoursesPage() {
   };
 
   const getFilteredCourses = () => {
+    console.log("Cursos obtenidos:", courses);
+    
     switch (filter) {
       case 'published':
         return courses.filter(course => course.isVisible);

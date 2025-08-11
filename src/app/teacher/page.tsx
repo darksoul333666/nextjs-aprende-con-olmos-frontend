@@ -332,7 +332,7 @@ export default function TeacherPage() {
         </Box>
 
         {/* Sección de Estadísticas */}
-        {stats && (
+        {stats && user?.role === 'maestro' && (
           <Paper sx={{ p: 4, mt: 4, textAlign: 'center' }}>
             <Typography variant="h4" component="h2" gutterBottom sx={{ fontWeight: 600 }}>
               Impacto en la Educación
@@ -343,7 +343,7 @@ export default function TeacherPage() {
                   <Group sx={{ fontSize: 40 }} />
                 </Avatar>
                 <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-                  {stats.totalStudents.toLocaleString()}+
+                  {(stats.totalStudents || 0).toLocaleString()}+
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
                   Estudiantes Atendidos
@@ -354,7 +354,7 @@ export default function TeacherPage() {
                   <Computer sx={{ fontSize: 40 }} />
                 </Avatar>
                 <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-                  {stats.totalCourses}+
+                  {(stats.totalCourses || 0)}+
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
                   Cursos Creados
@@ -365,7 +365,7 @@ export default function TeacherPage() {
                   <EmojiEvents sx={{ fontSize: 40 }} />
                 </Avatar>
                 <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-                  {stats.averageRating.toFixed(1)}
+                  {(stats.averageRating || 0).toFixed(1)}
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
                   Calificación Promedio

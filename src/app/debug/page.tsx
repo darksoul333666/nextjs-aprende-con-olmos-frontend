@@ -25,8 +25,16 @@ export default function DebugPage() {
     try {
       setIsLoading(true);
       setError('');
-      const coursesData = await courseService.getPurchasedCourses();
-      setCourses(coursesData);
+      
+      if (user?.role === 'estudiante') {
+        const coursesData = await courseService.getPurchasedCourses();
+        setCourses(coursesData);
+      } else if (user?.role === 'maestro') {
+        const coursesData = await courseService.getTeacherCourses();
+        setCourses(coursesData);
+      } else {
+        setCourses([]);
+      }
     } catch (error) {
       console.error('Error fetching courses:', error);
       setError('Error al cargar los cursos');

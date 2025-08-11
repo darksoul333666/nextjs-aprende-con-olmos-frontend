@@ -80,6 +80,7 @@ export default function EditTeacherPage() {
         setIsLoading(true);
         // Obtener perfil del maestro (solo maestros)
         const teacherData = await teacherService.getTeacherProfile();
+        console.log(teacherData);
         setTeacher(teacherData);
         setFormData({
           name: teacherData.name,

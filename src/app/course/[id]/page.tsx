@@ -8,6 +8,7 @@ import { courseService, Course } from '../../services/courseService';
 import { progressService } from '../../services/progressService';
 import { useAuth } from '../../contexts/AuthContext';
 import { useParams, useRouter } from 'next/navigation';
+import { Navbar } from '../../components/Navigation/Navbar';
 
 export default function CoursePage() {
   const params = useParams();
@@ -62,14 +63,16 @@ export default function CoursePage() {
 
   if (isLoading) {
     return (
-      <Box sx={{ 
-        minHeight: '100vh', 
-        backgroundColor: '#f8f9fa', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center' 
-      }}>
-        <CircularProgress size={60} />
+      <Box sx={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
+        <Navbar />
+        <Box sx={{ 
+          minHeight: 'calc(100vh - 64px)', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center' 
+        }}>
+          <CircularProgress size={60} />
+        </Box>
       </Box>
     );
   }
@@ -77,7 +80,8 @@ export default function CoursePage() {
   if (error || !course) {
     return (
       <Box sx={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
-        <Container maxWidth={false} disableGutters sx={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Navbar />
+        <Container maxWidth={false} disableGutters sx={{ height: 'calc(100vh - 64px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Paper sx={{ p: 4, textAlign: 'center' }}>
             <Typography variant="h5" color="text.secondary" gutterBottom>
               {error || 'Curso no encontrado'}
@@ -102,24 +106,27 @@ export default function CoursePage() {
   }
 
   return (
-    <Container maxWidth={false} disableGutters sx={{ height: '100vh', position: 'relative' }}>
-      {user?.role === 'maestro' && (
-        <Box sx={{ position: 'absolute', top: 16, right: 16, zIndex: 1000 }}>
-          <Button
-            variant="contained"
-            startIcon={<Edit />}
-            onClick={() => router.push(`/courses/edit/${courseId}`)}
-            sx={{ bgcolor: 'secondary.main', '&:hover': { bgcolor: 'secondary.dark' } }}
-          >
-            Editar Curso
-          </Button>
-        </Box>
-      )}
-      <CoursePlayer
-        course={course}
-        onVideoComplete={handleVideoComplete}
-        onVideoProgress={handleVideoProgress}
-      />
-    </Container>
+    <Box sx={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
+      <Navbar />
+      <Container maxWidth={false} disableGutters sx={{ height: 'calc(100vh - 64px)', position: 'relative' }}>
+        {user?.role === 'maestro' && (
+          <Box sx={{ position: 'absolute', top: 16, right: 16, zIndex: 1000 }}>
+            <Button
+              variant="contained"
+              startIcon={<Edit />}
+              onClick={() => router.push(`/courses/edit/${courseId}`)}
+              sx={{ bgcolor: 'secondary.main', '&:hover': { bgcolor: 'secondary.dark' } }}
+            >
+              Editar Curso
+            </Button>
+          </Box>
+        )}
+        <CoursePlayer
+          course={course}
+          onVideoComplete={handleVideoComplete}
+          onVideoProgress={handleVideoProgress}
+        />
+      </Container>
+    </Box>
   );
 }

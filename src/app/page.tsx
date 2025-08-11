@@ -44,7 +44,7 @@ export default function Home() {
         setIsLoading(true);
         const [courses, userCoursesData] = await Promise.all([
           courseService.getCourses(),
-          isAuthenticated ? courseService.getPurchasedCourses() : Promise.resolve([])
+          isAuthenticated && user?.role === 'estudiante' ? courseService.getPurchasedCourses() : Promise.resolve([])
         ]);
         
         // Asegurar que los datos sean arrays
@@ -60,7 +60,7 @@ export default function Home() {
     };
 
     fetchCourses();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user]);
 
   const formatDuration = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);

@@ -56,11 +56,11 @@ class TeacherService {
 
   // Obtener perfil del maestro (solo maestros) - GET /api/teachers/me
   async getTeacherProfile(): Promise<Teacher> {
-    const response = await apiService.get<Teacher>('/teachers/me');
+    const response = await apiService.get<{teacher: Teacher}>('/teachers/me');
     if (!response.data) {
       throw new Error('No se pudo obtener el perfil del maestro');
     }
-    return response.data;
+    return response.data.teacher;
   }
 
   // Actualizar perfil del maestro (solo maestros) - PUT /api/teachers/me
