@@ -74,11 +74,13 @@ export default function EditCoursePage() {
   const [editMode, setEditMode] = useState(false);
   const [showAddSectionDialog, setShowAddSectionDialog] = useState(false);
   const [showAddVideoDialog, setShowAddVideoDialog] = useState(false);
-  const [selectedSection, setSelectedSection] = useState<Section | null>(null);
+  const [selectedSection, setSelectedSection] = useState<{ title: string; videos?: Omit<Video, '_id'>[] } | null>(null);
   const [newSectionTitle, setNewSectionTitle] = useState('');
   const [newVideoTitle, setNewVideoTitle] = useState('');
   const [newVideoDescription, setNewVideoDescription] = useState('');
   const [newVideoUrl, setNewVideoUrl] = useState('');
+  const [newVideoMinutes, setNewVideoMinutes] = useState('');
+  const [newVideoSeconds, setNewVideoSeconds] = useState('');
   const [activeStep, setActiveStep] = useState(0);
 
   const [formData, setFormData] = useState<Partial<CreateCourseRequest>>({
@@ -213,25 +215,102 @@ export default function EditCoursePage() {
     setShowAddSectionDialog(false);
   };
 
-  const handleAddVideo = () => {
+  const handleAddVideo = async () => {
     if (!newVideoTitle.trim() || !newVideoUrl.trim() || !selectedSection) return;
+    
+    const minutes = parseInt(newVideoMinutes) || 0;
+    const seconds = parseInt(newVideoSeconds) || 0;
+    
+    // Validar que no sean negativos
+    if (minutes < 0 || seconds < 0) {
+      setError('Los minutos y segundos no pueden ser negativos');
+      return;
+    }
+    
+    // Validar que los segundos no excedan 59
+    if (seconds > 59) {
+      setError('Los segundos no pueden ser mayores a 59');
+      return;
+    }
+    
+    const totalSeconds = minutes * 60 + seconds;
+    
+    // Validación más estricta para la duración
+    if (!minutes && !seconds) {
+      setError('Debes ingresar al menos minutos o segundos');
+      return;
+    }
+    
+    if (totalSeconds <= 0) {
+      setError('La duración debe ser mayor a 0');
+      return;
+    }
+    
+    // Asegurar que sea un número entero positivo
+    if (!Number.isInteger(totalSeconds) || totalSeconds <= 0) {
+      setError('La duración debe ser un número entero positivo');
+      return;
+    }
 
-    const newVideo: Omit<Video, '_id'> = {
-      title: newVideoTitle.trim(),
-      description: newVideoDescription.trim(),
-      url: newVideoUrl.trim(),
-      duration: 0, // Se calcularía automáticamente
-      order: (selectedSection.videos?.length || 0) + 1,
-    };
+    try {
+      setIsSaving(true);
+      setError('');
 
-    // TODO: Arreglar tipos TypeScript
-    console.log('Add video temporarily disabled - type mismatch:', newVideo);
+                const newVideo: Omit<Video, '_id'> = {
+        title: newVideoTitle.trim(),
+        description: newVideoDescription.trim(),
+        url: newVideoUrl.trim(),
+        duration: totalSeconds, // Usar la duración total en segundos
+        order: (selectedSection.videos?.length || 0) + 1,
+      };
 
-    setNewVideoTitle('');
-    setNewVideoDescription('');
-    setNewVideoUrl('');
-    setSelectedSection(null);
-    setShowAddVideoDialog(false);
+      console.log('New video object:', newVideo);
+      console.log('Duration in seconds:', totalSeconds);
+      console.log('Duration type:', typeof totalSeconds);
+
+      // Crear los datos actualizados para enviar al backend
+      const updatedFormData = {
+        ...formData,
+        sections: formData.sections?.map((section) => {
+          if (section.title === selectedSection.title) {
+            return {
+              ...section,
+              videos: [...(section.videos || []), newVideo]
+            };
+          }
+          return section;
+        })
+      };
+
+      console.log('Data being sent to backend:', updatedFormData);
+      console.log('Sections being sent:', updatedFormData.sections);
+
+      // Guardar inmediatamente en el backend con los datos actualizados
+      const updatedCourse = await courseService.updateCourse(courseId, updatedFormData);
+      if (updatedCourse) {
+        setCourse(updatedCourse);
+        // Actualizar también el estado local del formulario
+        setFormData(updatedFormData);
+        setSuccess('Video agregado y guardado correctamente');
+      } else {
+        setError('Error al guardar el video en el backend');
+      }
+
+      // Limpiar el formulario
+      setNewVideoTitle('');
+      setNewVideoDescription('');
+      setNewVideoUrl('');
+      setNewVideoMinutes('');
+      setNewVideoSeconds('');
+      setSelectedSection(null);
+      setShowAddVideoDialog(false);
+
+    } catch (error) {
+      setError('Error al agregar el video');
+      console.error('Error adding video:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleRemoveSection = (sectionTitle: string) => {
@@ -431,20 +510,19 @@ export default function EditCoursePage() {
                             color="primary"
                             variant="outlined"
                           />
-                          {editMode && (
-                            <IconButton
-                              size="small"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRemoveSection(section.title);
-                              }}
-                              color="error"
-                            >
-                              <Delete />
-                            </IconButton>
-                          )}
                         </Box>
                       </AccordionSummary>
+                      {editMode && (
+                        <Box sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleRemoveSection(section.title)}
+                            color="error"
+                          >
+                            <Delete />
+                          </IconButton>
+                        </Box>
+                      )}
                       <AccordionDetails>
                         {section.description && (
                           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -461,13 +539,14 @@ export default function EditCoursePage() {
                             {editMode && (
                               <Button
                                 size="small"
-                                startIcon={<Add />}
+                                startIcon={isSaving ? <CircularProgress size={16} /> : <Add />}
                                 onClick={() => {
-                                  // TODO: Fix TypeScript issues
-                                  console.log('Add video dialog temporarily disabled');
+                                  setSelectedSection(section);
+                                  setShowAddVideoDialog(true);
                                 }}
+                                disabled={isSaving}
                               >
-                                Agregar Video
+                                {isSaving ? 'Guardando...' : 'Agregar Video'}
                               </Button>
                             )}
                           </Box>
@@ -478,6 +557,7 @@ export default function EditCoursePage() {
                                 <ListItem key={videoIndex} sx={{ px: 0 }}>
                                   <ListItemText
                                     primary={video.title}
+                                    secondaryTypographyProps={{ component: 'div' }}
                                     secondary={
                                       <Box display="flex" alignItems="center" gap={2}>
                                         <Typography variant="caption">
@@ -713,11 +793,56 @@ export default function EditCoursePage() {
             value={newVideoUrl}
             onChange={(e) => setNewVideoUrl(e.target.value)}
             placeholder="https://example.com/video.mp4"
+            sx={{ mb: 2 }}
           />
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <TextField
+              fullWidth
+              type="number"
+              label="Minutos"
+              value={newVideoMinutes}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === '' || (parseInt(value) >= 0 && parseInt(value) <= 999)) {
+                  setNewVideoMinutes(value);
+                }
+              }}
+              placeholder="5"
+              inputProps={{ min: 0, max: 999 }}
+              helperText="0-999 minutos"
+            />
+            <TextField
+              fullWidth
+              type="number"
+              label="Segundos"
+              value={newVideoSeconds}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === '' || (parseInt(value) >= 0 && parseInt(value) <= 59)) {
+                  setNewVideoSeconds(value);
+                }
+              }}
+              placeholder="30"
+              inputProps={{ min: 0, max: 59 }}
+              helperText="0-59 segundos"
+            />
+          </Box>
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+            Ejemplo: 5 minutos y 30 segundos = 5:30
+          </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowAddVideoDialog(false)}>Cancelar</Button>
-          <Button onClick={handleAddVideo} variant="contained">Agregar</Button>
+          <Button onClick={() => setShowAddVideoDialog(false)} disabled={isSaving}>
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleAddVideo} 
+            variant="contained" 
+            disabled={isSaving}
+            startIcon={isSaving ? <CircularProgress size={20} /> : <Add />}
+          >
+            {isSaving ? 'Guardando...' : 'Agregar'}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

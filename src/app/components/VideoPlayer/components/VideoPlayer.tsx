@@ -22,6 +22,7 @@ import {
   Subtitles
 } from '@mui/icons-material';
 import screenfull from 'screenfull';
+import ReactPlayer from 'react-player';
 
 interface VideoPlayerProps {
   url: string;
@@ -38,6 +39,18 @@ interface VideoPlayerProps {
   className?: string;
 }
 
+// Helper function to check if URL is YouTube
+const isYouTubeUrl = (url: string): boolean => {
+  return url.includes('youtube.com') || url.includes('youtu.be');
+};
+
+// Helper function to extract YouTube video ID
+const getYouTubeVideoId = (url: string): string | null => {
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? match[2] : null;
+};
+
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({ 
   url, 
   fullScreen = false, 
@@ -52,6 +65,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   showControls = true,
   className
 }) => {
+  // Debug: Log video URL
+  console.log('VideoPlayer received URL:', url);
+  console.log('VideoPlayer props:', { url, title, fullScreen, autoPlay });
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [playing, setPlaying] = useState(autoPlay);
@@ -64,6 +80,29 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [controlsTimeout, setControlsTimeout] = useState<NodeJS.Timeout | null>(null);
   const [isHovering, setIsHovering] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Handle SSR - only render after mount
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Monitor URL changes
+  useEffect(() => {
+    console.log('VideoPlayer URL changed to:', url);
+    if (url) {
+      setIsLoading(true);
+    }
+  }, [url]);
+
+  // Handle buffering using standard ReactPlayer events
+  const handleBuffer = useCallback(() => {
+    setIsLoading(true);
+  }, []);
+
+  const handleBufferEnd = useCallback(() => {
+    setIsLoading(false);
+  }, []);
 
   // Format time helper
   const formatTime = (seconds: number): string => {
@@ -253,22 +292,41 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <video
-        ref={videoRef}
-        src={url}
-        style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-        }}
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={handleLoadedMetadata}
-        onEnded={handleEnded}
-        onPlay={() => setPlaying(true)}
-        onPause={() => setPlaying(false)}
-        autoPlay={autoPlay}
-        muted={muted}
-      />
+      {isMounted ? (
+        <ReactPlayer
+          ref={videoRef}
+          width="100%"
+          src={url}
+          height="100%"
+          playing={playing}
+          muted={muted}
+          volume={volume}
+          onPlay={() => setPlaying(true)}
+          onPause={() => setPlaying(false)}
+          onProgress={handleTimeUpdate}
+          onEnded={handleEnded}
+          onError={(e) => console.error('Video error:', e)}
+          onReady={() => {
+            console.log('Video ready to play');
+            setIsLoading(false);
+          }}
+        />
+      ) : (
+        <Box
+          sx={{
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'black',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Typography variant="body2" color="white">
+            Cargando...
+          </Typography>
+        </Box>
+      )}
 
       {/* Loading overlay */}
       {isLoading && (
@@ -290,8 +348,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </Box>
       )}
 
-      {/* Center play button overlay */}
-      {!playing && showControls && (
+      {/* Center play button overlay - only for non-YouTube videos */}
+      {!playing && showControls && !isYouTubeUrl(url) && (
         <Box
           sx={{
             position: 'absolute',
@@ -318,8 +376,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </Box>
       )}
 
-      {/* Custom Controls Overlay */}
-      {showControls && (
+      {/* Custom Controls Overlay - only for non-YouTube videos */}
+      {showControls && !isYouTubeUrl(url) && (
         <Fade in={showControlsOverlay}>
           <Box
             className="controls-overlay"
@@ -480,8 +538,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </Fade>
       )}
 
-      {/* Keyboard shortcuts hint */}
-      {showControlsOverlay && (
+      {/* Keyboard shortcuts hint - only for non-YouTube videos */}
+      {showControlsOverlay && !isYouTubeUrl(url) && (
         <Box
           sx={{
             position: 'absolute',

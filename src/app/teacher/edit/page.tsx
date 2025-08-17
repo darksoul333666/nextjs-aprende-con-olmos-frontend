@@ -8,7 +8,6 @@ import {
   Paper,
   TextField,
   Button,
-  Avatar,
   Card,
   CardContent,
   Chip,
@@ -17,7 +16,6 @@ import {
   ListItem,
   ListItemText,
   ListItemSecondaryAction,
-  Divider,
   Alert,
   CircularProgress,
   Dialog,
@@ -30,8 +28,6 @@ import {
   Edit,
   Delete,
   Add,
-  School,
-  Work,
   Email,
   WhatsApp,
   Instagram,
@@ -45,7 +41,6 @@ import { Navbar } from '../../components/Navigation/Navbar';
 
 export default function EditTeacherPage() {
   const router = useRouter();
-  const { user } = useAuth();
   const [teacher, setTeacher] = useState<Teacher | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);

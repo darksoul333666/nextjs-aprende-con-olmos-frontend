@@ -65,6 +65,10 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
     return allVideos.find(video => video._id === currentVideoId) || allVideos[0];
   }, [currentVideoId, allVideos]);
 
+  // Debug: Log current video info
+  console.log('Current video:', currentVideo);
+  console.log('All videos:', allVideos);
+
   // Get current video index
   const currentVideoIndex = useMemo(() => {
     return allVideos.findIndex(video => video._id === currentVideo?._id);
@@ -216,19 +220,37 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
         {/* Video Player Section */}
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
           {/* Video Player */}
-          <Box sx={{ flex: 1, p: 2, pb: 1 }}>
-            <VideoPlayer
-              url={currentVideo?.url || ''}
-              title={currentVideo?.title}
-              onNext={handleNextVideo}
-              onPrevious={handlePreviousVideo}
-              hasNext={!!nextVideo && !nextVideo.isLocked}
-              hasPrevious={!!previousVideo}
-              onProgress={handleVideoProgress}
-              onEnded={handleVideoEnd}
-              autoPlay={false}
-              fullScreen={false}
-            />
+          <Box sx={{ flex: 1, p: 2, pb: 1, minHeight: 400 }}>
+            {currentVideo?.url ? (
+              <VideoPlayer
+                url={currentVideo.url}
+                title={currentVideo.title}
+                onNext={handleNextVideo}
+                onPrevious={handlePreviousVideo}
+                hasNext={!!nextVideo && !nextVideo.isLocked}
+                hasPrevious={!!previousVideo}
+                onProgress={handleVideoProgress}
+                onEnded={handleVideoEnd}
+                autoPlay={false}
+                fullScreen={false}
+              />
+            ) : (
+              <Box 
+                sx={{ 
+                  width: '100%', 
+                  height: 400, 
+                  bgcolor: 'grey.200', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  borderRadius: 1
+                }}
+              >
+                <Typography variant="h6" color="text.secondary">
+                  No hay video seleccionado
+                </Typography>
+              </Box>
+            )}
           </Box>
 
           {/* Video Info */}
@@ -392,6 +414,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
                                   {video.title}
                                 </Typography>
                               }
+                              secondaryTypographyProps={{ component: 'div' }}
                               secondary={
                                 <Box display="flex" alignItems="center" gap={1}>
                                   <Typography variant="caption" color="text.secondary">
