@@ -29,8 +29,12 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    // Mark as mounted to prevent hydration mismatch
+    setIsMounted(true);
+    
     // Verificar si hay un usuario autenticado al cargar la aplicación
     const currentUser = authService.getCurrentUser();
     if (currentUser) {
@@ -83,12 +87,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const value: AuthContextType = {
-    user,
-    isLoading,
+    user: isMounted ? user : null,
+    isLoading: isMounted ? isLoading : true,
     login,
     register,
     logout,
-    isAuthenticated: !!user,
+    isAuthenticated: isMounted ? !!user : false,
   };
 
   return (

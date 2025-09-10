@@ -28,13 +28,13 @@ class AuthService {
     const response = await apiService.post<AuthResponse>('/auth/login', credentials);
     
     // La API devuelve: { success: boolean, message: string, data: { user, token } }
-    if (response.data && response.data && response.data.user && response.data.token) {
+    if (response.success && response.data && response.data.user && response.data.token) {
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
       return { user: response.data.user, token: response.data.token };
     } else {
       console.error('Unexpected response structure:', response);
-      throw new Error('Respuesta de login inválida - estructura de datos incorrecta');
+      throw new Error(response.message || 'Respuesta de login inválida - estructura de datos incorrecta');
     }
   }
 
@@ -42,13 +42,13 @@ class AuthService {
     const response = await apiService.post<AuthResponse>('/auth/register', userData);
     
     // La API devuelve: { success: boolean, message: string, data: { user, token } }
-    if (response.data && response.data && response.data.user && response.data.token) {
+    if (response.success && response.data && response.data.user && response.data.token) {
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
       return { user: response.data.user, token: response.data.token };
     } else {
       console.error('Unexpected response structure:', response);
-      throw new Error('Respuesta de registro inválida - estructura de datos incorrecta');
+      throw new Error(response.message || 'Respuesta de registro inválida - estructura de datos incorrecta');
     }
   }
 

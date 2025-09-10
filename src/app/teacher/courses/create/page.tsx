@@ -14,7 +14,7 @@ import {
 import { ArrowBack, Save } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../contexts/AuthContext';
-import { courseService } from '../../../services/courseService';
+import { courseService, CreateDraftRequest } from '../../../services/courseService';
 import { Navbar } from '../../../components/Navigation/Navbar';
 
 export default function CreateCoursePage() {
@@ -24,10 +24,10 @@ export default function CreateCoursePage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const [formData, setFormData] = useState({
-    title: 'Curso de Prueba',
-    description: 'Este es un curso de prueba para verificar la funcionalidad',
-    price: 99.99,
+  const [formData, setFormData] = useState<CreateDraftRequest>({
+    title: '',
+    description: '',
+    price: 0,
   });
 
   const handleInputChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -37,28 +37,31 @@ export default function CreateCoursePage() {
     }));
   };
 
-  const handleCreateCourse = async () => {
+  const handleCreateDraft = async () => {
     try {
       setIsLoading(true);
       setError('');
       setSuccess('');
 
-      const createdCourse = await courseService.createCourse({
-        ...formData,
-        sections: []
-      });
-      if (createdCourse) {
-        setSuccess('Curso creado exitosamente!');
-        console.log('Curso creado:', createdCourse);
+      // Validar campos requeridos
+      if (!formData.title.trim() || !formData.description.trim() || formData.price <= 0) {
+        setError('Por favor completa todos los campos correctamente');
+        return;
+      }
+
+      const createdDraft = await courseService.createDraftCourse(formData);
+      if (createdDraft) {
+        setSuccess('Borrador del curso creado exitosamente!');
+        console.log('Borrador creado:', createdDraft);
         setTimeout(() => {
-          router.push('/teacher/courses');
+          router.push(`/teacher/courses/edit/${createdDraft.id}`);
         }, 2000);
       } else {
-        setError('Error al crear el curso');
+        setError('Error al crear el borrador del curso');
       }
     } catch (error) {
-      console.error('Error creating course:', error);
-      setError('Error al crear el curso');
+      console.error('Error creating draft course:', error);
+      setError('Error al crear el borrador del curso');
     } finally {
       setIsLoading(false);
     }
@@ -110,8 +113,12 @@ export default function CreateCoursePage() {
 
         <Paper sx={{ p: 4 }}>
           <Typography variant="h5" component="h2" sx={{ fontWeight: 600, mb: 3 }}>
-            Información del Curso
+            Crear Borrador del Curso
           </Typography>
+          
+          <Alert severity="info" sx={{ mb: 3 }}>
+            Primero crea un borrador con la información básica del curso. Después podrás agregar secciones y videos.
+          </Alert>
 
           <Box display="flex" flexDirection="column" gap={3}>
             <TextField
@@ -155,10 +162,10 @@ export default function CreateCoursePage() {
             <Button
               variant="contained"
               startIcon={isLoading ? <CircularProgress size={20} /> : <Save />}
-              onClick={handleCreateCourse}
+              onClick={handleCreateDraft}
               disabled={isLoading}
             >
-              {isLoading ? 'Creando...' : 'Crear Curso'}
+              {isLoading ? 'Creando...' : 'Crear Borrador'}
             </Button>
           </Box>
         </Paper>

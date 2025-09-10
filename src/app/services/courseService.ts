@@ -58,6 +58,45 @@ export interface CreateCourseRequest {
   sections: Omit<Section, '_id'>[];
 }
 
+export interface CreateDraftRequest {
+  title: string;
+  description: string;
+  price: number;
+}
+
+export interface CompleteCourseRequest {
+  thumbnail?: string;
+  sections: Omit<Section, '_id'>[];
+}
+
+export interface DraftCourse {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  status: 'draft';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TeacherCourse {
+  id: string;
+  title: string;
+  description: string;
+  thumbnail?: string;
+  price: number;
+  isVisible: boolean;
+  createdAt: string;
+  stats: {
+    totalStudents: number;
+    avgProgress: number;
+    completedStudents: number;
+    sectionsCount: number;
+    videosCount: number;
+    totalDuration: number;
+  };
+}
+
 class CourseService {
   private ensureArray<T>(data: unknown): T[] {
     if (Array.isArray(data)) {
@@ -207,6 +246,53 @@ class CourseService {
     } catch (error) {
       console.error('Error purchasing course:', error);
       return false;
+    }
+  }
+
+  // Crear un curso borrador - POST /api/courses/draft
+  async createDraftCourse(draftData: CreateDraftRequest): Promise<DraftCourse | null> {
+    try {
+      const response = await apiService.post<{ course: DraftCourse }>('/courses/draft', draftData);
+      return response.data?.course || null;
+    } catch (error) {
+      console.error('Error creating draft course:', error);
+      return null;
+    }
+  }
+
+  // Obtener cursos borrador del maestro - GET /api/courses/drafts
+  async getDraftCourses(): Promise<DraftCourse[]> {
+    try {
+      const response = await apiService.get<{ drafts: DraftCourse[] }>('/courses/drafts');
+      return response.data?.drafts || [];
+    } catch (error) {
+      console.error('Error fetching draft courses:', error);
+      return [];
+    }
+  }
+
+  // Completar un curso borrador - PUT /api/courses/:id/complete
+  async completeCourse(id: string, completeData: CompleteCourseRequest): Promise<Course | null> {
+    try {
+      const response = await apiService.put<{ course: Course }>(`/courses/${id}/complete`, completeData);
+      return response.data?.course || null;
+    } catch (error) {
+      console.error('Error completing course:', error);
+      return null;
+    }
+  }
+
+  // Obtener cursos del maestro con estadísticas - GET /api/courses/teacher
+  async getTeacherCoursesWithStats(): Promise<{ courses: TeacherCourse[]; summary: any }> {
+    try {
+      const response = await apiService.get<{ courses: TeacherCourse[]; summary: any }>('/courses/teacher');
+      return {
+        courses: response.data?.courses || [],
+        summary: response.data?.summary || {}
+      };
+    } catch (error) {
+      console.error('Error fetching teacher courses with stats:', error);
+      return { courses: [], summary: {} };
     }
   }
 }

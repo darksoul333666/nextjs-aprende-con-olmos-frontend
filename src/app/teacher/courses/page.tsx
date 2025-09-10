@@ -42,20 +42,20 @@ import {
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
-import { courseService, Course } from '../../services/courseService';
+import { courseService, Course, DraftCourse, TeacherCourse } from '../../services/courseService';
 import { Navbar } from '../../components/Navigation/Navbar';
 
 export default function TeacherCoursesPage() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
-  const [courses, setCourses] = useState<Course[]>([]);
+  const [courses, setCourses] = useState<TeacherCourse[]>([]);
+  const [drafts, setDrafts] = useState<DraftCourse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-  const [filter, setFilter] = useState<'all' | 'published' | 'drafts'>('all');
+  const [selectedCourse, setSelectedCourse] = useState<TeacherCourse | null>(null);
 
   const [newCourse, setNewCourse] = useState({
     title: '',
@@ -75,10 +75,16 @@ export default function TeacherCoursesPage() {
   const fetchCourses = async () => {
     try {
       setIsLoading(true);
-      const coursesData = await courseService.getTeacherCourses();
+      const [coursesData, draftsData] = await Promise.all([
+        courseService.getTeacherCoursesWithStats(),
+        courseService.getDraftCourses()
+      ]);
+      
       console.log('Cursos obtenidos:', coursesData);
-      console.log('Estructura del primer curso:', coursesData[0]);
-      setCourses(coursesData);
+      console.log('Borradores obtenidos:', draftsData);
+      
+      setCourses(coursesData.courses);
+      setDrafts(draftsData);
     } catch (error) {
       console.error('Error fetching courses:', error);
       setError('Error al cargar los cursos');
@@ -87,31 +93,30 @@ export default function TeacherCoursesPage() {
     }
   };
 
-  const handleCreateCourse = async () => {
+  const handleCreateDraft = async () => {
     try {
       if (!newCourse.title.trim()) {
         setError('El título del curso es obligatorio');
         return;
       }
 
-      const createdCourse = await courseService.createCourse({
+      const createdDraft = await courseService.createDraftCourse({
         title: newCourse.title,
         description: newCourse.description,
         price: newCourse.price,
-        sections: []
       });
 
-      if (createdCourse) {
-        setSuccess('Curso creado exitosamente como borrador');
+      if (createdDraft) {
+        setSuccess('Borrador creado exitosamente');
         setShowCreateDialog(false);
         setNewCourse({ title: '', description: '', price: 0 });
         fetchCourses();
       } else {
-        setError('Error al crear el curso');
+        setError('Error al crear el borrador');
       }
     } catch (error) {
-      console.error('Error creating course:', error);
-      setError('Error al crear el curso');
+      console.error('Error creating draft:', error);
+      setError('Error al crear el borrador');
     }
   };
 
@@ -169,20 +174,6 @@ export default function TeacherCoursesPage() {
     return `${minutes}m`;
   };
 
-  const getFilteredCourses = () => {
-    console.log("Cursos obtenidos:", courses);
-    
-    switch (filter) {
-      case 'published':
-        return courses.filter(course => course.isVisible);
-      case 'drafts':
-        return courses.filter(course => !course.isVisible);
-      default:
-        return courses;
-    }
-  };
-
-  const filteredCourses = getFilteredCourses();
 
   if (user?.role !== 'maestro') {
     return null;
@@ -215,219 +206,280 @@ export default function TeacherCoursesPage() {
           </Alert>
         )}
 
-        {/* Filtros y Acciones */}
+        {/* Acciones */}
         <Paper sx={{ p: 3, mb: 4 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h5" component="h2" sx={{ fontWeight: 600 }}>
               Gestionar Cursos
             </Typography>
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              onClick={() => setShowCreateDialog(true)}
-            >
-              Crear Nuevo Curso
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={() => router.push('/teacher/courses/create')}
-            >
-              Crear Curso (Página Completa)
-            </Button>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="outlined"
+                onClick={() => router.push('/teacher/courses/create')}
+              >
+                Crear Nuevo Curso
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={() => setShowCreateDialog(true)}
+              >
+                Crear Borrador Rápido
+              </Button>
+            </Box>
           </Box>
-
-          <FormControl sx={{ minWidth: 200 }}>
-            <InputLabel>Filtrar por Estado</InputLabel>
-            <Select
-              value={filter}
-              label="Filtrar por Estado"
-              onChange={(e) => setFilter(e.target.value as 'all' | 'published' | 'drafts')}
-            >
-              <MenuItem value="all">Todos los Cursos</MenuItem>
-              <MenuItem value="published">Cursos Publicados</MenuItem>
-              <MenuItem value="drafts">Borradores</MenuItem>
-            </Select>
-          </FormControl>
-          
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => {
-              console.log('Usuario actual:', user);
-              console.log('Estado de autenticación:', isAuthenticated);
-            }}
-          >
-            Debug Usuario
-          </Button>
         </Paper>
 
-        {/* Lista de Cursos */}
         {isLoading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <CircularProgress size={60} />
           </Box>
-        ) : filteredCourses.length === 0 ? (
-          <Paper sx={{ p: 6, textAlign: 'center' }}>
-            <School sx={{ fontSize: 80, color: 'text.secondary', mb: 2 }} />
-            <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 600 }}>
-              {filter === 'all' ? 'No tienes cursos aún' : 
-               filter === 'published' ? 'No tienes cursos publicados' : 'No tienes borradores'}
-            </Typography>
-            <Typography variant="body1" color="text.secondary" paragraph>
-              {filter === 'all' ? 'Comienza creando tu primer curso' : 
-               filter === 'published' ? 'Publica algunos de tus borradores' : 'Crea un nuevo borrador'}
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              onClick={() => setShowCreateDialog(true)}
-              sx={{ mt: 2 }}
-            >
-              Crear Nuevo Curso
-            </Button>
-          </Paper>
         ) : (
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }, gap: 3 }}>
-            {filteredCourses.map((course, index) => (
-              <Box key={course._id || `course-${index}`}>
-                <Card sx={{ 
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  position: 'relative',
-                  '&:hover': {
-                    boxShadow: 4,
-                  }
-                }}>
-                  {/* Estado del Curso */}
-                  <Box sx={{ position: 'absolute', top: 16, right: 16, zIndex: 1 }}>
-                    <Chip
-                      label={course.isVisible ? 'Publicado' : 'Borrador'}
-                      color={course.isVisible ? 'success' : 'default'}
-                      size="small"
-                      icon={course.isVisible ? <Visibility /> : <Drafts />}
-                    />
-                  </Box>
-
-                  {/* Imagen del Curso */}
-                  <Box
-                    sx={{
-                      height: 200,
-                      background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      position: 'relative',
-                    }}
-                  >
-                    <School sx={{ fontSize: 60 }} />
-                    <Chip
-                      label={`$${course.price || 0}`}
-                      color="primary"
-                      sx={{
-                        position: 'absolute',
-                        top: 16,
-                        left: 16,
-                        bgcolor: 'white',
-                        color: 'primary.main',
-                        fontWeight: 600,
-                      }}
-                    />
-                  </Box>
-
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Typography variant="h6" component="h3" gutterBottom>
-                      {course.title}
-                    </Typography>
-                    
-                    <Typography variant="body2" color="text.secondary" paragraph>
-                      {course.description}
-                    </Typography>
-
-                    {/* Estadísticas del Curso */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <AccessTime fontSize="small" />
-                        <Typography variant="caption">
-                          {formatDuration(course.totalDuration || 0)}
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <School fontSize="small" />
-                        <Typography variant="caption">
-                          {course.sections?.length || 0} secciones
-                        </Typography>
-                      </Box>
-                      {course.isVisible && (
-                        <>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <People fontSize="small" />
-                            <Typography variant="caption">
-                              {course.totalStudents || 0}
-                            </Typography>
-                          </Box>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <Star fontSize="small" />
-                            <Typography variant="caption">
-                              {course.rating?.toFixed(1) || '0.0'}
-                            </Typography>
-                          </Box>
-                        </>
-                      )}
-                    </Box>
-
-                    {/* TODO: Agregar createdAt a la interfaz Course 
-                    <Typography variant="caption" color="text.secondary">
-                      Creado: {new Date().toLocaleDateString()}
-                    </Typography>
-                    */}
-                  </CardContent>
-
-                  <CardActions sx={{ p: 2, pt: 0 }}>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={() => {
-                        console.log('Editando curso:', course);
-                        console.log('ID del curso:', course._id);
-                        if (!course._id) {
-                          setError('Error: El curso no tiene un ID válido');
-                          return;
-                        }
-                        router.push(`/courses/edit/${course._id}`);
-                      }}
-                      sx={{ flex: 1 }}
-                      disabled={!course._id}
-                    >
-                      Editar
-                    </Button>
-                    
-                    {!course.isVisible ? (
-                      <Button
-                        variant="contained"
-                        size="small"
-                        startIcon={<Publish />}
-                        onClick={() => handlePublishCourse(course)}
-                        sx={{ flex: 1 }}
-                      >
-                        Publicar
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<VisibilityOff />}
-                        onClick={() => handleToggleVisibility(course)}
-                        sx={{ flex: 1 }}
-                      >
-                        Ocultar
-                      </Button>
-                    )}
-                  </CardActions>
-                </Card>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {/* Sección de Cursos Publicados */}
+            <Paper sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <Typography variant="h5" component="h2" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Visibility color="success" />
+                  Cursos Publicados ({courses.length})
+                </Typography>
               </Box>
-            ))}
+
+              {courses.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <School sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
+                  <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+                    No tienes cursos publicados
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    Completa algunos de tus borradores para publicarlos
+                  </Typography>
+                </Box>
+              ) : (
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }, gap: 3 }}>
+                  {courses.map((course, index) => (
+                    <Box key={course.id || `course-${index}`}>
+                      <Card sx={{ 
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        position: 'relative',
+                        '&:hover': {
+                          boxShadow: 4,
+                        }
+                      }}>
+                        {/* Estado del Curso */}
+                        <Box sx={{ position: 'absolute', top: 16, right: 16, zIndex: 1 }}>
+                          <Chip
+                            label="Publicado"
+                            color="success"
+                            size="small"
+                            icon={<Visibility />}
+                          />
+                        </Box>
+
+                        {/* Imagen del Curso */}
+                        <Box
+                          sx={{
+                            height: 200,
+                            background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white',
+                            position: 'relative',
+                          }}
+                        >
+                          <School sx={{ fontSize: 60 }} />
+                          <Chip
+                            label={`$${course.price || 0}`}
+                            color="primary"
+                            sx={{
+                              position: 'absolute',
+                              top: 16,
+                              left: 16,
+                              bgcolor: 'white',
+                              color: 'primary.main',
+                              fontWeight: 600,
+                            }}
+                          />
+                        </Box>
+
+                        <CardContent sx={{ flexGrow: 1 }}>
+                          <Typography variant="h6" component="h3" gutterBottom>
+                            {course.title}
+                          </Typography>
+                          
+                          <Typography variant="body2" color="text.secondary" paragraph>
+                            {course.description}
+                          </Typography>
+
+                          {/* Estadísticas del Curso */}
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <AccessTime fontSize="small" />
+                              <Typography variant="caption">
+                                {formatDuration(course.stats.totalDuration || 0)}
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <School fontSize="small" />
+                              <Typography variant="caption">
+                                {course.stats.sectionsCount || 0} secciones
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <People fontSize="small" />
+                              <Typography variant="caption">
+                                {course.stats.totalStudents || 0} estudiantes
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </CardContent>
+
+                        <CardActions sx={{ p: 2, pt: 0 }}>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={() => router.push(`/courses/edit/${course.id}`)}
+                            sx={{ flex: 1 }}
+                          >
+                            Editar
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<VisibilityOff />}
+                            onClick={() => handleToggleVisibility(course as any)}
+                            sx={{ flex: 1 }}
+                          >
+                            Ocultar
+                          </Button>
+                        </CardActions>
+                      </Card>
+                    </Box>
+                  ))}
+                </Box>
+              )}
+            </Paper>
+
+            {/* Sección de Borradores */}
+            <Paper sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <Typography variant="h5" component="h2" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Drafts color="warning" />
+                  Borradores ({drafts.length})
+                </Typography>
+              </Box>
+
+              {drafts.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Drafts sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
+                  <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+                    No tienes borradores
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    Crea un nuevo borrador para comenzar a trabajar en un curso
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    startIcon={<Add />}
+                    onClick={() => setShowCreateDialog(true)}
+                    sx={{ mt: 2 }}
+                  >
+                    Crear Borrador
+                  </Button>
+                </Box>
+              ) : (
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }, gap: 3 }}>
+                  {drafts.map((draft, index) => (
+                    <Box key={draft.id || `draft-${index}`}>
+                      <Card sx={{ 
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        position: 'relative',
+                        '&:hover': {
+                          boxShadow: 4,
+                        }
+                      }}>
+                        {/* Estado del Curso */}
+                        <Box sx={{ position: 'absolute', top: 16, right: 16, zIndex: 1 }}>
+                          <Chip
+                            label="Borrador"
+                            color="warning"
+                            size="small"
+                            icon={<Drafts />}
+                          />
+                        </Box>
+
+                        {/* Imagen del Curso */}
+                        <Box
+                          sx={{
+                            height: 200,
+                            background: 'linear-gradient(45deg, #ff9800 30%, #f57c00 90%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white',
+                            position: 'relative',
+                          }}
+                        >
+                          <Drafts sx={{ fontSize: 60 }} />
+                          <Chip
+                            label={`$${draft.price || 0}`}
+                            color="primary"
+                            sx={{
+                              position: 'absolute',
+                              top: 16,
+                              left: 16,
+                              bgcolor: 'white',
+                              color: 'primary.main',
+                              fontWeight: 600,
+                            }}
+                          />
+                        </Box>
+
+                        <CardContent sx={{ flexGrow: 1 }}>
+                          <Typography variant="h6" component="h3" gutterBottom>
+                            {draft.title}
+                          </Typography>
+                          
+                          <Typography variant="body2" color="text.secondary" paragraph>
+                            {draft.description}
+                          </Typography>
+
+                          {/* Fecha de creación */}
+                          <Typography variant="caption" color="text.secondary">
+                            Creado: {new Date(draft.createdAt).toLocaleDateString()}
+                          </Typography>
+                        </CardContent>
+
+                        <CardActions sx={{ p: 2, pt: 0 }}>
+                          <Button
+                            variant="contained"
+                            size="small"
+                            onClick={() => router.push(`/teacher/courses/edit/${draft.id}`)}
+                            sx={{ flex: 1 }}
+                          >
+                            Completar
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<Edit />}
+                            onClick={() => router.push(`/teacher/courses/edit/${draft.id}`)}
+                            sx={{ flex: 1 }}
+                          >
+                            Editar
+                          </Button>
+                        </CardActions>
+                      </Card>
+                    </Box>
+                  ))}
+                </Box>
+              )}
+            </Paper>
           </Box>
         )}
       </Container>
@@ -466,7 +518,7 @@ export default function TeacherCoursesPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowCreateDialog(false)}>Cancelar</Button>
-          <Button onClick={handleCreateCourse} variant="contained">Crear Borrador</Button>
+          <Button onClick={handleCreateDraft} variant="contained">Crear Borrador</Button>
         </DialogActions>
       </Dialog>
 
