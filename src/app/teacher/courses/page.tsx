@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Container,
   Typography,
@@ -51,6 +51,8 @@ export default function TeacherCoursesPage() {
   const [courses, setCourses] = useState<TeacherCourse[]>([]);
   const [drafts, setDrafts] = useState<DraftCourse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -63,33 +65,83 @@ export default function TeacherCoursesPage() {
     price: 0,
   });
 
-  useEffect(() => {
-    if (user?.role !== 'maestro') {
-      router.push('/');
-      return;
+  const fetchCourses = useCallback(async () => {
+    if (isInitialized) {
+      return; // Ya se cargaron los datos
     }
 
-    fetchCourses();
-  }, [user, router]);
-
-  const fetchCourses = async () => {
     try {
       setIsLoading(true);
+      setError(''); // Limpiar errores previos
+      console.log('🔄 Iniciando carga de cursos...');
+      
       const [coursesData, draftsData] = await Promise.all([
         courseService.getTeacherCoursesWithStats(),
         courseService.getDraftCourses()
       ]);
       
-      console.log('Cursos obtenidos:', coursesData);
-      console.log('Borradores obtenidos:', draftsData);
+      console.log('✅ Cursos obtenidos:', coursesData);
+      console.log('✅ Borradores obtenidos:', draftsData);
       
       setCourses(coursesData.courses);
       setDrafts(draftsData);
+      setIsInitialized(true);
     } catch (error) {
-      console.error('Error fetching courses:', error);
-      setError('Error al cargar los cursos');
+      console.error('❌ Error fetching courses:', error);
+      
+      // Verificar si es un error de conexión
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        setError('Backend no disponible. Por favor, ejecuta el backend en http://localhost:3200 y recarga la página.');
+      } else {
+        setError('Error al cargar los cursos. Por favor, intenta de nuevo.');
+      }
+      
+      // NO redirigir, solo mostrar el error
+      setIsInitialized(true); // Marcar como inicializado para evitar reintentos
     } finally {
       setIsLoading(false);
+    }
+  }, [isInitialized]);
+
+  useEffect(() => {
+    // Solo ejecutar cuando el contexto esté completamente cargado
+    if (isAuthenticated === undefined) {
+      return; // Aún cargando
+    }
+
+    // Marcar que ya verificamos la autenticación
+    setAuthChecked(true);
+
+    // Verificar autenticación y rol
+    if (!isAuthenticated || user?.role !== 'maestro') {
+      // Usuario no autenticado o no es maestro
+      router.push('/');
+      return;
+    }
+
+    // Usuario es maestro, cargar cursos
+    fetchCourses();
+  }, [user, isAuthenticated, router, fetchCourses]);
+
+  const handleRetry = () => {
+    setIsInitialized(false);
+    setError('');
+    fetchCourses();
+  };
+
+  const checkBackendConnection = async () => {
+    try {
+      const response = await fetch('http://localhost:3200/api/health');
+      if (response.ok) {
+        setSuccess('Backend conectado correctamente. Recargando...');
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      } else {
+        setError('Backend responde pero con error. Verifica los logs del servidor.');
+      }
+    } catch (error) {
+      setError('Backend no disponible. Asegúrate de que esté ejecutándose en http://localhost:3200');
     }
   };
 
@@ -175,8 +227,22 @@ export default function TeacherCoursesPage() {
   };
 
 
-  if (user?.role !== 'maestro') {
-    return null;
+  // Mostrar loading mientras se verifica la autenticación o se cargan los datos
+  if (isAuthenticated === undefined || !authChecked || isLoading || !isInitialized) {
+    return (
+      <Box sx={{ minHeight: '100vh', backgroundColor: '#f8f9fa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <CircularProgress size={60} />
+      </Box>
+    );
+  }
+
+  // Si no está autenticado o no es maestro, mostrar loading (el useEffect se encarga del redirect)
+  if (!isAuthenticated || user?.role !== 'maestro') {
+    return (
+      <Box sx={{ minHeight: '100vh', backgroundColor: '#f8f9fa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <CircularProgress size={60} />
+      </Box>
+    );
   }
 
   return (
@@ -195,7 +261,16 @@ export default function TeacherCoursesPage() {
         </Box>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+          <Alert 
+            severity="error" 
+            sx={{ mb: 2 }} 
+            onClose={() => setError('')}
+            action={
+              <Button color="inherit" size="small" onClick={handleRetry}>
+                Reintentar
+              </Button>
+            }
+          >
             {error}
           </Alert>
         )}
@@ -234,6 +309,31 @@ export default function TeacherCoursesPage() {
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <CircularProgress size={60} />
           </Box>
+        ) : error && courses.length === 0 && drafts.length === 0 ? (
+          <Paper sx={{ p: 6, textAlign: 'center' }}>
+            <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 600, color: 'error.main' }}>
+              Backend No Disponible
+            </Typography>
+            <Typography variant="body1" color="text.secondary" paragraph>
+              No se pudo conectar con el servidor backend. Asegúrate de que esté ejecutándose en http://localhost:3200
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', mt: 3 }}>
+              <Button
+                variant="contained"
+                onClick={checkBackendConnection}
+                sx={{ mt: 2 }}
+              >
+                Verificar Conexión
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={handleRetry}
+                sx={{ mt: 2 }}
+              >
+                Reintentar
+              </Button>
+            </Box>
+          </Paper>
         ) : (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {/* Sección de Cursos Publicados */}

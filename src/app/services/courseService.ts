@@ -262,13 +262,8 @@ class CourseService {
 
   // Obtener cursos borrador del maestro - GET /api/courses/drafts
   async getDraftCourses(): Promise<DraftCourse[]> {
-    try {
-      const response = await apiService.get<{ drafts: DraftCourse[] }>('/courses/drafts');
-      return response.data?.drafts || [];
-    } catch (error) {
-      console.error('Error fetching draft courses:', error);
-      return [];
-    }
+    const response = await apiService.get<{ drafts: DraftCourse[] }>('/courses/drafts');
+    return response.data?.drafts || [];
   }
 
   // Completar un curso borrador - PUT /api/courses/:id/complete
@@ -284,16 +279,11 @@ class CourseService {
 
   // Obtener cursos del maestro con estadísticas - GET /api/courses/teacher
   async getTeacherCoursesWithStats(): Promise<{ courses: TeacherCourse[]; summary: any }> {
-    try {
-      const response = await apiService.get<{ courses: TeacherCourse[]; summary: any }>('/courses/teacher');
-      return {
-        courses: response.data?.courses || [],
-        summary: response.data?.summary || {}
-      };
-    } catch (error) {
-      console.error('Error fetching teacher courses with stats:', error);
-      return { courses: [], summary: {} };
-    }
+    const response = await apiService.get<{ courses: TeacherCourse[]; summary: any }>('/courses/teacher');
+    return {
+      courses: response.data?.courses || [],
+      summary: response.data?.summary || {}
+    };
   }
 }
 

@@ -37,12 +37,17 @@ class ApiService {
       });
     }
 
+    try {
     const response = await fetch(url.toString(), {
       method: 'GET',
       headers: this.getAuthHeaders(),
     });
 
     return this.handleResponse<T>(response);
+    } catch (error) {
+      console.error('Error fetching:', error);
+      throw error;
+    }
   }
 
   async post<T>(endpoint: string, data?: unknown): Promise<ApiResponse<T>> {
