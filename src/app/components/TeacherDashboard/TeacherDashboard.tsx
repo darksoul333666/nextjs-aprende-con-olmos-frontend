@@ -8,6 +8,9 @@ import {
   CardContent,
   Avatar,
   Paper,
+  CircularProgress,
+  Alert,
+  Button,
 } from '@mui/material';
 import {
   Dashboard,
@@ -15,76 +18,64 @@ import {
   People,
   VideoLibrary,
   MonetizationOn,
+  Refresh,
+  TrendingUp,
+  School,
+  Edit,
 } from '@mui/icons-material';
-
-interface VideoStats {
-  videoId: string;
-  title: string;
-  subscribers: number;
-  views: number;
-  revenue: number;
-}
-
-interface TeacherStats {
-  totalUsers: number;
-  totalSubscribers: number;
-  totalRevenue: number;
-  videoStats: VideoStats[];
-}
+import { teacherStatsService, TeacherDashboardData, VideoStat } from '../../services/teacherStatsService';
 
 export const TeacherDashboard: React.FC = () => {
-  const [teacherStats, setTeacherStats] = useState<TeacherStats>({
-    totalUsers: 0,
-    totalSubscribers: 0,
-    totalRevenue: 0,
-    videoStats: []
-  });
+  const [dashboardData, setDashboardData] = useState<TeacherDashboardData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchDashboardData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await teacherStatsService.getDashboardStats();
+      setDashboardData(data);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      setError('No se pudieron cargar las estadísticas del dashboard');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // Simular carga de estadísticas del maestro (en producción vendría del backend)
-    setTeacherStats({
-      totalUsers: 1247,
-      totalSubscribers: 892,
-      totalRevenue: 45680,
-      videoStats: [
-        {
-          videoId: '1',
-          title: 'Introducción al Álgebra',
-          subscribers: 234,
-          views: 1847,
-          revenue: 11700
-        },
-        {
-          videoId: '2',
-          title: 'Geometría Básica',
-          subscribers: 189,
-          views: 1523,
-          revenue: 9450
-        },
-        {
-          videoId: '3',
-          title: 'Cálculo Diferencial',
-          subscribers: 156,
-          views: 1298,
-          revenue: 7800
-        },
-        {
-          videoId: '4',
-          title: 'Trigonometría Avanzada',
-          subscribers: 143,
-          views: 1124,
-          revenue: 7150
-        },
-        {
-          videoId: '5',
-          title: 'Estadística y Probabilidad',
-          subscribers: 98,
-          views: 876,
-          revenue: 4900
-        }
-      ]
-    });
+    fetchDashboardData();
   }, []);
+
+  if (isLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+        <CircularProgress size={60} />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ mb: 6 }}>
+        <Alert 
+          severity="error" 
+          action={
+            <Button color="inherit" size="small" onClick={fetchDashboardData} startIcon={<Refresh />}>
+              Reintentar
+            </Button>
+          }
+        >
+          {error}
+        </Alert>
+      </Box>
+    );
+  }
+
+  if (!dashboardData) {
+    return null;
+  }
 
   return (
     <Box sx={{ mb: 6 }}>
@@ -105,7 +96,7 @@ export const TeacherDashboard: React.FC = () => {
               </Avatar>
               <Box>
                 <Typography variant="h3" sx={{ fontWeight: 700 }}>
-                  {teacherStats.totalUsers.toLocaleString()}
+                  {dashboardData.kpis.totalUsers.toLocaleString()}
                 </Typography>
                 <Typography variant="h6" sx={{ opacity: 0.9 }}>
                   Usuarios Registrados
@@ -123,7 +114,7 @@ export const TeacherDashboard: React.FC = () => {
               </Avatar>
               <Box>
                 <Typography variant="h3" sx={{ fontWeight: 700 }}>
-                  {teacherStats.totalSubscribers.toLocaleString()}
+                  {dashboardData.kpis.totalSubscribers.toLocaleString()}
                 </Typography>
                 <Typography variant="h6" sx={{ opacity: 0.9 }}>
                   Suscriptores Totales
@@ -141,10 +132,55 @@ export const TeacherDashboard: React.FC = () => {
               </Avatar>
               <Box>
                 <Typography variant="h3" sx={{ fontWeight: 700 }}>
-                  ${teacherStats.totalRevenue.toLocaleString()}
+                  ${dashboardData.kpis.totalIncome.toLocaleString()}
                 </Typography>
                 <Typography variant="h6" sx={{ opacity: 0.9 }}>
                   Ingresos Totales
+                </Typography>
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+      </Box>
+
+      {/* Estadísticas de Cursos y Crecimiento */}
+      <Box display="flex" flexDirection={{ xs: 'column', md: 'row' }} gap={3} sx={{ mb: 4 }}>
+        <Card sx={{ flex: 1, bgcolor: 'info.main', color: 'white' }}>
+          <CardContent>
+            <Box display="flex" alignItems="center" gap={2}>
+              <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 60, height: 60 }}>
+                <School sx={{ fontSize: 30 }} />
+              </Avatar>
+              <Box>
+                <Typography variant="h3" sx={{ fontWeight: 700 }}>
+                  {dashboardData.courseStats.totalCourses}
+                </Typography>
+                <Typography variant="h6" sx={{ opacity: 0.9 }}>
+                  Cursos Totales
+                </Typography>
+                <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                  {dashboardData.courseStats.publishedCourses} publicados, {dashboardData.courseStats.draftCourses} borradores
+                </Typography>
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+
+        <Card sx={{ flex: 1, bgcolor: 'secondary.main', color: 'white' }}>
+          <CardContent>
+            <Box display="flex" alignItems="center" gap={2}>
+              <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 60, height: 60 }}>
+                <TrendingUp sx={{ fontSize: 30 }} />
+              </Avatar>
+              <Box>
+                <Typography variant="h3" sx={{ fontWeight: 700 }}>
+                  +{dashboardData.growth.recentUsers}
+                </Typography>
+                <Typography variant="h6" sx={{ opacity: 0.9 }}>
+                  Usuarios Recientes
+                </Typography>
+                <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                  {dashboardData.growth.recentPurchases} compras, ${dashboardData.growth.recentIncome} ingresos
                 </Typography>
               </Box>
             </Box>
@@ -162,7 +198,7 @@ export const TeacherDashboard: React.FC = () => {
         </Box>
         
         <Box display="flex" flexDirection="column" gap={2}>
-          {teacherStats.videoStats.map((video) => (
+          {dashboardData.videoStats.map((video) => (
             <Card key={video.videoId} sx={{ 
               border: '1px solid',
               borderColor: 'grey.200',
@@ -177,8 +213,11 @@ export const TeacherDashboard: React.FC = () => {
                     <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
                       {video.title}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Video ID: {video.videoId}
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                      {video.courseTitle} - {video.sectionTitle}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      ID: {video.videoId}
                     </Typography>
                   </Box>
                   
@@ -203,7 +242,7 @@ export const TeacherDashboard: React.FC = () => {
                     
                     <Box textAlign="center">
                       <Typography variant="h5" sx={{ fontWeight: 700, color: 'warning.main' }}>
-                        ${video.revenue.toLocaleString()}
+                        ${video.income.toLocaleString()}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         Ingresos
@@ -212,7 +251,7 @@ export const TeacherDashboard: React.FC = () => {
                     
                     <Box textAlign="center">
                       <Typography variant="h5" sx={{ fontWeight: 700, color: 'info.main' }}>
-                        {((video.subscribers / video.views) * 100).toFixed(1)}%
+                        {video.conversion.toFixed(1)}%
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         Conversión
