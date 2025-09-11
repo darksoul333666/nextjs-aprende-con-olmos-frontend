@@ -18,6 +18,12 @@ export default function CoursePage() {
   const [course, setCourse] = useState<Course | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Handle SSR - only render after mount
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     const fetchCourse = async () => {
@@ -61,7 +67,7 @@ export default function CoursePage() {
     }
   };
 
-  if (isLoading) {
+  if (!isMounted || isLoading) {
     return (
       <Box sx={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
         <Navbar />

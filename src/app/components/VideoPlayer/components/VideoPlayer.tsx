@@ -17,9 +17,7 @@ import {
   Fullscreen,
   FullscreenExit,
   SkipNext,
-  SkipPrevious,
-  Settings,
-  Subtitles
+  SkipPrevious
 } from '@mui/icons-material';
 import screenfull from 'screenfull';
 import ReactPlayer from 'react-player';
@@ -455,9 +453,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 value={isFinite(currentTime) ? Math.max(currentTime, 0) : 0}
                 onChange={handleSeek}
                 sx={{
-                  color: 'primary.main',
+                  color: 'rgba(41, 50, 218, 0.7)',
                   '& .MuiSlider-track': {
-                    backgroundColor: 'primary.main',
+                    backgroundColor: 'rgba(41, 50, 218, 0.7)',
                   },
                   '& .MuiSlider-rail': {
                     backgroundColor: 'rgba(255,255,255,0.3)',
@@ -465,9 +463,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   '& .MuiSlider-thumb': {
                     width: 12,
                     height: 12,
-                    backgroundColor: 'primary.main',
+                    backgroundColor: 'rgba(41, 50, 218, 0.7)',
                     '&:hover': {
-                      boxShadow: '0 0 0 8px rgba(25, 118, 210, 0.16)',
+                      boxShadow: '0 0 0 8px rgba(41, 50, 218, 0.16)',
                     },
                   },
                 }}
@@ -528,14 +526,20 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                     step={0.01}
                     value={muted ? 0 : volume}
                     onChange={handleVolumeChange}
-                    sx={{ 
+                    sx={{
                       width: 80, 
-                      color: 'white',
+                      color: 'rgba(41, 50, 218, 0.7)',
                       '& .MuiSlider-track': {
-                        backgroundColor: 'white',
+                        backgroundColor: 'rgba(41, 50, 218, 0.7)',
                       },
                       '& .MuiSlider-rail': {
                         backgroundColor: 'rgba(255,255,255,0.3)',
+                      },
+                      '& .MuiSlider-thumb': {
+                        backgroundColor: 'rgba(41, 50, 218, 0.7)',
+                        '&:hover': {
+                          boxShadow: '0 0 0 8px rgba(41, 50, 218, 0.16)',
+                        },
                       },
                     }}
                   />
@@ -549,18 +553,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
               <Box display="flex" alignItems="center" gap={1}>
                 {/* Additional controls */}
-                <Tooltip title="Configuración">
-                  <IconButton sx={{ color: 'white', opacity: 0.7 }}>
-                    <Settings />
-                  </IconButton>
-                </Tooltip>
-
-                <Tooltip title="Subtítulos">
-                  <IconButton sx={{ color: 'white', opacity: 0.7 }}>
-                    <Subtitles />
-                  </IconButton>
-                </Tooltip>
-
                 <Tooltip title="Pantalla completa">
                   <IconButton 
                     onClick={handleFullscreen}
@@ -600,13 +592,20 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           }}
         >
           <Chip
-            label="Espacio: Play/Pause | ←→: Seek | M: Mute | F: Fullscreen"
+            label="Espacio: Reproducir/Pausar | ←→: Avanzar/Retroceder | M: Mute | F: Fullscreen"
             size="small"
-            sx={{
-              bgcolor: 'rgba(0,0,0,0.7)',
+            sx={isFullscreen ? {
+              bgcolor: 'rgba(41, 50, 218, 0.7)',
+              padding: '2rem',
               color: 'white',
-              fontSize: '0.7rem',
-            }}
+              fontSize: '1.7rem',
+            } : {
+              bgcolor: 'rgba(41, 50, 218, 0.7)',
+              padding: '0.5rem 1rem',
+              color: 'white',
+              fontSize: '.7rem',
+            }
+          }
           />
         </Box>
       )}
