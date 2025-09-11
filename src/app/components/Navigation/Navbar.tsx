@@ -23,6 +23,7 @@ import {
   ExitToApp,
   Notifications,
   Login,
+  ShoppingCart,
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
@@ -88,6 +89,13 @@ export const Navbar: React.FC<NavbarProps> = ({
               // Navegación para Maestros
               <>
                 <Button
+                  color={currentPage === 'home' ? 'primary' : 'inherit'}
+                  onClick={() => handleNavigation('/')}
+                  startIcon={<Home />}
+                >
+                  Inicio
+                </Button>
+                <Button
                   color={currentPage === 'teacher-courses' ? 'primary' : 'inherit'}
                   onClick={() => handleNavigation('/teacher/courses')}
                   startIcon={<Book />}
@@ -100,13 +108,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                   startIcon={<Person />}
                 >
                   Mi Perfil
-                </Button>
-                <Button
-                  color={currentPage === 'home' ? 'primary' : 'inherit'}
-                  onClick={() => handleNavigation('/')}
-                  startIcon={<Home />}
-                >
-                  Inicio
                 </Button>
               </>
             ) : (
@@ -125,6 +126,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                   startIcon={<Book />}
                 >
                   Cursos
+                </Button>
+                <Button
+                  color={currentPage === 'my-purchases' ? 'primary' : 'inherit'}
+                  onClick={() => handleNavigation('/my-purchases')}
+                  startIcon={<ShoppingCart />}
+                >
+                  Mis Compras
                 </Button>
               </>
             )}

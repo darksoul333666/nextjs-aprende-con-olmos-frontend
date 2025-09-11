@@ -32,6 +32,7 @@ import {
   Visibility,
 } from '@mui/icons-material';
 import { Navbar } from '../components/Navigation/Navbar';
+import { StripePayment } from '../components/StripePayment';
 import { courseService, Course, CourseFilters } from '../services/courseService';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../contexts/AuthContext';
@@ -45,6 +46,10 @@ export default function CoursesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [priceFilter, setPriceFilter] = useState('all');
   const [durationFilter, setDurationFilter] = useState('all');
+  
+  // Estado para el modal de pago
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
 
   useEffect(() => {
     const fetchCourses = async () => {
@@ -135,10 +140,21 @@ export default function CoursesPage() {
     router.push(`/course/${courseId}`);
   };
 
-  const handlePurchase = (courseId: string) => {
-    // Aquí se implementaría la lógica de compra
-    console.log('Comprando curso:', courseId);
-    alert('Funcionalidad de compra en desarrollo');
+  const handlePurchase = (course: Course) => {
+    setSelectedCourse(course);
+    setPaymentModalOpen(true);
+  };
+
+  const handlePaymentSuccess = () => {
+    setPaymentModalOpen(false);
+    setSelectedCourse(null);
+    // Recargar la página para actualizar el estado de los cursos
+    window.location.reload();
+  };
+
+  const handlePaymentClose = () => {
+    setPaymentModalOpen(false);
+    setSelectedCourse(null);
   };
 
   const handlePreview = (courseId: string) => {
@@ -375,7 +391,7 @@ export default function CoursesPage() {
                       <Button
                         variant="contained"
                         startIcon={<ShoppingCart />}
-                        onClick={() => handlePurchase(course._id)}
+                        onClick={() => handlePurchase(course)}
                         sx={{ flex: 1 }}
                       >
                         Comprar ${course.price || 0}
@@ -405,6 +421,20 @@ export default function CoursesPage() {
           </Button>
         </Paper>
       </Container>
+
+      {/* Modal de Pago con Stripe */}
+      {selectedCourse && (
+        <StripePayment
+          open={paymentModalOpen}
+          onClose={handlePaymentClose}
+          courseId={selectedCourse._id}
+          courseTitle={selectedCourse.title}
+          courseDescription={selectedCourse.description}
+          courseThumbnail={selectedCourse.thumbnail || '/placeholder-course.jpg'}
+          coursePrice={selectedCourse.price || 0}
+          onSuccess={handlePaymentSuccess}
+        />
+      )}
     </Box>
   );
 }

@@ -39,6 +39,7 @@ import {
   Star,
   Delete,
   ArrowBack,
+  PlayArrow,
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
@@ -224,6 +225,11 @@ export default function TeacherCoursesPage() {
       return `${hours}h ${minutes}m`;
     }
     return `${minutes}m`;
+  };
+
+  const handlePreviewCourse = (courseId: string) => {
+    // Navegar a la vista de preview del curso
+    router.push(`/course/${courseId}?preview=true`);
   };
 
 
@@ -438,6 +444,15 @@ export default function TeacherCoursesPage() {
                         </CardContent>
 
                         <CardActions sx={{ p: 2, pt: 0 }}>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<PlayArrow />}
+                            onClick={() => handlePreviewCourse(course.id)}
+                            sx={{ flex: 1 }}
+                          >
+                            Preview
+                          </Button>
                           <Button
                             variant="outlined"
                             size="small"

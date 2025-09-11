@@ -123,7 +123,7 @@ export default function CoursePage() {
       <Container maxWidth={false} disableGutters sx={{ height: 'calc(100vh - 64px)', position: 'relative' }}>
         {/* Indicador de Preview */}
         {isPreviewMode && (
-          <Box sx={{ position: 'absolute', top: 16, left: 16, zIndex: 1000 }}>
+          <Box sx={{ position: 'absolute', top: 80, left: 16, zIndex: 1000 }}>
             <Chip
               icon={<Visibility />}
               label="Vista Previa"
