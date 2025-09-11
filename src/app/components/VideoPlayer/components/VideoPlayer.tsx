@@ -68,7 +68,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // Debug: Log video URL
   console.log('VideoPlayer received URL:', url);
   console.log('VideoPlayer props:', { url, title, fullScreen, autoPlay });
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const videoRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [playing, setPlaying] = useState(autoPlay);
   const [currentTime, setCurrentTime] = useState(0);
@@ -79,7 +79,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [showControlsOverlay, setShowControlsOverlay] = useState(true);
   const [controlsTimeout, setControlsTimeout] = useState<NodeJS.Timeout | null>(null);
   const [isHovering, setIsHovering] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
   // Handle SSR - only render after mount
@@ -113,14 +113,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   // Handle play/pause
   const handlePlayPause = useCallback(() => {
-    if (videoRef.current) {
-      if (playing) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play();
-      }
-      setPlaying(!playing);
-    }
+    console.log('Toggle play/pause, current state:', playing);
+    setPlaying(!playing);
   }, [playing]);
 
   // Handle seek
@@ -293,24 +287,44 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       onMouseLeave={handleMouseLeave}
     >
       {isMounted ? (
-        <ReactPlayer
-          ref={videoRef}
-          width="100%"
-          src={url}
-          height="100%"
-          playing={playing}
-          muted={muted}
-          volume={volume}
-          onPlay={() => setPlaying(true)}
-          onPause={() => setPlaying(false)}
-          onProgress={handleTimeUpdate}
-          onEnded={handleEnded}
-          onError={(e) => console.error('Video error:', e)}
-          onReady={() => {
-            console.log('Video ready to play');
-            setIsLoading(false);
-          }}
-        />
+        <div>
+          {React.createElement(ReactPlayer as any, {
+            ref: videoRef,
+            width: "100%",
+            src: "/test-video.mp4",
+            height: "100%",
+            playing: playing,
+            muted: muted,
+            volume: volume,
+            onPlay: () => {
+              console.log('Video started playing');
+              setPlaying(true);
+              setIsLoading(false);
+            },
+            onPause: () => {
+              console.log('Video paused');
+              setPlaying(false);
+            },
+            onProgress: handleTimeUpdate,
+            onEnded: () => {
+              console.log('Video ended');
+              setPlaying(false);
+              handleEnded();
+            },
+            onError: (e: any) => {
+              console.error('Video error:', e);
+              setIsLoading(false);
+            },
+            onWaiting: () => {
+              console.log('Video waiting/buffering');
+              setIsLoading(true);
+            },
+            onCanPlay: () => {
+              console.log('Video can play');
+              setIsLoading(false);
+            }
+          })}
+        </div>
       ) : (
         <Box
           sx={{
