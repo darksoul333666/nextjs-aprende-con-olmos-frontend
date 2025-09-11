@@ -1,24 +1,28 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Container, CircularProgress, Paper, Typography, Box, Button } from '@mui/material';
-import { Edit } from '@mui/icons-material';
+import { Container, CircularProgress, Paper, Typography, Box, Button, Chip } from '@mui/material';
+import { Edit, Visibility } from '@mui/icons-material';
 import { CoursePlayer } from '../../components/CoursePlayer/CoursePlayer';
 import { courseService, Course } from '../../services/courseService';
 import { progressService } from '../../services/progressService';
 import { useAuth } from '../../contexts/AuthContext';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Navbar } from '../../components/Navigation/Navbar';
 
 export default function CoursePage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const courseId = params.id as string;
   const { isAuthenticated, user } = useAuth();
   const [course, setCourse] = useState<Course | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
+  
+  // Detectar si está en modo preview
+  const isPreviewMode = searchParams.get('preview') === 'true';
 
   // Handle SSR - only render after mount
   useEffect(() => {
@@ -46,7 +50,8 @@ export default function CoursePage() {
   }, [courseId]);
 
   const handleVideoComplete = async (videoId: string) => {
-    if (!isAuthenticated || !course) return;
+    // No guardar progreso en modo preview
+    if (isPreviewMode || !isAuthenticated || !course) return;
 
     try {
       await progressService.markVideoCompleted(course._id, videoId);
@@ -57,7 +62,8 @@ export default function CoursePage() {
   };
 
   const handleVideoProgress = async (videoId: string, progress: number) => {
-    if (!isAuthenticated || !course) return;
+    // No guardar progreso en modo preview
+    if (isPreviewMode || !isAuthenticated || !course) return;
 
     try {
       await progressService.updateVideoProgress(course._id, videoId, progress);
@@ -115,7 +121,28 @@ export default function CoursePage() {
     <Box sx={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
       <Navbar />
       <Container maxWidth={false} disableGutters sx={{ height: 'calc(100vh - 64px)', position: 'relative' }}>
-        {user?.role === 'maestro' && (
+        {/* Indicador de Preview */}
+        {isPreviewMode && (
+          <Box sx={{ position: 'absolute', top: 16, left: 16, zIndex: 1000 }}>
+            <Chip
+              icon={<Visibility />}
+              label="Vista Previa"
+              color="primary"
+              variant="filled"
+              sx={{ 
+                bgcolor: 'rgba(41, 50, 218, 0.9)',
+                color: 'white',
+                fontWeight: 600,
+                '& .MuiChip-icon': {
+                  color: 'white'
+                }
+              }}
+            />
+          </Box>
+        )}
+        
+        {/* Botón de Editar - Solo para maestros y NO en modo preview */}
+        {user?.role === 'maestro' && !isPreviewMode && (
           <Box sx={{ position: 'absolute', top: 16, right: 16, zIndex: 1000 }}>
             <Button
               variant="contained"
@@ -127,6 +154,7 @@ export default function CoursePage() {
             </Button>
           </Box>
         )}
+        
         <CoursePlayer
           course={course}
           onVideoComplete={handleVideoComplete}

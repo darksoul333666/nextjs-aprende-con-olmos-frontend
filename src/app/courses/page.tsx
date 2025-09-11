@@ -29,7 +29,7 @@ import {
   School,
   ShoppingCart,
   FilterList,
-  Edit,
+  Visibility,
 } from '@mui/icons-material';
 import { Navbar } from '../components/Navigation/Navbar';
 import { courseService, Course, CourseFilters } from '../services/courseService';
@@ -139,6 +139,11 @@ export default function CoursesPage() {
     // Aquí se implementaría la lógica de compra
     console.log('Comprando curso:', courseId);
     alert('Funcionalidad de compra en desarrollo');
+  };
+
+  const handlePreview = (courseId: string) => {
+    // Navegar a la vista de preview del curso
+    router.push(`/course/${courseId}?preview=true`);
   };
 
   if (isLoading) {
@@ -360,6 +365,14 @@ export default function CoursesPage() {
                         Ver Detalles
                       </Button>
                       <Button
+                        variant="outlined"
+                        startIcon={<Visibility />}
+                        onClick={() => handlePreview(course._id)}
+                        sx={{ flex: 1 }}
+                      >
+                        Ver Preview
+                      </Button>
+                      <Button
                         variant="contained"
                         startIcon={<ShoppingCart />}
                         onClick={() => handlePurchase(course._id)}
@@ -367,16 +380,6 @@ export default function CoursesPage() {
                       >
                         Comprar ${course.price || 0}
                       </Button>
-                      {user?.role === 'maestro' && (
-                        <Button
-                          variant="outlined"
-                          startIcon={<Edit />}
-                          onClick={() => router.push(`/courses/edit/${course._id}`)}
-                          sx={{ flex: 1 }}
-                        >
-                          Editar
-                        </Button>
-                      )}
                     </CardActions>
                   </Box>
                 </Box>

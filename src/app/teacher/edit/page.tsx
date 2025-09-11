@@ -33,6 +33,7 @@ import {
   Instagram,
   Facebook,
   ArrowBack,
+  Visibility,
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
@@ -224,9 +225,17 @@ export default function EditTeacherPage() {
           <IconButton onClick={() => router.push('/teacher')}>
             <ArrowBack />
           </IconButton>
-          <Typography variant="h3" component="h1" sx={{ fontWeight: 700 }}>
+          <Typography variant="h3" component="h1" sx={{ fontWeight: 700, flex: 1 }}>
             Editar Perfil del Maestro
           </Typography>
+          <Button
+            variant="outlined"
+            startIcon={<Visibility />}
+            onClick={() => router.push('/teacher')}
+            sx={{ ml: 2 }}
+          >
+            Ver como Estudiante
+          </Button>
         </Box>
 
         {error && (
