@@ -72,7 +72,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [playing, setPlaying] = useState(autoPlay);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
+  const [duration, setDuration] = useState(1);
   const [volume, setVolume] = useState(0.8);
   const [muted, setMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -80,6 +80,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [controlsTimeout, setControlsTimeout] = useState<NodeJS.Timeout | null>(null);
   const [isHovering, setIsHovering] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSeeking, setIsSeeking] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
   // Handle SSR - only render after mount
@@ -92,6 +93,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     console.log('VideoPlayer URL changed to:', url);
     if (url) {
       setIsLoading(true);
+      setIsSeeking(false); // Reset seeking state when URL changes
     }
   }, [url]);
 
@@ -119,12 +121,24 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   // Handle seek
   const handleSeek = useCallback((_: Event, newValue: number | number[]) => {
-    const seekTo = (newValue as number) * duration;
-    if (videoRef.current) {
-      videoRef.current.currentTime = seekTo;
-      setCurrentTime(seekTo);
+    const seekTo = newValue as number;
+    console.log('Seeking to:', seekTo);
+    
+    // Validar que el valor sea un número finito
+    if (!isFinite(seekTo) || isNaN(seekTo)) {
+      console.warn('Invalid seek value:', seekTo);
+      return;
     }
-  }, [duration]);
+    
+    setIsSeeking(true);
+    
+    if (videoRef.current && videoRef.current.duration) {
+      // Asegurar que el valor esté dentro del rango válido
+      const clampedValue = Math.max(0, Math.min(seekTo, videoRef.current.duration));
+      console.log('Setting currentTime to:', clampedValue);
+      videoRef.current.currentTime = clampedValue;
+    }
+  }, []);
 
   // Handle volume change
   const handleVolumeChange = useCallback((_: Event, newValue: number | number[]) => {
@@ -156,14 +170,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   }, [isFullscreen]);
 
-  // Handle time update
-  const handleTimeUpdate = useCallback(() => {
-    if (videoRef.current) {
-      const current = videoRef.current.currentTime;
-      setCurrentTime(current);
-      onProgress?.(current / duration);
-    }
-  }, [duration, onProgress]);
 
   // Handle loaded metadata
   const handleLoadedMetadata = useCallback(() => {
@@ -305,7 +311,35 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               console.log('Video paused');
               setPlaying(false);
             },
-            onProgress: handleTimeUpdate,
+            onTimeUpdate: () => {
+              const player = videoRef.current;
+              if (!player) return;
+              
+              console.log('onTimeUpdate', player.currentTime);
+              if (!player.duration) return;
+              
+              setCurrentTime(player.currentTime);
+              onProgress?.(player.currentTime / player.duration);
+              
+              // Si estábamos buscando, terminar el estado de búsqueda
+              if (isSeeking) {
+                setIsSeeking(false);
+              }
+            },
+            onDurationChange: () => {
+              const player = videoRef.current;
+              if (!player) return;
+              
+              console.log('onDurationChange', player.duration);
+              setDuration(player.duration);
+            },
+            onProgress: () => {
+              const player = videoRef.current;
+              if (!player || !player.buffered?.length) return;
+              
+              console.log('onProgress');
+              // No necesitamos actualizar el estado aquí, onTimeUpdate se encarga
+            },
             onEnded: () => {
               console.log('Video ended');
               setPlaying(false);
@@ -317,7 +351,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             },
             onWaiting: () => {
               console.log('Video waiting/buffering');
-              setIsLoading(true);
+              // Solo mostrar loading si no estamos buscando
+              if (!isSeeking) {
+                setIsLoading(true);
+              }
             },
             onCanPlay: () => {
               console.log('Video can play');
@@ -413,9 +450,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             <Box sx={{ mb: 1 }}>
               <Slider
                 min={0}
-                max={duration}
+                max={Math.max(duration, 1)}
                 step={0.1}
-                value={currentTime}
+                value={isFinite(currentTime) ? Math.max(currentTime, 0) : 0}
                 onChange={handleSeek}
                 sx={{
                   color: 'primary.main',
@@ -506,7 +543,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
                 {/* Time display */}
                 <Typography variant="caption" sx={{ ml: 2, opacity: 0.8 }}>
-                  {formatTime(currentTime)} / {formatTime(duration)}
+                  {formatTime(isNaN(currentTime) ? 0 : currentTime)} / {formatTime(isNaN(duration) ? 0 : duration)}
                 </Typography>
               </Box>
 
