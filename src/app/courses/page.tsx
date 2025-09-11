@@ -271,20 +271,40 @@ export default function CoursesPage() {
               }}>
                 <Box display="flex" flexDirection={{ xs: 'column', md: 'row' }}>
                   {/* Imagen del Curso */}
-                  <CardMedia
-                    component="div"
+                  <Box
                     sx={{
                       width: { xs: '100%', md: 280 },
                       height: { xs: 200, md: 200 },
-                      background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
                       position: 'relative',
+                      overflow: 'hidden',
                     }}
                   >
-                    <School sx={{ fontSize: 80 }} />
+                    {course.thumbnail ? (
+                      <CardMedia
+                        component="img"
+                        image={course.thumbnail}
+                        alt={course.title}
+                        sx={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                        }}
+                      />
+                    ) : (
+                      <Box
+                        sx={{
+                          width: '100%',
+                          height: '100%',
+                          background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                        }}
+                      >
+                        <School sx={{ fontSize: 80 }} />
+                      </Box>
+                    )}
                     <Chip
                       label={`$${course.price || 0}`}
                       color="primary"
@@ -297,7 +317,7 @@ export default function CoursesPage() {
                         fontWeight: 600,
                       }}
                     />
-                  </CardMedia>
+                  </Box>
 
                   {/* Contenido del Curso */}
                   <Box flex={1} display="flex" flexDirection="column">
