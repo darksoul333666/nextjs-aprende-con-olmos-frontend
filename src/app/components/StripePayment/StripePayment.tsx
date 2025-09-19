@@ -76,9 +76,13 @@ export const StripePayment: React.FC<StripePaymentProps> = ({
     try {
       setIsProcessing(true);
       setError(null);
-
+      
       // Crear sesión de checkout
       const session = await stripeService.createCheckoutSession(courseId);
+      
+      if (!session || !session.sessionId) {
+        throw new Error('No se pudo crear la sesión de pago. Inténtalo de nuevo.');
+      }
       
       // Cargar Stripe
       const stripe = await loadStripe(stripeConfig!.publishableKey);
@@ -96,12 +100,12 @@ export const StripePayment: React.FC<StripePaymentProps> = ({
         throw new Error(error.message);
       }
     } catch (err) {
-      console.error('Error processing payment:', err);
       setError(err instanceof Error ? err.message : 'Error al procesar el pago');
     } finally {
       setIsProcessing(false);
     }
   };
+
 
   const handleClose = () => {
     if (!isProcessing) {
@@ -213,28 +217,28 @@ export const StripePayment: React.FC<StripePaymentProps> = ({
         )}
       </DialogContent>
 
-      <DialogActions sx={{ p: 3, pt: 1 }}>
-        <Button 
-          onClick={handleClose} 
-          disabled={isProcessing}
-          color="inherit"
-        >
-          Cancelar
-        </Button>
-        <Button
-          onClick={handlePayment}
-          disabled={isLoading || isProcessing || !stripeConfig}
-          variant="contained"
-          startIcon={isProcessing ? <CircularProgress size={16} /> : <CreditCard />}
-          sx={{ 
-            minWidth: 140,
-            bgcolor: 'primary.main',
-            '&:hover': { bgcolor: 'primary.dark' }
-          }}
-        >
-          {isProcessing ? 'Procesando...' : 'Pagar con Stripe'}
-        </Button>
-      </DialogActions>
+    <DialogActions sx={{ p: 3, pt: 1 }}>
+      <Button 
+        onClick={handleClose} 
+        disabled={isProcessing}
+        color="inherit"
+      >
+        Cancelar
+      </Button>
+      <Button
+        onClick={handlePayment}
+        disabled={isLoading || isProcessing || !stripeConfig}
+        variant="contained"
+        startIcon={isProcessing ? <CircularProgress size={16} /> : <CreditCard />}
+        sx={{ 
+          minWidth: 140,
+          bgcolor: 'primary.main',
+          '&:hover': { bgcolor: 'primary.dark' }
+        }}
+      >
+        {isProcessing ? 'Procesando...' : 'Pagar con Stripe'}
+      </Button>
+    </DialogActions>
     </Dialog>
   );
 };
