@@ -23,11 +23,13 @@ import { Navbar } from '../../components/Navigation/Navbar';
 import { stripeService } from '../../services/stripeService';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
+import { useCart } from '../../contexts/CartContext';
 
 export default function PaymentSuccessPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isAuthenticated } = useAuth();
+  const { clearCart } = useCart();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [purchase, setPurchase] = useState<any>(null);
@@ -49,28 +51,73 @@ export default function PaymentSuccessPage() {
       setIsLoading(true);
       setError(null);
       
-      // Primero intentar procesar la sesión
+      
+      // Primero intentar procesar la sesión (para compras individuales)
       try {
         const processResponse = await stripeService.processSession(sessionId);
-        if (processResponse.success) {
-          setPurchase(processResponse.purchase);
-          setIsLoading(false);
+        
+        // Verificar si la respuesta tiene la estructura esperada
+        if (processResponse && (processResponse.success || (processResponse as any).purchase)) {
+          const purchase = processResponse.data?.purchase || (processResponse as any).purchase;
+          const session = processResponse.data?.session || (processResponse as any).session;
+          
+          const purchaseData = {
+            success: true,
+            course: purchase?.course || purchase,
+            price: purchase?.price || 0,
+            session: session,
+            message: 'Compra procesada exitosamente'
+          };
+          await handlePurchaseSuccess(purchaseData);
           return;
         }
       } catch (processError) {
-        console.log('Error procesando sesión, intentando verificación directa:', processError);
       }
       
-      // Si el procesamiento falla, verificar directamente
-      const response = await stripeService.getSessionStatus(sessionId);
-      
-      if (response.session && response.session.status === 'paid') {
-        setPurchase(response.purchase);
-      } else {
-        setError('El pago no se completó correctamente');
+      // Intentar procesar como sesión de carrito
+      try {
+        const cartProcessResponse = await stripeService.processCartSession(sessionId);
+        
+        // Verificar si la respuesta tiene la estructura esperada
+        if (cartProcessResponse && (cartProcessResponse.success || (cartProcessResponse as any).cartPurchase)) {
+          // Crear objeto de compra con la información del carrito
+          const cartPurchase = cartProcessResponse.data?.cartPurchase || (cartProcessResponse as any).cartPurchase;
+          const sessionData = (cartProcessResponse.data as any)?.session || (cartProcessResponse as any).session;
+          
+          const purchaseData = {
+            success: true,
+            cartPurchase: cartPurchase,
+            session: sessionData,
+            totalAmount: cartPurchase?.totalAmount || 0,
+            itemCount: cartPurchase?.itemCount || 0,
+            message: 'Compra de carrito procesada exitosamente'
+          };
+          await handlePurchaseSuccess(purchaseData);
+          return;
+        }
+      } catch (cartError) {
       }
+      
+      // Si ambos métodos fallan, verificar directamente el estado de la sesión
+      try {
+        const sessionStatus = await stripeService.getSessionStatus(sessionId);
+        
+        if (sessionStatus && sessionStatus.status === 'paid') {
+          // Crear un objeto de compra básico para mostrar éxito
+          const purchaseData = {
+            success: true,
+            sessionId: sessionId,
+            message: 'Pago verificado exitosamente'
+          };
+          await handlePurchaseSuccess(purchaseData);
+        } else {
+          setError('El pago no se completó correctamente');
+        }
+      } catch (statusError) {
+        setError('No se pudo verificar el estado del pago');
+      }
+      
     } catch (err) {
-      console.error('Error verifying payment:', err);
       setError('Error al verificar el pago');
     } finally {
       setIsLoading(false);
@@ -78,8 +125,13 @@ export default function PaymentSuccessPage() {
   };
 
   const handleContinueCourse = () => {
+    // Para compras individuales
     if (purchase?.course?.id) {
       router.push(`/course/${purchase.course.id}`);
+    }
+    // Para compras del carrito o cuando no hay curso específico
+    else {
+      router.push('/my-purchases');
     }
   };
 
@@ -89,6 +141,18 @@ export default function PaymentSuccessPage() {
 
   const handleViewPurchases = () => {
     router.push('/my-purchases');
+  };
+
+  const handlePurchaseSuccess = async (purchaseData: any) => {
+    setPurchase(purchaseData);
+    setIsLoading(false);
+    
+    // Limpiar el carrito después de una compra exitosa
+    try {
+      await clearCart();
+    } catch (error) {
+      // No mostrar error al usuario, solo log
+    }
   };
 
   if (!isAuthenticated) {
@@ -151,19 +215,21 @@ export default function PaymentSuccessPage() {
             <Card sx={{ mb: 4 }}>
               <CardContent sx={{ p: 3 }}>
                 <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 600 }}>
-                  {purchase.course?.title || 'Curso Comprado'}
+                  {purchase.course?.title || (purchase.itemCount > 1 ? `${purchase.itemCount} Cursos Comprados` : 'Curso Comprado')}
                 </Typography>
                 
                 <Typography variant="body1" color="text.secondary" paragraph>
-                  {purchase.course?.description || 'Descripción del curso'}
+                  {purchase.course?.description || purchase.message || 'Tu compra se ha procesado correctamente'}
                 </Typography>
 
                 <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                   <Typography variant="h6" color="primary" fontWeight="bold">
-                    ${purchase.price ? purchase.price.toFixed(2) : (purchase.session?.amountTotal ? (purchase.session.amountTotal / 100).toFixed(2) : '0.00')} USD
+                    ${purchase.price ? purchase.price.toFixed(2) : 
+                      (purchase.totalAmount ? (purchase.totalAmount / 100).toFixed(2) : 
+                      (purchase.session?.amountTotal ? (purchase.session.amountTotal / 100).toFixed(2) : '0.00'))} USD
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Compra realizada exitosamente
+                    {purchase.itemCount > 1 ? `${purchase.itemCount} items` : 'Compra realizada exitosamente'}
                   </Typography>
                 </Box>
 
@@ -178,7 +244,7 @@ export default function PaymentSuccessPage() {
                       '&:hover': { bgcolor: 'primary.dark' }
                     }}
                   >
-                    Continuar Curso
+                    {purchase.course?.title ? 'Continuar Curso' : 'Ver Mis Compras'}
                   </Button>
                   <Button
                     variant="outlined"
