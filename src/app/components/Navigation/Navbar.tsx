@@ -27,6 +27,8 @@ import {
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
+import { CartIcon } from '../Cart/CartIcon';
+import { CartDrawer } from '../Cart/CartDrawer';
 
 interface NavbarProps {
   currentPage?: string;
@@ -39,6 +41,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const { user, logout, isAuthenticated } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [notificationAnchor, setNotificationAnchor] = useState<null | HTMLElement>(null);
+  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -69,6 +72,14 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const handleLogin = () => {
     router.push('/login');
+  };
+
+  const handleCartOpen = () => {
+    setCartDrawerOpen(true);
+  };
+
+  const handleCartClose = () => {
+    setCartDrawerOpen(false);
   };
 
   return (
@@ -152,6 +163,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           </IconButton>
         )}
 
+        {/* Carrito - Solo para estudiantes */}
+        {isAuthenticated && user?.role === 'estudiante' && (
+          <CartIcon onClick={handleCartOpen} />
+        )}
+
         {/* Avatar y Menú de Usuario o Botón de Login */}
         {isAuthenticated ? (
           <Box display="flex" alignItems="center">
@@ -228,6 +244,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           </MenuItem>
         </Menu>
       </Toolbar>
+      
+      {/* Cart Drawer */}
+      <CartDrawer open={cartDrawerOpen} onClose={handleCartClose} />
     </AppBar>
   );
 };

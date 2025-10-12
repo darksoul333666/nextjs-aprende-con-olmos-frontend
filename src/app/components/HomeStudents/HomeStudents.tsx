@@ -27,6 +27,7 @@ import {
 } from '@mui/icons-material';
 import { Navbar } from '../Navigation/Navbar';
 import { StudentStats } from '../StudentStats';
+import { CourseCard } from '../CourseCard/CourseCard';
 import { Course } from '../../services/courseService';
 import { useRouter } from 'next/navigation';
 
@@ -45,7 +46,16 @@ export const HomeStudents: React.FC<HomeStudentsProps> = ({
 }) => {
   const router = useRouter();
 
-  const formatDuration = (seconds: number): string => {
+  // Filtrar cursos disponibles para excluir los ya comprados
+  const purchasedCourseIds = userCourses.map(course => course._id);
+  const filteredAvailableCourses = availableCourses.filter(course => 
+    !purchasedCourseIds.includes(course._id)
+  );
+
+  const formatDuration = (seconds: number | undefined): string => {
+    if (!seconds || isNaN(seconds) || seconds <= 0) {
+      return '0m';
+    }
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     if (hours > 0) {
@@ -87,7 +97,7 @@ export const HomeStudents: React.FC<HomeStudentsProps> = ({
           <Box display="flex" flexDirection={{ xs: 'column', md: 'row' }} alignItems="center" gap={4}>
             <Box flex={1}>
               <Typography variant="h2" component="h1" gutterBottom sx={{ fontWeight: 700 }}>
-                Domina las Matemáticas
+                Matemáticas
               </Typography>
               <Typography variant="h5" paragraph sx={{ opacity: 0.9 }}>
                 Aprende con el Prof. Carlos Olmos, experto en educación matemática con más de 15 años de experiencia.
@@ -150,86 +160,27 @@ export const HomeStudents: React.FC<HomeStudentsProps> = ({
                 Ver Todos
               </Button>
             </Box>
+            {/* Debug info - remover en producción */}
+            {process.env.NODE_ENV === 'development' && (
+              <Box sx={{ mb: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
+                <Typography variant="caption" color="text.secondary">
+                  Debug: {userCourses.length} cursos encontrados
+                </Typography>
+                {userCourses.map((course, index) => (
+                  <Typography key={index} variant="caption" display="block">
+                    {index + 1}. {course.title || 'Sin título'} - ID: {course._id}
+                  </Typography>
+                ))}
+              </Box>
+            )}
             <Box display="flex" flexDirection={{ xs: 'column', md: 'row' }} gap={3}>
               {userCourses.map((course) => (
                 <Box key={course._id} flex={1}>
-                  <Card 
-                    sx={{ 
-                      height: '100%',
-                      cursor: 'pointer',
-                      transition: 'transform 0.2s, box-shadow 0.2s',
-                      '&:hover': {
-                        transform: 'translateY(-4px)',
-                        boxShadow: 4,
-                      }
-                    }}
-                    onClick={() => handleCourseClick(course._id)}
-                  >
-                    <Box sx={{ height: 200, overflow: 'hidden' }}>
-                      {course.thumbnail ? (
-                        <CardMedia
-                          component="img"
-                          image={course.thumbnail}
-                          alt={course.title}
-                          sx={{
-                            height: 200,
-                            objectFit: 'cover',
-                          }}
-                        />
-                      ) : (
-                        <Box
-                          sx={{
-                            width: '100%',
-                            height: '100%',
-                            background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: 'white',
-                          }}
-                        >
-                          <School sx={{ fontSize: 80 }} />
-                        </Box>
-                      )}
-                    </Box>
-                    <CardContent sx={{ flexGrow: 1 }}>
-                      <Box display="flex" alignItems="center" gap={1} mb={1}>
-                        <CheckCircle color="success" fontSize="small" />
-                        <Typography variant="caption" color="success.main">
-                          En Progreso
-                        </Typography>
-                      </Box>
-                      <Typography variant="h6" component="h3" gutterBottom>
-                        {course.title}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" paragraph>
-                        {course.description}
-                      </Typography>
-                      <Box display="flex" alignItems="center" gap={2} mb={2}>
-                        <Box display="flex" alignItems="center" gap={0.5}>
-                          <AccessTime fontSize="small" />
-                          <Typography variant="caption">
-                            {formatDuration(course.totalDuration)}
-                          </Typography>
-                        </Box>
-                        <Box display="flex" alignItems="center" gap={0.5}>
-                          <People fontSize="small" />
-                          <Typography variant="caption">
-                            {course.totalStudents}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </CardContent>
-                    <CardActions>
-                      <Button 
-                        variant="contained" 
-                        fullWidth
-                        startIcon={<PlayArrow />}
-                      >
-                        Continuar
-                      </Button>
-                    </CardActions>
-                  </Card>
+                  <CourseCard
+                    course={course}
+                    variant="compact"
+                    showActions={true}
+                  />
                 </Box>
               ))}
             </Box>
@@ -245,121 +196,24 @@ export const HomeStudents: React.FC<HomeStudentsProps> = ({
             Explora nuestra colección completa de cursos de matemáticas diseñados para todos los niveles.
           </Typography>
           
-          {!availableCourses || availableCourses.length === 0 ? (
+          {!filteredAvailableCourses || filteredAvailableCourses.length === 0 ? (
             <Paper sx={{ p: 6, textAlign: 'center' }}>
               <Typography variant="h6" color="text.secondary">
-                No hay cursos disponibles en este momento.
+                {isAuthenticated && userCourses.length > 0 
+                  ? '¡Felicidades! Ya tienes acceso a todos los cursos disponibles.'
+                  : 'No hay cursos disponibles en este momento.'
+                }
               </Typography>
             </Paper>
           ) : (
-            <Box display="flex" flexDirection="column" gap={3}>
-              {availableCourses.map((course) => (
-                <Box key={course._id} flex={1}>
-                  <Card 
-                    sx={{ 
-                      height: '100%',
-                      cursor: 'pointer',
-                      transition: 'transform 0.2s, box-shadow 0.2s',
-                      '&:hover': {
-                        transform: 'translateY(-4px)',
-                        boxShadow: 4,
-                      }
-                    }}
-                    onClick={() => handleCourseClick(course._id)}
-                  >
-                    <Box display="flex" flexDirection={{ xs: 'column', md: 'row' }}>
-                      {/* Imagen del Curso */}
-                      <Box
-                        sx={{
-                          width: { xs: '100%', md: 280 },
-                          height: { xs: 200, md: 200 },
-                          position: 'relative',
-                          overflow: 'hidden',
-                        }}
-                      >
-                        {course.thumbnail ? (
-                          <CardMedia
-                            component="img"
-                            image={course.thumbnail}
-                            alt={course.title}
-                            sx={{
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'cover',
-                            }}
-                          />
-                        ) : (
-                          <Box
-                            sx={{
-                              width: '100%',
-                              height: '100%',
-                              background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: 'white',
-                            }}
-                          >
-                            <School sx={{ fontSize: 80 }} />
-                          </Box>
-                        )}
-                        <Chip
-                          label={`$${course.price}`}
-                          color="primary"
-                          sx={{
-                            position: 'absolute',
-                            top: 16,
-                            right: 16,
-                            bgcolor: 'white',
-                            color: 'primary.main',
-                            fontWeight: 600,
-                          }}
-                        />
-                      </Box>
-
-                      {/* Contenido del Curso */}
-                      <Box flex={1} display="flex" flexDirection="column">
-                        <CardContent sx={{ flexGrow: 1 }}>
-                          <Box display="flex" alignItems="center" gap={1} mb={1}>
-                            <Rating value={course.rating || 0} precision={0.1} size="small" readOnly />
-                            <Typography variant="caption" color="text.secondary">
-                              ({course.rating || 0})
-                            </Typography>
-                          </Box>
-                          <Typography variant="h6" component="h3" gutterBottom>
-                            {course.title}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary" paragraph>
-                            {course.description}
-                          </Typography>
-                          <Box display="flex" alignItems="center" gap={2} mb={2}>
-                            <Box display="flex" alignItems="center" gap={0.5}>
-                              <AccessTime fontSize="small" />
-                              <Typography variant="caption">
-                                {formatDuration(course.totalDuration)}
-                              </Typography>
-                            </Box>
-                            <Box display="flex" alignItems="center" gap={0.5}>
-                              <People fontSize="small" />
-                              <Typography variant="caption">
-                                {course.totalStudents} estudiantes
-                              </Typography>
-                            </Box>
-                          </Box>
-                        </CardContent>
-                        <CardActions>
-                          <Button 
-                            variant="contained" 
-                            fullWidth
-                            startIcon={<School />}
-                          >
-                            Comprar Curso
-                          </Button>
-                        </CardActions>
-                      </Box>
-                    </Box>
-                  </Card>
-                </Box>
+            <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(auto-fit, minmax(400px, 1fr))' }} gap={3}>
+              {filteredAvailableCourses.map((course) => (
+                <CourseCard
+                  key={course._id}
+                  course={course}
+                  variant="default"
+                  showActions={true}
+                />
               ))}
             </Box>
           )}

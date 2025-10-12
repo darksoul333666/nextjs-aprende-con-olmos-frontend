@@ -217,8 +217,20 @@ class CourseService {
   // Obtener cursos comprados por el usuario autenticado
   async getPurchasedCourses(): Promise<Course[]> {
     try {
+      console.log('=== DEBUG COURSE SERVICE ===');
+      console.log('Fetching purchased courses from /courses/purchased');
+      
       const response = await apiService.get<Course[]>('/courses/purchased');
+      
+      console.log('Raw response from backend:', response);
+      console.log('Response data:', response.data);
+      console.log('Response type:', typeof response.data);
+      console.log('Response is array:', Array.isArray(response.data));
+      
       const courses = this.ensureArray<Course>(response.data || response);
+      console.log('Processed courses:', courses);
+      console.log('===========================');
+      
       return courses;
     } catch (error) {
       console.error('Error fetching purchased courses:', error);
