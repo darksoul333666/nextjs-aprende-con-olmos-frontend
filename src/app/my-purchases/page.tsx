@@ -226,32 +226,26 @@ export default function MyPurchasesPage() {
                         <Typography variant="h6" sx={{ fontWeight: 600 }}>
                           ${purchaseGroup.totalAmount.toFixed(2)}
                         </Typography>
-                        <Chip
-                          label={getStatusText(purchaseGroup.status)}
-                          color={getStatusColor(purchaseGroup.status) as any}
-                          size="small"
-                          icon={purchaseGroup.status === 'completed' ? <CheckCircle /> : undefined}
-                          sx={{ bgcolor: 'white', color: 'primary.main' }}
-                        />
                       </Box>
                       <Button
-                        variant="contained"
+                        variant="outlined"
                         startIcon={<Download />}
                         onClick={() => handleDownloadReceipt(purchaseGroup.id)}
                         disabled={downloadingIds.has(purchaseGroup.id)}
                         sx={{
-                          bgcolor: 'white',
-                          color: 'primary.main',
+                          borderColor: 'white',
+                          color: 'white',
                           '&:hover': {
-                            bgcolor: 'rgba(255, 255, 255, 0.9)',
+                            borderColor: 'rgba(255, 255, 255, 0.8)',
+                            bgcolor: 'rgba(255, 255, 255, 0.1)',
                           },
                           '&:disabled': {
-                            bgcolor: 'rgba(255, 255, 255, 0.5)',
-                            color: 'rgba(25, 118, 210, 0.5)',
+                            borderColor: 'rgba(255, 255, 255, 0.3)',
+                            color: 'rgba(255, 255, 255, 0.5)',
                           },
                         }}
                       >
-                        {downloadingIds.has(purchaseGroup.id) ? 'Descargando...' : 'Comprobante'}
+                        {downloadingIds.has(purchaseGroup.id) ? 'Descargando...' : 'PDF'}
                       </Button>
                     </Box>
                   </Box>
