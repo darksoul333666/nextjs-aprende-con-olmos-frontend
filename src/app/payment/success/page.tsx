@@ -49,9 +49,22 @@ export default function PaymentSuccessPage() {
       setIsLoading(true);
       setError(null);
       
+      // Primero intentar procesar la sesión
+      try {
+        const processResponse = await stripeService.processSession(sessionId);
+        if (processResponse.success) {
+          setPurchase(processResponse.purchase);
+          setIsLoading(false);
+          return;
+        }
+      } catch (processError) {
+        console.log('Error procesando sesión, intentando verificación directa:', processError);
+      }
+      
+      // Si el procesamiento falla, verificar directamente
       const response = await stripeService.getSessionStatus(sessionId);
       
-      if (response.session && response.session.status === 'complete') {
+      if (response.session && response.session.status === 'paid') {
         setPurchase(response.purchase);
       } else {
         setError('El pago no se completó correctamente');
@@ -147,10 +160,10 @@ export default function PaymentSuccessPage() {
 
                 <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                   <Typography variant="h6" color="primary" fontWeight="bold">
-                    ${purchase.session?.amountTotal ? (purchase.session.amountTotal / 100).toFixed(2) : '0.00'} USD
+                    ${purchase.price ? purchase.price.toFixed(2) : (purchase.session?.amountTotal ? (purchase.session.amountTotal / 100).toFixed(2) : '0.00')} USD
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    ID de Sesión: {sessionId}
+                    Compra realizada exitosamente
                   </Typography>
                 </Box>
 

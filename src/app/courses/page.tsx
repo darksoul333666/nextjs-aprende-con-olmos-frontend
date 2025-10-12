@@ -30,10 +30,13 @@ import {
   ShoppingCart,
   FilterList,
   Visibility,
+  CheckCircle,
+  PlayArrow,
 } from '@mui/icons-material';
 import { Navbar } from '../components/Navigation/Navbar';
 import { StripePayment } from '../components/StripePayment';
 import { courseService, Course, CourseFilters } from '../services/courseService';
+import { stripeService } from '../services/stripeService';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -42,6 +45,7 @@ export default function CoursesPage() {
   const { user } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
+  const [purchasedCourseIds, setPurchasedCourseIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [priceFilter, setPriceFilter] = useState('all');
@@ -57,13 +61,36 @@ export default function CoursesPage() {
         setIsLoading(true);
         const coursesData = await courseService.getCourses();
         console.log('Cursos obtenidos:', coursesData);
-        console.log('Estructura del primer curso:', coursesData[0]);
+        
         const coursesArray = Array.isArray(coursesData) ? coursesData : [];
         setCourses(coursesArray);
         setFilteredCourses(coursesArray);
+        
+        // Verificar si el backend proporciona isPurchased correctamente
+        const hasPurchasedCourses = coursesArray.some(course => course.isPurchased === true);
+        
+        // Si no hay cursos marcados como comprados, usar el método alternativo
+        if (!hasPurchasedCourses && user) {
+          try {
+            const purchasesResponse = await stripeService.getPurchases();
+            console.log('Compras de Stripe:', purchasesResponse);
+            
+            if (purchasesResponse.purchases && Array.isArray(purchasesResponse.purchases)) {
+              const purchasedIds = purchasesResponse.purchases
+                .filter(purchase => purchase.status === 'completed')
+                .map(purchase => purchase.courseId);
+              
+              console.log('IDs de cursos comprados:', purchasedIds);
+              setPurchasedCourseIds(purchasedIds);
+            }
+          } catch (purchaseError) {
+            console.error('Error obteniendo compras:', purchaseError);
+          }
+        }
       } catch (error) {
         console.error('Error fetching courses:', error);
         setCourses([]);
+        setPurchasedCourseIds([]);
         setFilteredCourses([]);
       } finally {
         setIsLoading(false);
@@ -71,7 +98,7 @@ export default function CoursesPage() {
     };
 
     fetchCourses();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     // Filtrar cursos basado en los criterios
@@ -129,6 +156,16 @@ export default function CoursesPage() {
       return `${hours}h ${minutes}m`;
     }
     return `${minutes}m`;
+  };
+
+  const isCoursePurchased = (course: Course): boolean => {
+    // Usar el campo isPurchased del backend si está disponible
+    if (course.isPurchased !== undefined) {
+      return course.isPurchased;
+    }
+    
+    // Fallback al método anterior si el backend no proporciona el campo
+    return purchasedCourseIds.includes(course._id);
   };
 
   const handleCourseClick = (courseId: string) => {
@@ -261,14 +298,21 @@ export default function CoursesPage() {
           </Paper>
         ) : (
           <Box display="flex" flexDirection="column" gap={3}>
-            {filteredCourses.map((course) => (
-              <Card key={course._id} sx={{ 
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: 4,
-                }
-              }}>
+            {filteredCourses.map((course) => {
+              const isPurchased = isCoursePurchased(course);
+              
+              return (
+                <Card key={course._id} sx={{ 
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  border: isPurchased ? '2px solid' : 'none',
+                  borderColor: isPurchased ? 'success.main' : 'transparent',
+                  bgcolor: isPurchased ? 'rgba(76, 175, 80, 0.05)' : 'background.paper',
+                  position: 'relative',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: 4,
+                  }
+                }}>
                 <Box display="flex" flexDirection={{ xs: 'column', md: 'row' }}>
                   {/* Imagen del Curso */}
                   <Box
@@ -305,18 +349,34 @@ export default function CoursesPage() {
                         <School sx={{ fontSize: 80 }} />
                       </Box>
                     )}
-                    <Chip
-                      label={`$${course.price || 0}`}
-                      color="primary"
-                      sx={{
-                        position: 'absolute',
-                        top: 16,
-                        right: 16,
-                        bgcolor: 'white',
-                        color: 'primary.main',
-                        fontWeight: 600,
-                      }}
-                    />
+                    {isPurchased ? (
+                      <Chip
+                        label="Comprado"
+                        color="success"
+                        icon={<CheckCircle />}
+                        sx={{
+                          position: 'absolute',
+                          top: 16,
+                          right: 16,
+                          bgcolor: 'success.main',
+                          color: 'white',
+                          fontWeight: 600,
+                        }}
+                      />
+                    ) : (
+                      <Chip
+                        label={`$${course.price || 0}`}
+                        color="primary"
+                        sx={{
+                          position: 'absolute',
+                          top: 16,
+                          right: 16,
+                          bgcolor: 'white',
+                          color: 'primary.main',
+                          fontWeight: 600,
+                        }}
+                      />
+                    )}
                   </Box>
 
                   {/* Contenido del Curso */}
@@ -334,6 +394,18 @@ export default function CoursesPage() {
                       
                       <Typography variant="h5" component="h3" gutterBottom>
                         {course.title}
+                        {isPurchased && (
+                          <Chip 
+                            label="Comprado" 
+                            color="success" 
+                            size="small" 
+                            sx={{ 
+                              ml: 2, 
+                              fontWeight: 'bold',
+                              opacity: 0.8
+                            }}
+                          />
+                        )}
                       </Typography>
                       
                       <Typography variant="body2" color="text.secondary" paragraph>
@@ -408,19 +480,45 @@ export default function CoursesPage() {
                       >
                         Ver Preview
                       </Button>
-                      <Button
-                        variant="contained"
-                        startIcon={<ShoppingCart />}
-                        onClick={() => handlePurchase(course)}
-                        sx={{ flex: 1 }}
-                      >
-                        Comprar ${course.price || 0}
-                      </Button>
+                      {isPurchased ? (
+                        <Button
+                          variant="contained"
+                          startIcon={<PlayArrow />}
+                          onClick={() => handleCourseClick(course._id)}
+                          sx={{ 
+                            flex: 1,
+                            bgcolor: 'success.main',
+                            '&:hover': { 
+                              bgcolor: 'success.dark',
+                              transform: 'scale(1.02)'
+                            },
+                            transition: 'all 0.2s ease-in-out'
+                          }}
+                        >
+                          Continuar Curso
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="contained"
+                          startIcon={<ShoppingCart />}
+                          onClick={() => handlePurchase(course)}
+                          sx={{ 
+                            flex: 1,
+                            '&:hover': { 
+                              transform: 'scale(1.02)'
+                            },
+                            transition: 'all 0.2s ease-in-out'
+                          }}
+                        >
+                          Comprar ${course.price || 0}
+                        </Button>
+                      )}
                     </CardActions>
                   </Box>
                 </Box>
               </Card>
-            ))}
+              );
+            })}
           </Box>
         )}
 

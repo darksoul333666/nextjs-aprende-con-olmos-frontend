@@ -11,18 +11,25 @@ export interface CheckoutSession {
 }
 
 export interface Purchase {
-  id: string;
-  courseId: string;
-  price: number;
-  status: string;
-  purchaseDate: string;
-  course: {
-    id: string;
+  _id: string;
+  userId: string;
+  courseId: {
+    _id: string;
     title: string;
     description: string;
-    thumbnail: string;
     instructorName: string;
+    thumbnail?: string;
+    price: number;
   };
+  price: number;
+  paymentMethod: string;
+  stripeSessionId: string;
+  stripeCustomerId: string;
+  status: string;
+  purchaseDate: string;
+  createdAt: string;
+  updatedAt: string;
+  stripePaymentIntentId: string;
 }
 
 export interface PurchasesResponse {
@@ -71,6 +78,19 @@ export const stripeService = {
     if (!response.success || !response.data) {
       throw new Error(response.message || 'Error loading session status');
     }
+    return response.data;
+  },
+
+  // Procesar sesión de pago
+  async processSession(sessionId: string): Promise<any> {
+    const response = await apiService.post<any>('/stripe/process-session', {
+      sessionId
+    });
+    
+    if (!response.success) {
+      throw new Error(response.message || 'Error processing session');
+    }
+    
     return response.data;
   },
 

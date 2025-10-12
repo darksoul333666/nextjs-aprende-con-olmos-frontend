@@ -145,21 +145,62 @@ export default function MyPurchasesPage() {
             </Button>
           </Paper>
         ) : (
-          <Grid container spacing={3}>
-            {purchases.map((purchase) => (
-              <Grid item xs={12} md={6} lg={4} key={purchase.id}>
-                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                  <CardMedia
-                    component="img"
-                    height="200"
-                    image={purchase.course.thumbnail || '/placeholder-course.jpg'}
-                    alt={purchase.course.title}
-                    sx={{ objectFit: 'cover' }}
-                  />
-                  <CardContent sx={{ flexGrow: 1, p: 2 }}>
+          <Box display="flex" flexDirection="column" gap={3}>
+            {purchases.map((purchase) => {
+              return (
+                <Card key={purchase._id} sx={{ 
+                  height: '100%', 
+                  display: 'flex', 
+                  flexDirection: 'row',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: 4,
+                  }
+                }}>
+                  {/* Imagen del Curso */}
+                  <Box
+                    sx={{
+                      width: 280,
+                      height: 200,
+                      position: 'relative',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {purchase?.courseId?.thumbnail ? (
+                      <CardMedia
+                        component="img"
+                        image={purchase.courseId.thumbnail}
+                        alt={purchase?.courseId?.title}
+                        sx={{ 
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover'
+                        }}
+                      />
+                    ) : (
+                      <Box
+                        sx={{
+                          width: '100%',
+                          height: '100%',
+                          background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                        }}
+                      >
+                        <School sx={{ fontSize: 80 }} />
+                      </Box>
+                    )}
+                  </Box>
+
+                  {/* Contenido del Curso */}
+                  <Box flex={1} display="flex" flexDirection="column">
+                    <CardContent sx={{ flexGrow: 1, p: 2 }}>
                     <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
                       <Typography variant="h6" component="h2" sx={{ fontWeight: 600, flex: 1 }}>
-                        {purchase.course.title}
+                        {purchase?.courseId?.title}
                       </Typography>
                       <Chip
                         label={getStatusText(purchase.status)}
@@ -170,13 +211,13 @@ export default function MyPurchasesPage() {
                     </Box>
                     
                     <Typography variant="body2" color="text.secondary" paragraph>
-                      {purchase.course.description}
+                      {purchase.courseId?.description}
                     </Typography>
 
                     <Box display="flex" alignItems="center" gap={1} mb={1}>
                       <Person fontSize="small" color="action" />
                       <Typography variant="body2" color="text.secondary">
-                        {purchase.course.instructorName}
+                        {purchase.courseId?.instructorName}
                       </Typography>
                     </Box>
 
@@ -187,30 +228,31 @@ export default function MyPurchasesPage() {
                       </Typography>
                     </Box>
 
-                    <Typography variant="h6" color="primary" fontWeight="bold">
-                      ${purchase.price.toFixed(2)} USD
-                    </Typography>
-                  </CardContent>
+                      <Typography variant="h6" color="primary" fontWeight="bold">
+                        ${purchase.price.toFixed(2)} USD
+                      </Typography>
+                    </CardContent>
 
-                  <CardActions sx={{ p: 2, pt: 0 }}>
-                    <Button
-                      variant="contained"
-                      startIcon={<PlayArrow />}
-                      onClick={() => handleCourseClick(purchase.courseId)}
-                      disabled={purchase.status !== 'completed'}
-                      fullWidth
-                      sx={{ 
-                        bgcolor: 'primary.main',
-                        '&:hover': { bgcolor: 'primary.dark' }
-                      }}
-                    >
-                      {purchase.status === 'completed' ? 'Continuar Curso' : 'Pago Pendiente'}
-                    </Button>
-                  </CardActions>
+                    <CardActions sx={{ p: 2, pt: 0 }}>
+                      <Button
+                        variant="contained"
+                        startIcon={<PlayArrow />}
+                        onClick={() => handleCourseClick(purchase.courseId._id)}
+                        disabled={purchase.status !== 'completed'}
+                        fullWidth
+                        sx={{ 
+                          bgcolor: 'primary.main',
+                          '&:hover': { bgcolor: 'primary.dark' }
+                        }}
+                      >
+                        {purchase.status === 'completed' ? 'Continuar Curso' : 'Pago Pendiente'}
+                      </Button>
+                    </CardActions>
+                  </Box>
                 </Card>
-              </Grid>
-            ))}
-          </Grid>
+              );
+            })}
+          </Box>
         )}
 
         {/* Resumen de compras */}
