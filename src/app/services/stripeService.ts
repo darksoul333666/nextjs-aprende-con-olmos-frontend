@@ -1,5 +1,8 @@
 import { apiService } from './api';
 
+// Importar la base URL del API
+const API_BASE_URL = 'http://localhost:3200/api';
+
 export interface StripeConfig {
   publishableKey: string;
   currency: string;
@@ -10,6 +13,52 @@ export interface CheckoutSession {
   url: string;
 }
 
+// Nuevo tipo para compras agrupadas
+export interface PurchaseGroup {
+  id: string;
+  purchaseDate: string;
+  totalAmount: number;
+  itemCount: number;
+  paymentMethod: string;
+  stripeSessionId?: string;
+  stripePaymentIntentId?: string;
+  stripeCustomerId?: string;
+  status: 'pending' | 'completed' | 'cancelled' | 'refunded';
+  isGroupedPurchase: boolean;
+  groupTotalAmount?: number;
+  groupItemCount?: number;
+  courses: PurchaseItem[];
+}
+
+export interface PurchaseItem {
+  id: string;
+  courseId: {
+    _id: string;
+    title: string;
+    description: string;
+    thumbnail?: string;
+    price: number;
+    instructorId: {
+      _id: string;
+      name: string;
+      title: string;
+      photo?: string;
+    };
+  };
+  price: number;
+  purchaseDate: string;
+}
+
+export interface PurchasesResponse {
+  success: boolean;
+  data: {
+    purchases: PurchaseGroup[];
+    totalPurchases: number;
+    totalCourses: number;
+  };
+}
+
+// Mantener la interfaz anterior para compatibilidad
 export interface Purchase {
   _id: string;
   userId: string;
@@ -30,11 +79,6 @@ export interface Purchase {
   createdAt: string;
   updatedAt: string;
   stripePaymentIntentId: string;
-}
-
-export interface PurchasesResponse {
-  purchases: Purchase[];
-  total: number;
 }
 
 export interface CartCheckoutSession {
@@ -123,15 +167,57 @@ export const stripeService = {
   },
 
   // Obtener compras del usuario
-  async getPurchases(): Promise<PurchasesResponse> {
-    const response = await apiService.get<PurchasesResponse>('/purchases');
+  async getPurchases(): Promise<PurchaseGroup[]> {
+    const response = await apiService.get<{purchases: PurchaseGroup[], totalPurchases: number, totalCourses: number}>('/purchases');
     if (!response.success || !response.data) {
       throw new Error(response.message || 'Error loading purchases');
     }
-    return response.data;
+    return response.data.purchases;
   },
 
-  // === MÉTODOS PARA CARRITO ===
+  // Descargar comprobante de pago en PDF
+  async downloadReceiptPDF(purchaseGroupId: string): Promise<void> {
+    try {
+      // Extraer el ID real de la base de datos (remover prefijos como "individual_", "cart_", etc.)
+      const actualId = purchaseGroupId.replace(/^(individual_|cart_|group_)/, '');
+      
+      const response = await fetch(`${API_BASE_URL}/pdf/download/${actualId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al descargar el comprobante');
+      }
+
+      // Obtener el nombre del archivo del header Content-Disposition
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `comprobante_${actualId}_${Date.now()}.pdf`;
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      // Crear blob y descargar
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      throw error;
+    }
+  },
 
   // Crear sesión de checkout para carrito
   async createCartCheckoutSession(): Promise<CartCheckoutSession> {

@@ -14,7 +14,6 @@ import {
   CircularProgress,
   Alert,
   Paper,
-  Grid,
 } from '@mui/material';
 import {
   PlayArrow,
@@ -22,18 +21,22 @@ import {
   AccessTime,
   Person,
   School,
+  ShoppingCart,
+  Download,
 } from '@mui/icons-material';
 import { Navbar } from '../components/Navigation/Navbar';
-import { stripeService, Purchase } from '../services/stripeService';
+import { stripeService, PurchaseGroup } from '../services/stripeService';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function MyPurchasesPage() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
-  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [purchases, setPurchases] = useState<PurchaseGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
+  const [downloadMessage, setDownloadMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -45,8 +48,8 @@ export default function MyPurchasesPage() {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await stripeService.getPurchases();
-      setPurchases(response.purchases);
+      const purchases = await stripeService.getPurchases();
+      setPurchases(purchases);
     } catch (err) {
       console.error('Error fetching purchases:', err);
       setError('Error al cargar tus compras');
@@ -59,37 +62,74 @@ export default function MyPurchasesPage() {
     router.push(`/course/${courseId}`);
   };
 
+  const handleDownloadReceipt = async (purchaseGroupId: string) => {
+    try {
+      setDownloadingIds(prev => new Set(prev).add(purchaseGroupId));
+      setDownloadMessage(null);
+      
+      await stripeService.downloadReceiptPDF(purchaseGroupId);
+      
+      setDownloadMessage({
+        type: 'success',
+        text: 'Comprobante descargado exitosamente'
+      });
+      
+      // Limpiar mensaje después de 3 segundos
+      setTimeout(() => setDownloadMessage(null), 3000);
+    } catch (error) {
+      console.error('Error downloading receipt:', error);
+      setDownloadMessage({
+        type: 'error',
+        text: 'Error al descargar el comprobante. Inténtalo de nuevo.'
+      });
+      
+      // Limpiar mensaje después de 5 segundos
+      setTimeout(() => setDownloadMessage(null), 5000);
+    } finally {
+      setDownloadingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(purchaseGroupId);
+        return newSet;
+      });
+    }
+  };
+
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-ES', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
     });
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'completed':
-        return 'success';
-      case 'pending':
-        return 'warning';
-      case 'failed':
-        return 'error';
-      default:
-        return 'default';
-    }
-  };
-
   const getStatusText = (status: string) => {
-    switch (status.toLowerCase()) {
+    switch (status) {
       case 'completed':
         return 'Completado';
       case 'pending':
         return 'Pendiente';
-      case 'failed':
-        return 'Fallido';
+      case 'cancelled':
+        return 'Cancelado';
+      case 'refunded':
+        return 'Reembolsado';
       default:
         return status;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'success';
+      case 'pending':
+        return 'warning';
+      case 'cancelled':
+        return 'error';
+      case 'refunded':
+        return 'info';
+      default:
+        return 'default';
     }
   };
 
@@ -97,10 +137,39 @@ export default function MyPurchasesPage() {
     return (
       <Box sx={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
         <Navbar />
-        <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Container maxWidth="md" sx={{ py: 4 }}>
           <Alert severity="warning">
-            Necesitas iniciar sesión para ver tus compras
+            Necesitas iniciar sesión para ver esta página
           </Alert>
+        </Container>
+      </Box>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <Box sx={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
+        <Navbar />
+        <Container maxWidth="md" sx={{ py: 4 }}>
+          <Box display="flex" justifyContent="center" alignItems="center" minHeight={400}>
+            <CircularProgress size={60} />
+          </Box>
+        </Container>
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
+        <Navbar />
+        <Container maxWidth="md" sx={{ py: 4 }}>
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+          <Button variant="contained" onClick={fetchPurchases}>
+            Reintentar
+          </Button>
         </Container>
       </Box>
     );
@@ -110,166 +179,178 @@ export default function MyPurchasesPage() {
     <Box sx={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
       <Navbar />
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 700 }}>
-            Mis Compras
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Aquí puedes ver todos los cursos que has comprado
-          </Typography>
-        </Box>
+        <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 700, mb: 4 }}>
+          Mis Compras
+        </Typography>
 
-        {isLoading ? (
-          <Box display="flex" justifyContent="center" alignItems="center" py={8}>
-            <CircularProgress size={60} />
-          </Box>
-        ) : error ? (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
+        {downloadMessage && (
+          <Alert 
+            severity={downloadMessage.type} 
+            sx={{ mb: 3 }}
+            onClose={() => setDownloadMessage(null)}
+          >
+            {downloadMessage.text}
           </Alert>
-        ) : purchases.length === 0 ? (
+        )}
+
+        {purchases.length === 0 ? (
           <Paper sx={{ p: 4, textAlign: 'center' }}>
-            <School sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-            <Typography variant="h6" gutterBottom>
+            <ShoppingCart sx={{ fontSize: 80, color: 'text.secondary', mb: 2 }} />
+            <Typography variant="h5" color="text.secondary" gutterBottom>
               No tienes compras aún
             </Typography>
-            <Typography variant="body2" color="text.secondary" paragraph>
-              Explora nuestros cursos y comienza tu aprendizaje
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+              Explora nuestros cursos y encuentra tu próximo aprendizaje
             </Typography>
-            <Button
-              variant="contained"
-              onClick={() => router.push('/courses')}
-              sx={{ mt: 2 }}
-            >
-              Ver Cursos Disponibles
+            <Button variant="contained" size="large" onClick={() => router.push('/courses')}>
+              Explorar Cursos
             </Button>
           </Paper>
         ) : (
-          <Box display="flex" flexDirection="column" gap={3}>
-            {purchases.map((purchase) => {
-              return (
-                <Card key={purchase._id} sx={{ 
-                  height: '100%', 
-                  display: 'flex', 
-                  flexDirection: 'row',
-                  transition: 'transform 0.2s, box-shadow 0.2s',
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: 4,
-                  }
-                }}>
-                  {/* Imagen del Curso */}
-                  <Box
-                    sx={{
-                      width: 280,
-                      height: 200,
-                      position: 'relative',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    {purchase?.courseId?.thumbnail ? (
-                      <CardMedia
-                        component="img"
-                        image={purchase.courseId.thumbnail}
-                        alt={purchase?.courseId?.title}
-                        sx={{ 
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover'
-                        }}
-                      />
-                    ) : (
-                      <Box
-                        sx={{
-                          width: '100%',
-                          height: '100%',
-                          background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white',
-                        }}
-                      >
-                        <School sx={{ fontSize: 80 }} />
+          <Box>
+            {purchases.map((purchaseGroup) => (
+              <Box key={purchaseGroup.id} mb={4}>
+                {/* Header del grupo de compra */}
+                <Paper sx={{ p: 3, mb: 2, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
+                  <Box display="flex" justifyContent="space-between" alignItems="center">
+                    <Box>
+                      <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                        {purchaseGroup.isGroupedPurchase ? 'Compra Múltiple' : 'Compra Individual'}
+                      </Typography>
+                      <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                        {formatDate(purchaseGroup.purchaseDate)} • {purchaseGroup.itemCount} curso{purchaseGroup.itemCount > 1 ? 's' : ''}
+                      </Typography>
+                    </Box>
+                    <Box display="flex" alignItems="center" gap={2}>
+                      <Box textAlign="right">
+                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                          ${purchaseGroup.totalAmount.toFixed(2)}
+                        </Typography>
+                        <Chip
+                          label={getStatusText(purchaseGroup.status)}
+                          color={getStatusColor(purchaseGroup.status) as any}
+                          size="small"
+                          icon={purchaseGroup.status === 'completed' ? <CheckCircle /> : undefined}
+                          sx={{ bgcolor: 'white', color: 'primary.main' }}
+                        />
                       </Box>
-                    )}
-                  </Box>
-
-                  {/* Contenido del Curso */}
-                  <Box flex={1} display="flex" flexDirection="column">
-                    <CardContent sx={{ flexGrow: 1, p: 2 }}>
-                    <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
-                      <Typography variant="h6" component="h2" sx={{ fontWeight: 600, flex: 1 }}>
-                        {purchase?.courseId?.title}
-                      </Typography>
-                      <Chip
-                        label={getStatusText(purchase.status)}
-                        color={getStatusColor(purchase.status) as any}
-                        size="small"
-                        icon={purchase.status === 'completed' ? <CheckCircle /> : undefined}
-                      />
-                    </Box>
-                    
-                    <Typography variant="body2" color="text.secondary" paragraph>
-                      {purchase.courseId?.description}
-                    </Typography>
-
-                    <Box display="flex" alignItems="center" gap={1} mb={1}>
-                      <Person fontSize="small" color="action" />
-                      <Typography variant="body2" color="text.secondary">
-                        {purchase.courseId?.instructorName}
-                      </Typography>
-                    </Box>
-
-                    <Box display="flex" alignItems="center" gap={1} mb={2}>
-                      <AccessTime fontSize="small" color="action" />
-                      <Typography variant="body2" color="text.secondary">
-                        Comprado el {formatDate(purchase.purchaseDate)}
-                      </Typography>
-                    </Box>
-
-                      <Typography variant="h6" color="primary" fontWeight="bold">
-                        ${purchase.price.toFixed(2)} USD
-                      </Typography>
-                    </CardContent>
-
-                    <CardActions sx={{ p: 2, pt: 0 }}>
                       <Button
                         variant="contained"
-                        startIcon={<PlayArrow />}
-                        onClick={() => handleCourseClick(purchase.courseId._id)}
-                        disabled={purchase.status !== 'completed'}
-                        fullWidth
-                        sx={{ 
-                          bgcolor: 'primary.main',
-                          '&:hover': { bgcolor: 'primary.dark' }
+                        startIcon={<Download />}
+                        onClick={() => handleDownloadReceipt(purchaseGroup.id)}
+                        disabled={downloadingIds.has(purchaseGroup.id)}
+                        sx={{
+                          bgcolor: 'white',
+                          color: 'primary.main',
+                          '&:hover': {
+                            bgcolor: 'rgba(255, 255, 255, 0.9)',
+                          },
+                          '&:disabled': {
+                            bgcolor: 'rgba(255, 255, 255, 0.5)',
+                            color: 'rgba(25, 118, 210, 0.5)',
+                          },
                         }}
                       >
-                        {purchase.status === 'completed' ? 'Continuar Curso' : 'Pago Pendiente'}
+                        {downloadingIds.has(purchaseGroup.id) ? 'Descargando...' : 'Comprobante'}
                       </Button>
-                    </CardActions>
+                    </Box>
                   </Box>
-                </Card>
-              );
-            })}
-          </Box>
-        )}
+                </Paper>
 
-        {/* Resumen de compras */}
-        {purchases.length > 0 && (
-          <Paper sx={{ p: 3, mt: 4 }}>
-            <Typography variant="h6" gutterBottom>
-              Resumen de Compras
-            </Typography>
-            <Box display="flex" justifyContent="space-between" alignItems="center">
-              <Typography variant="body1">
-                Total de cursos comprados: <strong>{purchases.length}</strong>
-              </Typography>
-              <Typography variant="h6" color="primary">
-                Total gastado: <strong>${purchases.reduce((sum, p) => sum + p.price, 0).toFixed(2)} USD</strong>
-              </Typography>
-            </Box>
-          </Paper>
+                {/* Lista de cursos en el grupo */}
+                <Box display="flex" flexDirection="column" gap={2}>
+                  {purchaseGroup.courses.map((courseItem) => (
+                    <Card
+                      key={courseItem.id}
+                      sx={{
+                        display: 'flex',
+                        flexDirection: 'row',
+                        transition: 'transform 0.2s, box-shadow 0.2s',
+                        '&:hover': {
+                          transform: 'translateY(-2px)',
+                          boxShadow: 4,
+                        },
+                      }}
+                    >
+                      {/* Imagen del curso */}
+                      <Box sx={{ width: 280, height: 200, position: 'relative', overflow: 'hidden' }}>
+                        {courseItem.courseId.thumbnail ? (
+                          <CardMedia
+                            component="img"
+                            image={courseItem.courseId.thumbnail}
+                            alt={courseItem.courseId.title}
+                            sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        ) : (
+                          <Box
+                            sx={{
+                              width: '100%',
+                              height: '100%',
+                              background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'white',
+                            }}
+                          >
+                            <School sx={{ fontSize: 80 }} />
+                          </Box>
+                        )}
+                      </Box>
+
+                      {/* Contenido del curso */}
+                      <Box flex={1} display="flex" flexDirection="column">
+                        <CardContent sx={{ flexGrow: 1, p: 2 }}>
+                          <Typography variant="h6" component="h2" sx={{ fontWeight: 600, mb: 1 }}>
+                            {courseItem.courseId.title}
+                          </Typography>
+                          
+                          <Typography variant="body2" color="text.secondary" paragraph>
+                            {courseItem.courseId.description}
+                          </Typography>
+
+                          <Box display="flex" alignItems="center" gap={1} mb={1}>
+                            <Person fontSize="small" color="action" />
+                            <Typography variant="body2" color="text.secondary">
+                              {courseItem.courseId.instructorId.name}
+                            </Typography>
+                          </Box>
+
+                          <Box display="flex" alignItems="center" gap={1} mb={2}>
+                            <AccessTime fontSize="small" color="action" />
+                            <Typography variant="body2" color="text.secondary">
+                              Comprado el {formatDate(courseItem.purchaseDate)}
+                            </Typography>
+                          </Box>
+
+                          <Typography variant="h6" color="primary" sx={{ fontWeight: 600 }}>
+                            ${courseItem.price.toFixed(2)}
+                          </Typography>
+                        </CardContent>
+
+                        <CardActions sx={{ p: 2, pt: 0 }}>
+                          <Button
+                            variant="contained"
+                            startIcon={<PlayArrow />}
+                            onClick={() => handleCourseClick(courseItem.courseId._id)}
+                            disabled={purchaseGroup.status !== 'completed'}
+                            sx={{
+                              '&:hover': {
+                                transform: 'scale(1.02)',
+                              },
+                              transition: 'transform 0.2s',
+                            }}
+                          >
+                            {purchaseGroup.status === 'completed' ? 'Continuar Curso' : 'Pago Pendiente'}
+                          </Button>
+                        </CardActions>
+                      </Box>
+                    </Card>
+                  ))}
+                </Box>
+              </Box>
+            ))}
+          </Box>
         )}
       </Container>
     </Box>
