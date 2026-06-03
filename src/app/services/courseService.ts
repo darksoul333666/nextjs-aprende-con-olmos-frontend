@@ -1,4 +1,4 @@
-import { apiService } from './api';
+import { apiService } from "./api";
 
 export interface Video {
   _id: string;
@@ -55,7 +55,7 @@ export interface CreateCourseRequest {
   description: string;
   thumbnail?: string;
   price: number;
-  sections: Omit<Section, '_id'>[];
+  sections: Omit<Section, "_id">[];
 }
 
 export interface CreateDraftRequest {
@@ -66,7 +66,7 @@ export interface CreateDraftRequest {
 
 export interface CompleteCourseRequest {
   thumbnail?: string;
-  sections: Omit<Section, '_id'>[];
+  sections: Omit<Section, "_id">[];
 }
 
 export interface DraftCourse {
@@ -74,7 +74,7 @@ export interface DraftCourse {
   title: string;
   description: string;
   price: number;
-  status: 'draft';
+  status: "draft";
   createdAt: string;
   updatedAt: string;
 }
@@ -102,10 +102,20 @@ class CourseService {
     if (Array.isArray(data)) {
       return data;
     }
-    if (data && typeof data === 'object' && 'data' in data && Array.isArray((data as Record<string, unknown>).data)) {
+    if (
+      data &&
+      typeof data === "object" &&
+      "data" in data &&
+      Array.isArray((data as Record<string, unknown>).data)
+    ) {
       return (data as Record<string, unknown>).data as T[];
     }
-    if (data && typeof data === 'object' && 'courses' in data && Array.isArray((data as Record<string, unknown>).courses)) {
+    if (
+      data &&
+      typeof data === "object" &&
+      "courses" in data &&
+      Array.isArray((data as Record<string, unknown>).courses)
+    ) {
       return (data as Record<string, unknown>).courses as T[];
     }
     return [];
@@ -114,12 +124,10 @@ class CourseService {
   // Obtener lista de cursos (público) - GET /api/courses
   async getCourses(filters?: CourseFilters): Promise<Course[]> {
     try {
-      const response = await apiService.get<Course[]>('/courses', filters);
-      // La API puede devolver { success: true, data: Course[] } o directamente Course[]
+      const response = await apiService.get<Course[]>("/courses", filters);
       const courses = this.ensureArray<Course>(response.data || response);
       return courses;
-    } catch (error) {
-      console.error('Error fetching courses:', error);
+    } catch {
       return [];
     }
   }
@@ -128,55 +136,70 @@ class CourseService {
   async getCourse(id: string): Promise<Course | null> {
     try {
       const response = await apiService.get<unknown>(`/courses/${id}`);
-      
-      // La API devuelve { success: true, data: { course: Course, canViewVideos: boolean } }
-      const responseData = response.data as {course: Record<string, unknown>, canViewVideos: boolean};
+
+      const responseData = response.data as {
+        course: Record<string, unknown>;
+        canViewVideos: boolean;
+      };
       if (responseData?.course) {
         const courseData = responseData.course;
-        
-        // Mapear la estructura del backend a la estructura del frontend
+
         const mappedCourse: Course = {
           _id: courseData._id as string,
           title: courseData.title as string,
           description: courseData.description as string,
-          instructorId: typeof courseData.instructorId === 'object' ? (courseData.instructorId as Record<string, unknown>)._id as string : courseData.instructorId as string,
-          instructor: typeof courseData.instructorId === 'object' ? {
-            _id: (courseData.instructorId as Record<string, unknown>)._id as string,
-            name: (courseData.instructorId as Record<string, unknown>).name as string,
-            title: (courseData.instructorId as Record<string, unknown>).title as string
-          } : undefined,
+          instructorId:
+            typeof courseData.instructorId === "object"
+              ? ((courseData.instructorId as Record<string, unknown>)
+                  ._id as string)
+              : (courseData.instructorId as string),
+          instructor:
+            typeof courseData.instructorId === "object"
+              ? {
+                  _id: (courseData.instructorId as Record<string, unknown>)
+                    ._id as string,
+                  name: (courseData.instructorId as Record<string, unknown>)
+                    .name as string,
+                  title: (courseData.instructorId as Record<string, unknown>)
+                    .title as string,
+                }
+              : undefined,
           thumbnail: courseData.thumbnail as string,
           rating: (courseData.rating as number) || 0,
           totalStudents: (courseData.totalStudents as number) || 0,
           totalDuration: (courseData.totalDuration as number) || 0,
-          sections: ((courseData.sections as Record<string, unknown>[]) || []).map((section) => ({
+          sections: (
+            (courseData.sections as Record<string, unknown>[]) || []
+          ).map((section) => ({
             _id: (section.id || section._id) as string, // Backend usa 'id' para sections
             title: section.title as string,
             description: section.description as string,
-            order: (section.order as number),
-            videos: ((section.videos as Record<string, unknown>[]) || []).map((video) => ({
-              _id: (video.id || video._id) as string, // Backend usa 'id' para videos
-              title: video.title as string,
-              description: video.description as string,
-              url: video.url as string,
-              duration: video.duration as number,
-              thumbnail: video.thumbnail as string,
-              order: video.order as number,
-              isCompleted: (video.isCompleted as boolean) || false,
-              isLocked: (video.isLocked as boolean) || !responseData.canViewVideos
-            }))
+            order: section.order as number,
+            videos: ((section.videos as Record<string, unknown>[]) || []).map(
+              (video) => ({
+                _id: (video.id || video._id) as string, // Backend usa 'id' para videos
+                title: video.title as string,
+                description: video.description as string,
+                url: video.url as string,
+                duration: video.duration as number,
+                thumbnail: video.thumbnail as string,
+                order: video.order as number,
+                isCompleted: (video.isCompleted as boolean) || false,
+                isLocked:
+                  (video.isLocked as boolean) || !responseData.canViewVideos,
+              }),
+            ),
           })),
           price: courseData.price as number,
           isVisible: courseData.isVisible as boolean,
-          isPurchased: responseData.canViewVideos || false
+          isPurchased: responseData.canViewVideos || false,
         };
-        
+
         return mappedCourse;
       }
-      
+
       return null;
-    } catch (error) {
-      console.error('Error fetching course:', error);
+    } catch {
       return null;
     }
   }
@@ -184,21 +207,25 @@ class CourseService {
   // Crear un curso (solo maestros) - POST /api/courses
   async createCourse(courseData: CreateCourseRequest): Promise<Course | null> {
     try {
-      const response = await apiService.post<Course>('/courses', courseData);
+      const response = await apiService.post<Course>("/courses", courseData);
       return response.data || null;
-    } catch (error) {
-      console.error('Error creating course:', error);
+    } catch {
       return null;
     }
   }
 
   // Actualizar un curso - PUT /api/courses/{id}
-  async updateCourse(id: string, courseData: Partial<CreateCourseRequest>): Promise<Course | null> {
+  async updateCourse(
+    id: string,
+    courseData: Partial<CreateCourseRequest>,
+  ): Promise<Course | null> {
     try {
-      const response = await apiService.put<Course>(`/courses/${id}`, courseData);
+      const response = await apiService.put<Course>(
+        `/courses/${id}`,
+        courseData,
+      );
       return response.data || null;
-    } catch (error) {
-      console.error('Error updating course:', error);
+    } catch {
       return null;
     }
   }
@@ -206,10 +233,11 @@ class CourseService {
   // Cambiar visibilidad de un curso - PATCH /api/courses/{id}/visibility
   async toggleCourseVisibility(id: string): Promise<Course | null> {
     try {
-      const response = await apiService.patch<Course>(`/courses/${id}/visibility`);
+      const response = await apiService.patch<Course>(
+        `/courses/${id}/visibility`,
+      );
       return response.data || null;
-    } catch (error) {
-      console.error('Error toggling course visibility:', error);
+    } catch {
       return null;
     }
   }
@@ -217,23 +245,10 @@ class CourseService {
   // Obtener cursos comprados por el usuario autenticado
   async getPurchasedCourses(): Promise<Course[]> {
     try {
-      console.log('=== DEBUG COURSE SERVICE ===');
-      console.log('Fetching purchased courses from /courses/purchased');
-      
-      const response = await apiService.get<Course[]>('/courses/purchased');
-      
-      console.log('Raw response from backend:', response);
-      console.log('Response data:', response.data);
-      console.log('Response type:', typeof response.data);
-      console.log('Response is array:', Array.isArray(response.data));
-      
+      const response = await apiService.get<Course[]>("/courses/purchased");
       const courses = this.ensureArray<Course>(response.data || response);
-      console.log('Processed courses:', courses);
-      console.log('===========================');
-      
       return courses;
-    } catch (error) {
-      console.error('Error fetching purchased courses:', error);
+    } catch {
       return [];
     }
   }
@@ -241,11 +256,10 @@ class CourseService {
   // Obtener cursos del maestro autenticado
   async getTeacherCourses(): Promise<Course[]> {
     try {
-      const response = await apiService.get<Course[]>('/courses/teacher');
+      const response = await apiService.get<Course[]>("/courses/teacher");
       const courses = this.ensureArray<Course>(response.data || response);
       return courses;
-    } catch (error) {
-      console.error('Error fetching teacher courses:', error);
+    } catch {
       return [];
     }
   }
@@ -255,46 +269,62 @@ class CourseService {
     try {
       await apiService.post(`/purchases/${courseId}`);
       return true;
-    } catch (error) {
-      console.error('Error purchasing course:', error);
+    } catch {
       return false;
     }
   }
 
   // Crear un curso borrador - POST /api/courses/draft
-  async createDraftCourse(draftData: CreateDraftRequest): Promise<DraftCourse | null> {
+  async createDraftCourse(
+    draftData: CreateDraftRequest,
+  ): Promise<DraftCourse | null> {
     try {
-      const response = await apiService.post<{ course: DraftCourse }>('/courses/draft', draftData);
+      const response = await apiService.post<{ course: DraftCourse }>(
+        "/courses/draft",
+        draftData,
+      );
       return response.data?.course || null;
-    } catch (error) {
-      console.error('Error creating draft course:', error);
+    } catch {
       return null;
     }
   }
 
   // Obtener cursos borrador del maestro - GET /api/courses/drafts
   async getDraftCourses(): Promise<DraftCourse[]> {
-    const response = await apiService.get<{ drafts: DraftCourse[] }>('/courses/drafts');
+    const response = await apiService.get<{ drafts: DraftCourse[] }>(
+      "/courses/drafts",
+    );
     return response.data?.drafts || [];
   }
 
   // Completar un curso borrador - PUT /api/courses/:id/complete
-  async completeCourse(id: string, completeData: CompleteCourseRequest): Promise<Course | null> {
+  async completeCourse(
+    id: string,
+    completeData: CompleteCourseRequest,
+  ): Promise<Course | null> {
     try {
-      const response = await apiService.put<{ course: Course }>(`/courses/${id}/complete`, completeData);
+      const response = await apiService.put<{ course: Course }>(
+        `/courses/${id}/complete`,
+        completeData,
+      );
       return response.data?.course || null;
-    } catch (error) {
-      console.error('Error completing course:', error);
+    } catch {
       return null;
     }
   }
 
   // Obtener cursos del maestro con estadísticas - GET /api/courses/teacher
-  async getTeacherCoursesWithStats(): Promise<{ courses: TeacherCourse[]; summary: any }> {
-    const response = await apiService.get<{ courses: TeacherCourse[]; summary: any }>('/courses/teacher');
+  async getTeacherCoursesWithStats(): Promise<{
+    courses: TeacherCourse[];
+    summary: any;
+  }> {
+    const response = await apiService.get<{
+      courses: TeacherCourse[];
+      summary: any;
+    }>("/courses/teacher");
     return {
       courses: response.data?.courses || [],
-      summary: response.data?.summary || {}
+      summary: response.data?.summary || {},
     };
   }
 }

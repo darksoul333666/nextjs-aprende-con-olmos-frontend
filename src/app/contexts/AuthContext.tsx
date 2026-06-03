@@ -1,7 +1,13 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authService, User } from '../services/authService';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import { authService, User } from "../services/authService";
 
 interface AuthContextType {
   user: User | null;
@@ -17,7 +23,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
@@ -34,7 +40,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     // Mark as mounted to prevent hydration mismatch
     setIsMounted(true);
-    
+
     // Verificar si hay un usuario autenticado al cargar la aplicación
     const currentUser = authService.getCurrentUser();
     if (currentUser) {
@@ -47,15 +53,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       const response = await authService.login({ email, password });
-      
+
       // El servicio ahora devuelve directamente { user, token }
       if (response.user) {
         setUser(response.user);
       } else {
-        throw new Error('Respuesta de login inválida - estructura de datos incorrecta');
+        throw new Error(
+          "Respuesta de login inválida - estructura de datos incorrecta",
+        );
       }
-    } catch (error) {
-      console.error('Login error:', error);
+    } catch {
       throw error;
     } finally {
       setIsLoading(false);
@@ -66,15 +73,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       const response = await authService.register({ email, password });
-      
+
       // El servicio ahora devuelve directamente { user, token }
       if (response.user) {
         setUser(response.user);
       } else {
-        throw new Error('Respuesta de registro inválida - estructura de datos incorrecta');
+        throw new Error(
+          "Respuesta de registro inválida - estructura de datos incorrecta",
+        );
       }
-    } catch (error) {
-      console.error('Register error:', error);
+    } catch {
       throw error;
     } finally {
       setIsLoading(false);
@@ -95,9 +103,5 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isAuthenticated: isMounted ? !!user : false,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

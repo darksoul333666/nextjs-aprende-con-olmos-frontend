@@ -1,1 +1,1 @@
-export { TeacherDashboard } from './TeacherDashboard';
+export { TeacherDashboard } from "./TeacherDashboard";

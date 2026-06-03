@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   AppBar,
   Toolbar,
@@ -13,7 +13,7 @@ import {
   IconButton,
   Badge,
   Divider,
-} from '@mui/material';
+} from "@mui/material";
 import {
   School,
   Person,
@@ -24,23 +24,22 @@ import {
   Notifications,
   Login,
   ShoppingCart,
-} from '@mui/icons-material';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '../../contexts/AuthContext';
-import { CartIcon } from '../Cart/CartIcon';
-import { CartDrawer } from '../Cart/CartDrawer';
+} from "@mui/icons-material";
+import { useRouter } from "next/navigation";
+import { useAuth } from "../../contexts/AuthContext";
+import { CartIcon } from "../Cart/CartIcon";
+import { CartDrawer } from "../Cart/CartDrawer";
 
 interface NavbarProps {
   currentPage?: string;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({
-  currentPage = 'home',
-}) => {
+export const Navbar: React.FC<NavbarProps> = ({ currentPage = "home" }) => {
   const router = useRouter();
   const { user, logout, isAuthenticated } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [notificationAnchor, setNotificationAnchor] = useState<null | HTMLElement>(null);
+  const [notificationAnchor, setNotificationAnchor] =
+    useState<null | HTMLElement>(null);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -67,11 +66,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   const handleLogout = () => {
     logout();
     handleMenuClose();
-    router.push('/');
+    router.push("/");
   };
 
   const handleLogin = () => {
-    router.push('/login');
+    router.push("/login");
   };
 
   const handleCartOpen = () => {
@@ -83,11 +82,15 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <AppBar position="static" elevation={1} sx={{ backgroundColor: 'white', color: 'text.primary' }}>
+    <AppBar
+      position="static"
+      elevation={1}
+      sx={{ backgroundColor: "white", color: "text.primary" }}
+    >
       <Toolbar>
         {/* Logo y Título */}
         <Box display="flex" alignItems="center" sx={{ flexGrow: 1 }}>
-          <School sx={{ mr: 1, color: 'primary.main' }} />
+          <School sx={{ mr: 1, color: "primary.main" }} />
           <Typography variant="h6" component="div" sx={{ fontWeight: 600 }}>
             Aprende con Olmos
           </Typography>
@@ -96,26 +99,28 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Navegación Principal */}
         {isAuthenticated && (
           <Box display="flex" gap={1} sx={{ mr: 2 }}>
-            {user?.role === 'maestro' ? (
+            {user?.role === "maestro" ? (
               // Navegación para Maestros
               <>
                 <Button
-                  color={currentPage === 'home' ? 'primary' : 'inherit'}
-                  onClick={() => handleNavigation('/')}
+                  color={currentPage === "home" ? "primary" : "inherit"}
+                  onClick={() => handleNavigation("/")}
                   startIcon={<Home />}
                 >
                   Inicio
                 </Button>
                 <Button
-                  color={currentPage === 'teacher-courses' ? 'primary' : 'inherit'}
-                  onClick={() => handleNavigation('/teacher/courses')}
+                  color={
+                    currentPage === "teacher-courses" ? "primary" : "inherit"
+                  }
+                  onClick={() => handleNavigation("/teacher/courses")}
                   startIcon={<Book />}
                 >
                   Gestionar Cursos
                 </Button>
                 <Button
-                  color={currentPage === 'teacher-edit' ? 'primary' : 'inherit'}
-                  onClick={() => handleNavigation('/teacher/edit')}
+                  color={currentPage === "teacher-edit" ? "primary" : "inherit"}
+                  onClick={() => handleNavigation("/teacher/edit")}
                   startIcon={<Person />}
                 >
                   Mi Perfil
@@ -125,22 +130,22 @@ export const Navbar: React.FC<NavbarProps> = ({
               // Navegación para Estudiantes
               <>
                 <Button
-                  color={currentPage === 'home' ? 'primary' : 'inherit'}
-                  onClick={() => handleNavigation('/')}
+                  color={currentPage === "home" ? "primary" : "inherit"}
+                  onClick={() => handleNavigation("/")}
                   startIcon={<Home />}
                 >
                   Inicio
                 </Button>
                 <Button
-                  color={currentPage === 'courses' ? 'primary' : 'inherit'}
-                  onClick={() => handleNavigation('/courses')}
+                  color={currentPage === "courses" ? "primary" : "inherit"}
+                  onClick={() => handleNavigation("/courses")}
                   startIcon={<Book />}
                 >
                   Cursos
                 </Button>
                 <Button
-                  color={currentPage === 'my-purchases' ? 'primary' : 'inherit'}
-                  onClick={() => handleNavigation('/my-purchases')}
+                  color={currentPage === "my-purchases" ? "primary" : "inherit"}
+                  onClick={() => handleNavigation("/my-purchases")}
                   startIcon={<ShoppingCart />}
                 >
                   Mis Compras
@@ -164,7 +169,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         )}
 
         {/* Carrito - Solo para estudiantes */}
-        {isAuthenticated && user?.role === 'estudiante' && (
+        {isAuthenticated && user?.role === "estudiante" && (
           <CartIcon onClick={handleCartOpen} />
         )}
 
@@ -172,16 +177,17 @@ export const Navbar: React.FC<NavbarProps> = ({
         {isAuthenticated ? (
           <Box display="flex" alignItems="center">
             <Avatar
-              sx={{ 
-                width: 40, 
-                height: 40, 
-                cursor: 'pointer',
-                bgcolor: 'primary.main',
-                '&:hover': { opacity: 0.8 }
+              sx={{
+                width: 40,
+                height: 40,
+                cursor: "pointer",
+                bgcolor: "primary.main",
+                "&:hover": { opacity: 0.8 },
               }}
               onClick={handleMenuOpen}
             >
-              {user?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
+              {user?.name?.charAt(0).toUpperCase() ||
+                user?.email?.charAt(0).toUpperCase()}
             </Avatar>
           </Box>
         ) : (
@@ -200,7 +206,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           open={Boolean(notificationAnchor)}
           onClose={handleNotificationClose}
           PaperProps={{
-            sx: { minWidth: 300, mt: 1 }
+            sx: { minWidth: 300, mt: 1 },
           }}
         >
           <MenuItem onClick={handleNotificationClose}>
@@ -226,7 +232,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           open={Boolean(anchorEl)}
           onClose={handleMenuClose}
           PaperProps={{
-            sx: { minWidth: 200, mt: 1 }
+            sx: { minWidth: 200, mt: 1 },
           }}
         >
           <Box sx={{ p: 2, pb: 1 }}>
@@ -234,7 +240,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               {user?.email}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              {user?.role === 'maestro' ? 'Maestro' : 'Estudiante'}
+              {user?.role === "maestro" ? "Maestro" : "Estudiante"}
             </Typography>
           </Box>
           <Divider />
@@ -244,7 +250,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </MenuItem>
         </Menu>
       </Toolbar>
-      
+
       {/* Cart Drawer */}
       <CartDrawer open={cartDrawerOpen} onClose={handleCartClose} />
     </AppBar>

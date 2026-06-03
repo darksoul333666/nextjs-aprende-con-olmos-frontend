@@ -1,17 +1,17 @@
-'use client';
+"use client";
 
-import React from 'react';
+import React from "react";
 import {
   Container,
   Typography,
   Box,
   Paper,
   CircularProgress,
-} from '@mui/material';
-import { School } from '@mui/icons-material';
-import { Navbar } from '../Navigation/Navbar';
-import { TeacherDashboard } from '../TeacherDashboard';
-import { Course } from '../../services/courseService';
+} from "@mui/material";
+import { School } from "@mui/icons-material";
+import { Navbar } from "../Navigation/Navbar";
+import { TeacherDashboard } from "../TeacherDashboard";
+import { Course } from "../../services/courseService";
 
 interface HomeTeacherProps {
   availableCourses: Course[];
@@ -20,28 +20,35 @@ interface HomeTeacherProps {
 
 export const HomeTeacher: React.FC<HomeTeacherProps> = ({
   availableCourses,
-  isLoading
+  isLoading,
 }) => {
   if (isLoading) {
     return (
-      <Box sx={{ minHeight: '100vh', backgroundColor: '#f8f9fa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Box
+        sx={{
+          minHeight: "100vh",
+          backgroundColor: "#f8f9fa",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
         <CircularProgress size={60} />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
+    <Box sx={{ minHeight: "100vh", backgroundColor: "#f8f9fa" }}>
       <Navbar currentPage="home" />
-            <Box
+      <Box
         sx={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: 'white',
+          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          color: "white",
           py: 4,
           mb: 4,
         }}
-      >
-      </Box>
+      ></Box>
 
       <Container maxWidth="lg">
         <TeacherDashboard />

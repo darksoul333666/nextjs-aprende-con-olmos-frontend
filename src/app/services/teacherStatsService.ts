@@ -1,4 +1,4 @@
-import { apiService } from './api';
+import { apiService } from "./api";
 
 export interface TeacherKPIs {
   totalUsers: number;
@@ -49,21 +49,19 @@ export interface VideoStatsResponse {
 export const teacherStatsService = {
   async getDashboardStats(): Promise<TeacherDashboardData> {
     try {
-      const response = await apiService.get('/teachers/dashboard');
+      const response = await apiService.get("/teachers/dashboard");
       return response.data;
-    } catch (error) {
-      console.error('Error fetching teacher dashboard stats:', error);
+    } catch {
       throw error;
     }
   },
 
   async getVideoStats(): Promise<VideoStatsResponse> {
     try {
-      const response = await apiService.get('/teachers/video-stats');
+      const response = await apiService.get("/teachers/video-stats");
       return response.data;
-    } catch (error) {
-      console.error('Error fetching teacher video stats:', error);
+    } catch {
       throw error;
     }
-  }
+  },
 };

@@ -1,8 +1,14 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { cartService, Cart, CartItem } from '../services/cartService';
-import { useAuth } from './AuthContext';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import { cartService, Cart, CartItem } from "../services/cartService";
+import { useAuth } from "./AuthContext";
 
 interface CartContextType {
   cart: Cart | null;
@@ -30,7 +36,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
 
   // Cargar carrito inicial
   useEffect(() => {
-    if (isAuthenticated && user?.role === 'estudiante') {
+    if (isAuthenticated && user?.role === "estudiante") {
       refreshCart();
     } else {
       setCart(null);
@@ -38,7 +44,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   }, [isAuthenticated, user]);
 
   const refreshCart = async () => {
-    if (!isAuthenticated || user?.role !== 'estudiante') {
+    if (!isAuthenticated || user?.role !== "estudiante") {
       setCart(null);
       return;
     }
@@ -47,8 +53,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       setIsLoading(true);
       const cartData = await cartService.getCart();
       setCart(cartData);
-    } catch (error) {
-      console.error('Error refreshing cart:', error);
+    } catch {
       setCart(null);
     } finally {
       setIsLoading(false);
@@ -56,8 +61,8 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   };
 
   const addToCart = async (courseId: string) => {
-    if (!isAuthenticated || user?.role !== 'estudiante') {
-      throw new Error('Usuario no autenticado o sin permisos');
+    if (!isAuthenticated || user?.role !== "estudiante") {
+      throw new Error("Usuario no autenticado o sin permisos");
     }
 
     try {
@@ -66,10 +71,9 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       if (success) {
         await refreshCart();
       } else {
-        throw new Error('Error al agregar al carrito');
+        throw new Error("Error al agregar al carrito");
       }
-    } catch (error) {
-      console.error('Error adding to cart:', error);
+    } catch {
       throw error;
     } finally {
       setIsLoading(false);
@@ -77,8 +81,8 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   };
 
   const removeFromCart = async (courseId: string) => {
-    if (!isAuthenticated || user?.role !== 'estudiante') {
-      throw new Error('Usuario no autenticado o sin permisos');
+    if (!isAuthenticated || user?.role !== "estudiante") {
+      throw new Error("Usuario no autenticado o sin permisos");
     }
 
     try {
@@ -87,10 +91,9 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       if (success) {
         await refreshCart();
       } else {
-        throw new Error('Error al remover del carrito');
+        throw new Error("Error al remover del carrito");
       }
-    } catch (error) {
-      console.error('Error removing from cart:', error);
+    } catch {
       throw error;
     } finally {
       setIsLoading(false);
@@ -98,8 +101,8 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   };
 
   const clearCart = async () => {
-    if (!isAuthenticated || user?.role !== 'estudiante') {
-      throw new Error('Usuario no autenticado o sin permisos');
+    if (!isAuthenticated || user?.role !== "estudiante") {
+      throw new Error("Usuario no autenticado o sin permisos");
     }
 
     try {
@@ -108,10 +111,9 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       if (success) {
         await refreshCart();
       } else {
-        throw new Error('Error al limpiar el carrito');
+        throw new Error("Error al limpiar el carrito");
       }
-    } catch (error) {
-      console.error('Error clearing cart:', error);
+    } catch {
       throw error;
     } finally {
       setIsLoading(false);
@@ -120,7 +122,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
 
   const isInCart = (courseId: string): boolean => {
     if (!cart || !cart.items) return false;
-    return cart.items.some(item => item.courseId._id === courseId);
+    return cart.items.some((item) => item.courseId._id === courseId);
   };
 
   const value: CartContextType = {
@@ -134,17 +136,13 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     isInCart,
   };
 
-  return (
-    <CartContext.Provider value={value}>
-      {children}
-    </CartContext.Provider>
-  );
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };
 
 export const useCart = (): CartContextType => {
   const context = useContext(CartContext);
   if (context === undefined) {
-    throw new Error('useCart must be used within a CartProvider');
+    throw new Error("useCart must be used within a CartProvider");
   }
   return context;
 };

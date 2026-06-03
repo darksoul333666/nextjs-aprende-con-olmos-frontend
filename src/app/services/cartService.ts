@@ -1,4 +1,4 @@
-import { apiService } from './api';
+import { apiService } from "./api";
 
 export interface CartItem {
   courseId: {
@@ -46,10 +46,9 @@ class CartService {
   // Obtener carrito del usuario
   async getCart(): Promise<Cart | null> {
     try {
-      const response = await apiService.get<CartResponse>('/cart');
+      const response = await apiService.get<CartResponse>("/cart");
       return response.data?.cart || null;
-    } catch (error) {
-      console.error('Error fetching cart:', error);
+    } catch {
       return null;
     }
   }
@@ -57,10 +56,9 @@ class CartService {
   // Obtener cantidad de items en el carrito
   async getCartCount(): Promise<number> {
     try {
-      const response = await apiService.get<CartCountResponse>('/cart/count');
+      const response = await apiService.get<CartCountResponse>("/cart/count");
       return response.data?.count || 0;
-    } catch (error) {
-      console.error('Error fetching cart count:', error);
+    } catch {
       return 0;
     }
   }
@@ -68,10 +66,9 @@ class CartService {
   // Agregar curso al carrito
   async addToCart(courseId: string): Promise<boolean> {
     try {
-      await apiService.post('/cart/add', { courseId });
+      await apiService.post("/cart/add", { courseId });
       return true;
-    } catch (error) {
-      console.error('Error adding to cart:', error);
+    } catch {
       return false;
     }
   }
@@ -81,8 +78,7 @@ class CartService {
     try {
       await apiService.delete(`/cart/remove/${courseId}`);
       return true;
-    } catch (error) {
-      console.error('Error removing from cart:', error);
+    } catch {
       return false;
     }
   }
@@ -90,10 +86,9 @@ class CartService {
   // Limpiar carrito completo
   async clearCart(): Promise<boolean> {
     try {
-      await apiService.delete('/cart/clear');
+      await apiService.delete("/cart/clear");
       return true;
-    } catch (error) {
-      console.error('Error clearing cart:', error);
+    } catch {
       return false;
     }
   }

@@ -1,22 +1,25 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
+import React from "react";
+import {
+  ThemeProvider as MuiThemeProvider,
+  createTheme,
+} from "@mui/material/styles";
+import CssBaseline from "@mui/material/CssBaseline";
 
 // Create a theme instance
 const theme = createTheme({
   palette: {
-    mode: 'light',
+    mode: "light",
     primary: {
-      main: '#1976d2',
+      main: "#1976d2",
     },
     secondary: {
-      main: '#dc004e',
+      main: "#dc004e",
     },
   },
   typography: {
-    fontFamily: 'Roboto, Arial, sans-serif',
+    fontFamily: "Roboto, Arial, sans-serif",
   },
 });
 

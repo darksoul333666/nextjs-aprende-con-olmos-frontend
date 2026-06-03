@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Container,
   Typography,
@@ -10,34 +10,33 @@ import {
   Alert,
   CircularProgress,
   Divider,
-} from '@mui/material';
-import { useAuth } from '../contexts/AuthContext';
-import { courseService } from '../services/courseService';
-import { authService } from '../services/authService';
+} from "@mui/material";
+import { useAuth } from "../contexts/AuthContext";
+import { courseService } from "../services/courseService";
+import { authService } from "../services/authService";
 
 export default function DebugPage() {
   const { user, isAuthenticated } = useAuth();
   const [courses, setCourses] = useState<unknown[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const fetchCourses = async () => {
     try {
       setIsLoading(true);
-      setError('');
-      
-      if (user?.role === 'estudiante') {
+      setError("");
+
+      if (user?.role === "estudiante") {
         const coursesData = await courseService.getPurchasedCourses();
         setCourses(coursesData);
-      } else if (user?.role === 'maestro') {
+      } else if (user?.role === "maestro") {
         const coursesData = await courseService.getTeacherCourses();
         setCourses(coursesData);
       } else {
         setCourses([]);
       }
-    } catch (error) {
-      console.error('Error fetching courses:', error);
-      setError('Error al cargar los cursos');
+    } catch {
+      setError("Error al cargar los cursos");
     } finally {
       setIsLoading(false);
     }
@@ -59,15 +58,16 @@ export default function DebugPage() {
         <Typography variant="h5" component="h2" sx={{ fontWeight: 600, mb: 2 }}>
           Información del Usuario
         </Typography>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
           <Typography variant="body2">
-            <strong>Autenticado:</strong> {isAuthenticated ? 'Sí' : 'No'}
+            <strong>Autenticado:</strong> {isAuthenticated ? "Sí" : "No"}
           </Typography>
           <Typography variant="body2">
-            <strong>Usuario:</strong> {user ? JSON.stringify(user, null, 2) : 'No hay usuario'}
+            <strong>Usuario:</strong>{" "}
+            {user ? JSON.stringify(user, null, 2) : "No hay usuario"}
           </Typography>
           <Typography variant="body2">
-            <strong>Token:</strong> {authService.getToken() || 'No hay token'}
+            <strong>Token:</strong> {authService.getToken() || "No hay token"}
           </Typography>
         </Box>
       </Paper>
@@ -77,33 +77,23 @@ export default function DebugPage() {
         <Typography variant="h5" component="h2" sx={{ fontWeight: 600, mb: 2 }}>
           Acciones de Debug
         </Typography>
-        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+        <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
           <Button
             variant="contained"
             onClick={fetchCourses}
             disabled={isLoading}
           >
-            {isLoading ? <CircularProgress size={20} /> : 'Cargar Mis Cursos'}
+            {isLoading ? <CircularProgress size={20} /> : "Cargar Mis Cursos"}
           </Button>
-          <Button
-            variant="outlined"
-            onClick={clearStorage}
-          >
+          <Button variant="outlined" onClick={clearStorage}>
             Limpiar localStorage
           </Button>
-          <Button
-            variant="outlined"
-            onClick={() => {
-              console.log('Usuario actual:', user);
-              console.log('Estado de autenticación:', isAuthenticated);
-              console.log('Token:', authService.getToken());
-            }}
-          >
+          <Button variant="outlined" onClick={() => {}}>
             Log a Consola
           </Button>
           <Button
             variant="outlined"
-            onClick={() => window.location.href = '/debug/courses'}
+            onClick={() => (window.location.href = "/debug/courses")}
           >
             Debug de Cursos
           </Button>
@@ -115,7 +105,7 @@ export default function DebugPage() {
         <Typography variant="h5" component="h2" sx={{ fontWeight: 600, mb: 2 }}>
           Mis Cursos ({courses.length})
         </Typography>
-        
+
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
@@ -127,13 +117,17 @@ export default function DebugPage() {
             No hay cursos cargados
           </Typography>
         ) : (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
             {courses.map((course, index) => (
-              <Paper key={index} sx={{ p: 2, bgcolor: '#f5f5f5' }}>
+              <Paper key={index} sx={{ p: 2, bgcolor: "#f5f5f5" }}>
                 <Typography variant="h6" gutterBottom>
                   Curso {index + 1}
                 </Typography>
-                <Typography variant="body2" component="pre" sx={{ fontSize: '0.8rem' }}>
+                <Typography
+                  variant="body2"
+                  component="pre"
+                  sx={{ fontSize: "0.8rem" }}
+                >
                   {JSON.stringify(course, null, 2)}
                 </Typography>
               </Paper>
@@ -147,15 +141,18 @@ export default function DebugPage() {
         <Typography variant="h5" component="h2" sx={{ fontWeight: 600, mb: 2 }}>
           Información del Sistema
         </Typography>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
           <Typography variant="body2">
-            <strong>URL actual:</strong> {typeof window !== 'undefined' ? window.location.href : 'N/A'}
+            <strong>URL actual:</strong>{" "}
+            {typeof window !== "undefined" ? window.location.href : "N/A"}
           </Typography>
           <Typography variant="body2">
-            <strong>User Agent:</strong> {typeof window !== 'undefined' ? window.navigator.userAgent : 'N/A'}
+            <strong>User Agent:</strong>{" "}
+            {typeof window !== "undefined" ? window.navigator.userAgent : "N/A"}
           </Typography>
           <Typography variant="body2">
-            <strong>localStorage disponible:</strong> {typeof window !== 'undefined' ? 'Sí' : 'No'}
+            <strong>localStorage disponible:</strong>{" "}
+            {typeof window !== "undefined" ? "Sí" : "No"}
           </Typography>
         </Box>
       </Paper>

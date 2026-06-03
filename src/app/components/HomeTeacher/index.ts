@@ -1,1 +1,1 @@
-export { HomeTeacher } from './HomeTeacher';
+export { HomeTeacher } from "./HomeTeacher";

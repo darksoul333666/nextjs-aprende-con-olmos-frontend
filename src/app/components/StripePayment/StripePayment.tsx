@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -15,15 +15,15 @@ import {
   CardContent,
   CardMedia,
   Divider,
-} from '@mui/material';
+} from "@mui/material";
 import {
   CreditCard,
   Lock,
   CheckCircle,
   Error as ErrorIcon,
-} from '@mui/icons-material';
-import { loadStripe } from '@stripe/stripe-js';
-import { stripeService, StripeConfig } from '../../services/stripeService';
+} from "@mui/icons-material";
+import { loadStripe } from "@stripe/stripe-js";
+import { stripeService, StripeConfig } from "../../services/stripeService";
 
 interface StripePaymentProps {
   open: boolean;
@@ -64,9 +64,8 @@ export const StripePayment: React.FC<StripePaymentProps> = ({
       setError(null);
       const config = await stripeService.getConfig();
       setStripeConfig(config);
-    } catch (err) {
-      console.error('Error loading Stripe config:', err);
-      setError('Error al cargar la configuración de pagos');
+    } catch {
+      setError("Error al cargar la configuración de pagos");
     } finally {
       setIsLoading(false);
     }
@@ -76,19 +75,21 @@ export const StripePayment: React.FC<StripePaymentProps> = ({
     try {
       setIsProcessing(true);
       setError(null);
-      
+
       // Crear sesión de checkout
       const session = await stripeService.createCheckoutSession(courseId);
-      
+
       if (!session || !session.sessionId) {
-        throw new Error('No se pudo crear la sesión de pago. Inténtalo de nuevo.');
+        throw new Error(
+          "No se pudo crear la sesión de pago. Inténtalo de nuevo.",
+        );
       }
-      
+
       // Cargar Stripe
       const stripe = await loadStripe(stripeConfig!.publishableKey);
-      
+
       if (!stripe) {
-        throw new Error('Error al cargar Stripe');
+        throw new Error("Error al cargar Stripe");
       }
 
       // Redirigir a Stripe Checkout
@@ -99,13 +100,14 @@ export const StripePayment: React.FC<StripePaymentProps> = ({
       if (error) {
         throw new Error(error.message);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al procesar el pago');
+    } catch {
+      setError(
+        err instanceof Error ? err.message : "Error al procesar el pago",
+      );
     } finally {
       setIsProcessing(false);
     }
   };
-
 
   const handleClose = () => {
     if (!isProcessing) {
@@ -115,13 +117,13 @@ export const StripePayment: React.FC<StripePaymentProps> = ({
   };
 
   return (
-    <Dialog 
-      open={open} 
+    <Dialog
+      open={open}
       onClose={handleClose}
       maxWidth="sm"
       fullWidth
       PaperProps={{
-        sx: { borderRadius: 2 }
+        sx: { borderRadius: 2 },
       }}
     >
       <DialogTitle sx={{ pb: 1 }}>
@@ -135,7 +137,12 @@ export const StripePayment: React.FC<StripePaymentProps> = ({
 
       <DialogContent sx={{ pt: 2 }}>
         {isLoading ? (
-          <Box display="flex" justifyContent="center" alignItems="center" py={4}>
+          <Box
+            display="flex"
+            justifyContent="center"
+            alignItems="center"
+            py={4}
+          >
             <CircularProgress />
             <Typography variant="body2" sx={{ ml: 2 }}>
               Cargando configuración de pagos...
@@ -154,14 +161,18 @@ export const StripePayment: React.FC<StripePaymentProps> = ({
                   <CardMedia
                     component="img"
                     sx={{ width: 80, height: 60, borderRadius: 1 }}
-                    image={courseThumbnail || '/placeholder-course.jpg'}
+                    image={courseThumbnail || "/placeholder-course.jpg"}
                     alt={courseTitle}
                   />
                   <Box flex={1}>
                     <Typography variant="h6" gutterBottom>
                       {courseTitle}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mb: 1 }}
+                    >
                       {courseDescription}
                     </Typography>
                     <Typography variant="h6" color="primary" fontWeight="bold">
@@ -188,20 +199,14 @@ export const StripePayment: React.FC<StripePaymentProps> = ({
                 Resumen de la compra:
               </Typography>
               <Box display="flex" justifyContent="space-between" mb={1}>
-                <Typography variant="body2">
-                  {courseTitle}
-                </Typography>
+                <Typography variant="body2">{courseTitle}</Typography>
                 <Typography variant="body2" fontWeight="bold">
                   ${coursePrice.toFixed(2)}
                 </Typography>
               </Box>
               <Box display="flex" justifyContent="space-between" mb={1}>
-                <Typography variant="body2">
-                  Impuestos
-                </Typography>
-                <Typography variant="body2">
-                  $0.00
-                </Typography>
+                <Typography variant="body2">Impuestos</Typography>
+                <Typography variant="body2">$0.00</Typography>
               </Box>
               <Divider sx={{ my: 1 }} />
               <Box display="flex" justifyContent="space-between">
@@ -217,28 +222,26 @@ export const StripePayment: React.FC<StripePaymentProps> = ({
         )}
       </DialogContent>
 
-    <DialogActions sx={{ p: 3, pt: 1 }}>
-      <Button 
-        onClick={handleClose} 
-        disabled={isProcessing}
-        color="inherit"
-      >
-        Cancelar
-      </Button>
-      <Button
-        onClick={handlePayment}
-        disabled={isLoading || isProcessing || !stripeConfig}
-        variant="contained"
-        startIcon={isProcessing ? <CircularProgress size={16} /> : <CreditCard />}
-        sx={{ 
-          minWidth: 140,
-          bgcolor: 'primary.main',
-          '&:hover': { bgcolor: 'primary.dark' }
-        }}
-      >
-        {isProcessing ? 'Procesando...' : 'Pagar con Stripe'}
-      </Button>
-    </DialogActions>
+      <DialogActions sx={{ p: 3, pt: 1 }}>
+        <Button onClick={handleClose} disabled={isProcessing} color="inherit">
+          Cancelar
+        </Button>
+        <Button
+          onClick={handlePayment}
+          disabled={isLoading || isProcessing || !stripeConfig}
+          variant="contained"
+          startIcon={
+            isProcessing ? <CircularProgress size={16} /> : <CreditCard />
+          }
+          sx={{
+            minWidth: 140,
+            bgcolor: "primary.main",
+            "&:hover": { bgcolor: "primary.dark" },
+          }}
+        >
+          {isProcessing ? "Procesando..." : "Pagar con Stripe"}
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 };

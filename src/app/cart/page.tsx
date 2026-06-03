@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Container,
   Typography,
@@ -17,18 +17,18 @@ import {
   Divider,
   Breadcrumbs,
   Link,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Delete,
   School,
   ArrowForward,
   ShoppingCart,
   Home,
-} from '@mui/icons-material';
-import { Navbar } from '../components/Navigation/Navbar';
-import { useCart } from '../contexts/CartContext';
-import { stripeService } from '../services/stripeService';
-import { useRouter } from 'next/navigation';
+} from "@mui/icons-material";
+import { Navbar } from "../components/Navigation/Navbar";
+import { useCart } from "../contexts/CartContext";
+import { stripeService } from "../services/stripeService";
+import { useRouter } from "next/navigation";
 
 export default function CartPage() {
   const { cart, isLoading, removeFromCart, clearCart } = useCart();
@@ -40,9 +40,8 @@ export default function CartPage() {
     try {
       setError(null);
       await removeFromCart(courseId);
-    } catch (error) {
-      console.error('Error removing item:', error);
-      setError('Error al remover el curso del carrito');
+    } catch {
+      setError("Error al remover el curso del carrito");
     }
   };
 
@@ -50,9 +49,8 @@ export default function CartPage() {
     try {
       setError(null);
       await clearCart();
-    } catch (error) {
-      console.error('Error clearing cart:', error);
-      setError('Error al limpiar el carrito');
+    } catch {
+      setError("Error al limpiar el carrito");
     }
   };
 
@@ -63,26 +61,32 @@ export default function CartPage() {
       setIsProcessing(true);
       setError(null);
       const checkoutSession = await stripeService.createCartCheckoutSession();
-      
+
       // Redirigir a Stripe Checkout
       window.location.href = checkoutSession.url;
-    } catch (error) {
-      console.error('Error creating checkout session:', error);
-      setError('Error al procesar el pago. Inténtalo de nuevo.');
+    } catch {
+      setError("Error al procesar el pago. Inténtalo de nuevo.");
       setIsProcessing(false);
     }
   };
 
   const handleContinueShopping = () => {
-    router.push('/courses');
+    router.push("/courses");
   };
 
   if (isLoading) {
     return (
-      <Box sx={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
+      <Box sx={{ minHeight: "100vh", backgroundColor: "#f8f9fa" }}>
         <Navbar currentPage="cart" />
         <Container maxWidth="lg" sx={{ py: 4 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              minHeight: 400,
+            }}
+          >
             <CircularProgress size={60} />
           </Box>
         </Container>
@@ -91,9 +95,9 @@ export default function CartPage() {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
+    <Box sx={{ minHeight: "100vh", backgroundColor: "#f8f9fa" }}>
       <Navbar currentPage="cart" />
-      
+
       <Container maxWidth="lg" sx={{ py: 4 }}>
         {/* Breadcrumbs */}
         <Breadcrumbs sx={{ mb: 3 }}>
@@ -102,9 +106,9 @@ export default function CartPage() {
             href="/"
             onClick={(e) => {
               e.preventDefault();
-              router.push('/');
+              router.push("/");
             }}
-            sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
+            sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
           >
             <Home fontSize="small" />
             Inicio
@@ -114,7 +118,12 @@ export default function CartPage() {
 
         {/* Header */}
         <Box sx={{ mb: 4 }}>
-          <Typography variant="h3" component="h1" gutterBottom sx={{ fontWeight: 700 }}>
+          <Typography
+            variant="h3"
+            component="h1"
+            gutterBottom
+            sx={{ fontWeight: 700 }}
+          >
             Carrito de Compras
           </Typography>
           <Typography variant="body1" color="text.secondary">
@@ -130,8 +139,10 @@ export default function CartPage() {
 
         {!cart || cart.items.length === 0 ? (
           /* Empty Cart */
-          <Paper sx={{ p: 6, textAlign: 'center' }}>
-            <ShoppingCart sx={{ fontSize: 80, color: 'text.secondary', mb: 2 }} />
+          <Paper sx={{ p: 6, textAlign: "center" }}>
+            <ShoppingCart
+              sx={{ fontSize: 80, color: "text.secondary", mb: 2 }}
+            />
             <Typography variant="h5" gutterBottom>
               Tu carrito está vacío
             </Typography>
@@ -149,35 +160,54 @@ export default function CartPage() {
           </Paper>
         ) : (
           /* Cart with Items */
-          <Box display="flex" flexDirection={{ xs: 'column', lg: 'row' }} gap={4}>
+          <Box
+            display="flex"
+            flexDirection={{ xs: "column", lg: "row" }}
+            gap={4}
+          >
             {/* Cart Items */}
             <Box flex={2}>
               <Typography variant="h5" gutterBottom sx={{ fontWeight: 600 }}>
                 Cursos Seleccionados ({cart.itemCount})
               </Typography>
-              
+
               <Box display="flex" flexDirection="column" gap={2}>
                 {cart.items.map((item) => (
-                  <Card key={item.courseId._id} sx={{ display: 'flex', flexDirection: 'row' }}>
+                  <Card
+                    key={item.courseId._id}
+                    sx={{ display: "flex", flexDirection: "row" }}
+                  >
                     {/* Course Image */}
-                    <Box sx={{ width: 200, height: 150, position: 'relative', overflow: 'hidden' }}>
+                    <Box
+                      sx={{
+                        width: 200,
+                        height: 150,
+                        position: "relative",
+                        overflow: "hidden",
+                      }}
+                    >
                       {item.courseId.thumbnail ? (
                         <CardMedia
                           component="img"
                           image={item.courseId.thumbnail}
                           alt={item.courseId.title}
-                          sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          sx={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                          }}
                         />
                       ) : (
                         <Box
                           sx={{
-                            width: '100%',
-                            height: '100%',
-                            background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: 'white',
+                            width: "100%",
+                            height: "100%",
+                            background:
+                              "linear-gradient(45deg, #667eea 30%, #764ba2 90%)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "white",
                           }}
                         >
                           <School sx={{ fontSize: 60 }} />
@@ -191,16 +221,26 @@ export default function CartPage() {
                         <Typography variant="h6" component="h3" gutterBottom>
                           {item.courseId.title}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary" paragraph>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          paragraph
+                        >
                           {item.courseId.description}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
                           Instructor: {item.courseId.instructorId.name}
                         </Typography>
                       </CardContent>
-                      
-                      <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
-                        <Typography variant="h6" color="primary" fontWeight="bold">
+
+                      <CardActions
+                        sx={{ justifyContent: "space-between", px: 2, pb: 2 }}
+                      >
+                        <Typography
+                          variant="h6"
+                          color="primary"
+                          fontWeight="bold"
+                        >
                           ${item.price.toFixed(2)} USD
                         </Typography>
                         <IconButton
@@ -217,7 +257,7 @@ export default function CartPage() {
               </Box>
 
               {/* Clear Cart Button */}
-              <Box sx={{ mt: 3, textAlign: 'right' }}>
+              <Box sx={{ mt: 3, textAlign: "right" }}>
                 <Button
                   variant="outlined"
                   color="error"
@@ -231,22 +271,23 @@ export default function CartPage() {
 
             {/* Order Summary */}
             <Box flex={1}>
-              <Paper sx={{ p: 3, position: 'sticky', top: 20 }}>
+              <Paper sx={{ p: 3, position: "sticky", top: 20 }}>
                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
                   Resumen del Pedido
                 </Typography>
-                
+
                 <Divider sx={{ my: 2 }} />
-                
+
                 <Box display="flex" justifyContent="space-between" mb={1}>
                   <Typography variant="body1">
-                    Subtotal ({cart.itemCount} {cart.itemCount === 1 ? 'curso' : 'cursos'})
+                    Subtotal ({cart.itemCount}{" "}
+                    {cart.itemCount === 1 ? "curso" : "cursos"})
                   </Typography>
                   <Typography variant="body1">
                     ${cart.totalAmount.toFixed(2)} USD
                   </Typography>
                 </Box>
-                
+
                 <Box display="flex" justifyContent="space-between" mb={2}>
                   <Typography variant="body2" color="text.secondary">
                     Impuestos
@@ -255,14 +296,18 @@ export default function CartPage() {
                     Incluidos
                   </Typography>
                 </Box>
-                
+
                 <Divider sx={{ my: 2 }} />
-                
+
                 <Box display="flex" justifyContent="space-between" mb={3}>
                   <Typography variant="h6" sx={{ fontWeight: 600 }}>
                     Total
                   </Typography>
-                  <Typography variant="h6" color="primary" sx={{ fontWeight: 600 }}>
+                  <Typography
+                    variant="h6"
+                    color="primary"
+                    sx={{ fontWeight: 600 }}
+                  >
                     ${cart.totalAmount.toFixed(2)} USD
                   </Typography>
                 </Box>
@@ -273,10 +318,16 @@ export default function CartPage() {
                   fullWidth
                   onClick={handleCheckout}
                   disabled={isProcessing}
-                  endIcon={isProcessing ? <CircularProgress size={20} /> : <ArrowForward />}
+                  endIcon={
+                    isProcessing ? (
+                      <CircularProgress size={20} />
+                    ) : (
+                      <ArrowForward />
+                    )
+                  }
                   sx={{ mb: 2 }}
                 >
-                  {isProcessing ? 'Procesando...' : 'Proceder al Pago'}
+                  {isProcessing ? "Procesando..." : "Proceder al Pago"}
                 </Button>
 
                 <Button

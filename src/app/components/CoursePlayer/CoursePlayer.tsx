@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from "react";
 import {
   Box,
   Paper,
@@ -14,7 +14,7 @@ import {
   AccordionSummary,
   AccordionDetails,
   LinearProgress,
-} from '@mui/material';
+} from "@mui/material";
 import {
   PlayArrow,
   CheckCircle,
@@ -28,9 +28,9 @@ import {
   Search,
   KeyboardArrowDown,
   KeyboardArrowUp,
-} from '@mui/icons-material';
-import { VideoPlayer } from '../VideoPlayer/components/VideoPlayer';
-import { Course, Video, Section } from '../../services/courseService';
+} from "@mui/icons-material";
+import { VideoPlayer } from "../VideoPlayer/components/VideoPlayer";
+import { Course, Video, Section } from "../../services/courseService";
 
 interface CoursePlayerProps {
   course: Course;
@@ -46,15 +46,19 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
   className,
 }) => {
   const [currentVideoId, setCurrentVideoId] = useState<string | null>(null);
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
-  const [videoProgress, setVideoProgress] = useState<Record<string, number>>({});
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(
+    new Set(),
+  );
+  const [videoProgress, setVideoProgress] = useState<Record<string, number>>(
+    {},
+  );
 
   // Get all videos from all sections
   const allVideos = useMemo(() => {
     if (!course?.sections || !Array.isArray(course.sections)) {
       return [];
     }
-    return course.sections.flatMap(section => section.videos || []);
+    return course.sections.flatMap((section) => section.videos || []);
   }, [course?.sections]);
 
   // Get current video
@@ -62,16 +66,16 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
     if (!currentVideoId) {
       return allVideos[0];
     }
-    return allVideos.find(video => video._id === currentVideoId) || allVideos[0];
+    return (
+      allVideos.find((video) => video._id === currentVideoId) || allVideos[0]
+    );
   }, [currentVideoId, allVideos]);
 
   // Debug: Log current video info
-  console.log('Current video:', currentVideo);
-  console.log('All videos:', allVideos);
 
   // Get current video index
   const currentVideoIndex = useMemo(() => {
-    return allVideos.findIndex(video => video._id === currentVideo?._id);
+    return allVideos.findIndex((video) => video._id === currentVideo?._id);
   }, [currentVideo, allVideos]);
 
   // Get next and previous videos
@@ -91,7 +95,9 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
 
   // Calculate course progress
   const courseProgress = useMemo(() => {
-    const completedVideos = allVideos.filter(video => video.isCompleted).length;
+    const completedVideos = allVideos.filter(
+      (video) => video.isCompleted,
+    ).length;
     return (completedVideos / allVideos.length) * 100;
   }, [allVideos]);
 
@@ -99,7 +105,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
   const totalWatchedTime = useMemo(() => {
     return allVideos.reduce((total, video) => {
       const progress = videoProgress[video._id] || 0;
-      return total + (video.duration * progress);
+      return total + video.duration * progress;
     }, 0);
   }, [allVideos, videoProgress]);
 
@@ -123,7 +129,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
 
   // Handle section expansion
   const handleSectionToggle = useCallback((sectionId: string) => {
-    setExpandedSections(prev => {
+    setExpandedSections((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(sectionId)) {
         newSet.delete(sectionId);
@@ -149,15 +155,18 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
   }, [previousVideo]);
 
   // Handle video progress
-  const handleVideoProgress = useCallback((progress: number) => {
-    if (currentVideo) {
-      setVideoProgress(prev => ({
-        ...prev,
-        [currentVideo._id]: progress,
-      }));
-      onVideoProgress?.(currentVideo._id, progress);
-    }
-  }, [currentVideo, onVideoProgress]);
+  const handleVideoProgress = useCallback(
+    (progress: number) => {
+      if (currentVideo) {
+        setVideoProgress((prev) => ({
+          ...prev,
+          [currentVideo._id]: progress,
+        }));
+        onVideoProgress?.(currentVideo._id, progress);
+      }
+    },
+    [currentVideo, onVideoProgress],
+  );
 
   // Handle video end
   const handleVideoEnd = useCallback(() => {
@@ -165,7 +174,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
       // Mark video as completed
       currentVideo.isCompleted = true;
       onVideoComplete?.(currentVideo._id);
-      
+
       // Auto-advance to next video after a delay
       setTimeout(() => {
         if (nextVideo && !nextVideo.isLocked) {
@@ -178,20 +187,25 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
   // Expand all sections initially
   React.useEffect(() => {
     if (course?.sections && Array.isArray(course.sections)) {
-      setExpandedSections(new Set(course.sections.map(section => section._id)));
+      setExpandedSections(
+        new Set(course.sections.map((section) => section._id)),
+      );
     }
   }, [course?.sections]);
 
   return (
-    <Box className={className} sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <Box
+      className={className}
+      sx={{ height: "100vh", display: "flex", flexDirection: "column" }}
+    >
       {/* Header */}
-      <Paper 
-        elevation={1} 
-        sx={{ 
-          p: 2, 
-          borderBottom: 1, 
-          borderColor: 'divider',
-          backgroundColor: 'background.paper'
+      <Paper
+        elevation={1}
+        sx={{
+          p: 2,
+          borderBottom: 1,
+          borderColor: "divider",
+          backgroundColor: "background.paper",
         }}
       >
         <Box>
@@ -216,9 +230,9 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
       </Paper>
 
       {/* Main Content */}
-      <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      <Box sx={{ flex: 1, display: "flex", overflow: "hidden" }}>
         {/* Video Player Section */}
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
           {/* Video Player */}
           <Box sx={{ flex: 1, p: 2, pb: 1, minHeight: 400 }}>
             {currentVideo?.url ? (
@@ -235,15 +249,15 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
                 fullScreen={false}
               />
             ) : (
-              <Box 
-                sx={{ 
-                  width: '100%', 
-                  height: 400, 
-                  bgcolor: 'grey.200', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  borderRadius: 1
+              <Box
+                sx={{
+                  width: "100%",
+                  height: 400,
+                  bgcolor: "grey.200",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 1,
                 }}
               >
                 <Typography variant="h6" color="text.secondary">
@@ -261,10 +275,15 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
             <Typography variant="body2" color="text.secondary" paragraph>
               {currentVideo?.description}
             </Typography>
-            
+
             {/* Progress Bar */}
             <Box sx={{ mb: 2 }}>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+              <Box
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+                mb={1}
+              >
                 <Typography variant="body2" color="text.secondary">
                   Progreso del curso
                 </Typography>
@@ -272,9 +291,9 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
                   {Math.round(courseProgress)}%
                 </Typography>
               </Box>
-              <LinearProgress 
-                variant="determinate" 
-                value={courseProgress} 
+              <LinearProgress
+                variant="determinate"
+                value={courseProgress}
                 sx={{ height: 8, borderRadius: 4 }}
               />
             </Box>
@@ -304,23 +323,26 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
         </Box>
 
         {/* Course Content Sidebar */}
-        <Paper 
-          elevation={1} 
-          sx={{ 
-            width: 400, 
-            borderLeft: 1, 
-            borderColor: 'divider',
-            display: 'flex',
-            flexDirection: 'column',
-            backgroundColor: 'background.paper'
+        <Paper
+          elevation={1}
+          sx={{
+            width: 400,
+            borderLeft: 1,
+            borderColor: "divider",
+            display: "flex",
+            flexDirection: "column",
+            backgroundColor: "background.paper",
           }}
         >
           {/* Sidebar Header */}
-          <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-              <Typography variant="h6">
-                Contenido del curso
-              </Typography>
+          <Box sx={{ p: 2, borderBottom: 1, borderColor: "divider" }}>
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+              mb={1}
+            >
+              <Typography variant="h6">Contenido del curso</Typography>
               <Box display="flex" gap={1}>
                 <IconButton size="small">
                   <Search />
@@ -332,113 +354,143 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
             </Box>
             <Box display="flex" alignItems="center" gap={1}>
               <Typography variant="body2" color="text.secondary">
-                {allVideos.filter(v => v.isCompleted).length} de {allVideos.length} lecciones completadas
+                {allVideos.filter((v) => v.isCompleted).length} de{" "}
+                {allVideos.length} lecciones completadas
               </Typography>
             </Box>
           </Box>
 
           {/* Course Sections */}
-          <Box sx={{ flex: 1, overflow: 'auto' }}>
-            {course?.sections && Array.isArray(course.sections) ? course.sections.map((section) => (
-              <Accordion
-                key={section._id}
-                expanded={expandedSections.has(section._id)}
-                onChange={() => handleSectionToggle(section._id)}
-                sx={{
-                  '&:before': { display: 'none' },
-                  boxShadow: 'none',
-                  borderBottom: 1,
-                  borderColor: 'divider',
-                }}
-              >
-                <AccordionSummary
-                  expandIcon={<ExpandMore />}
+          <Box sx={{ flex: 1, overflow: "auto" }}>
+            {course?.sections && Array.isArray(course.sections) ? (
+              course.sections.map((section) => (
+                <Accordion
+                  key={section._id}
+                  expanded={expandedSections.has(section._id)}
+                  onChange={() => handleSectionToggle(section._id)}
                   sx={{
-                    '& .MuiAccordionSummary-content': {
-                      margin: 0,
-                    },
+                    "&:before": { display: "none" },
+                    boxShadow: "none",
+                    borderBottom: 1,
+                    borderColor: "divider",
                   }}
                 >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-                    <VideoLibrary fontSize="small" color="action" />
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="subtitle2">
-                        {section.title}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {(section.videos || []).length} lecciones • {formatDuration((section.videos || []).reduce((sum, v) => sum + v.duration, 0))}
-                      </Typography>
+                  <AccordionSummary
+                    expandIcon={<ExpandMore />}
+                    sx={{
+                      "& .MuiAccordionSummary-content": {
+                        margin: 0,
+                      },
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        width: "100%",
+                      }}
+                    >
+                      <VideoLibrary fontSize="small" color="action" />
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="subtitle2">
+                          {section.title}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {(section.videos || []).length} lecciones •{" "}
+                          {formatDuration(
+                            (section.videos || []).reduce(
+                              (sum, v) => sum + v.duration,
+                              0,
+                            ),
+                          )}
+                        </Typography>
+                      </Box>
                     </Box>
-                  </Box>
-                </AccordionSummary>
-                <AccordionDetails sx={{ p: 0 }}>
-                  <List dense sx={{ p: 0 }}>
-                    {(section.videos || []).map((video) => {
-                      const isCurrentVideo = video._id === currentVideo?._id;
-                      const progress = videoProgress[video._id] || 0;
-                      
-                      return (
-                        <ListItem
-                          key={video._id}
-                          disablePadding
-                          sx={{
-                            backgroundColor: isCurrentVideo ? 'action.selected' : 'transparent',
-                            '&:hover': {
-                              backgroundColor: 'action.hover',
-                            },
-                          }}
-                        >
-                          <ListItemButton
-                            onClick={() => handleVideoSelect(video)}
-                            disabled={video.isLocked}
-                            sx={{ pl: 4 }}
+                  </AccordionSummary>
+                  <AccordionDetails sx={{ p: 0 }}>
+                    <List dense sx={{ p: 0 }}>
+                      {(section.videos || []).map((video) => {
+                        const isCurrentVideo = video._id === currentVideo?._id;
+                        const progress = videoProgress[video._id] || 0;
+
+                        return (
+                          <ListItem
+                            key={video._id}
+                            disablePadding
+                            sx={{
+                              backgroundColor: isCurrentVideo
+                                ? "action.selected"
+                                : "transparent",
+                              "&:hover": {
+                                backgroundColor: "action.hover",
+                              },
+                            }}
                           >
-                            <ListItemIcon sx={{ minWidth: 36 }}>
-                              {video.isLocked ? (
-                                <Lock fontSize="small" color="action" />
-                              ) : video.isCompleted ? (
-                                <CheckCircle fontSize="small" color="success" />
-                              ) : (
-                                <PlayArrow fontSize="small" color="action" />
-                              )}
-                            </ListItemIcon>
-                            <ListItemText
-                              primary={
-                                <Typography
-                                  variant="body2"
-                                  sx={{
-                                    fontWeight: isCurrentVideo ? 600 : 400,
-                                    color: video.isLocked ? 'text.disabled' : 'text.primary',
-                                  }}
-                                >
-                                  {video.title}
-                                </Typography>
-                              }
-                              secondaryTypographyProps={{ component: 'div' }}
-                              secondary={
-                                <Box display="flex" alignItems="center" gap={1}>
-                                  <Typography variant="caption" color="text.secondary">
-                                    {formatDuration(video.duration)}
+                            <ListItemButton
+                              onClick={() => handleVideoSelect(video)}
+                              disabled={video.isLocked}
+                              sx={{ pl: 4 }}
+                            >
+                              <ListItemIcon sx={{ minWidth: 36 }}>
+                                {video.isLocked ? (
+                                  <Lock fontSize="small" color="action" />
+                                ) : video.isCompleted ? (
+                                  <CheckCircle
+                                    fontSize="small"
+                                    color="success"
+                                  />
+                                ) : (
+                                  <PlayArrow fontSize="small" color="action" />
+                                )}
+                              </ListItemIcon>
+                              <ListItemText
+                                primary={
+                                  <Typography
+                                    variant="body2"
+                                    sx={{
+                                      fontWeight: isCurrentVideo ? 600 : 400,
+                                      color: video.isLocked
+                                        ? "text.disabled"
+                                        : "text.primary",
+                                    }}
+                                  >
+                                    {video.title}
                                   </Typography>
-                                  {progress > 0 && !video.isCompleted && (
-                                    <LinearProgress
-                                      variant="determinate"
-                                      value={progress * 100}
-                                      sx={{ flex: 1, height: 2 }}
-                                    />
-                                  )}
-                                </Box>
-                              }
-                            />
-                          </ListItemButton>
-                        </ListItem>
-                      );
-                    })}
-                  </List>
-                </AccordionDetails>
-              </Accordion>
-            )) : (
-              <Box sx={{ p: 3, textAlign: 'center' }}>
+                                }
+                                secondaryTypographyProps={{ component: "div" }}
+                                secondary={
+                                  <Box
+                                    display="flex"
+                                    alignItems="center"
+                                    gap={1}
+                                  >
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                    >
+                                      {formatDuration(video.duration)}
+                                    </Typography>
+                                    {progress > 0 && !video.isCompleted && (
+                                      <LinearProgress
+                                        variant="determinate"
+                                        value={progress * 100}
+                                        sx={{ flex: 1, height: 2 }}
+                                      />
+                                    )}
+                                  </Box>
+                                }
+                              />
+                            </ListItemButton>
+                          </ListItem>
+                        );
+                      })}
+                    </List>
+                  </AccordionDetails>
+                </Accordion>
+              ))
+            ) : (
+              <Box sx={{ p: 3, textAlign: "center" }}>
                 <Typography variant="body2" color="text.secondary">
                   No hay contenido disponible para este curso
                 </Typography>
@@ -447,7 +499,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
           </Box>
 
           {/* Sidebar Footer */}
-          <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
+          <Box sx={{ p: 2, borderTop: 1, borderColor: "divider" }}>
             <Button
               variant="outlined"
               startIcon={<Book />}

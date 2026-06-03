@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Container,
   Typography,
@@ -16,35 +16,24 @@ import {
   ListItem,
   ListItemText,
   ListItemSecondaryAction,
-  Divider,
   Alert,
   CircularProgress,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Switch,
-  FormControlLabel,
   Stepper,
   Step,
   StepLabel,
-  StepContent,
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Fab,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Save,
   Edit,
   Delete,
   Add,
-  School,
-  PlayArrow,
   ArrowBack,
   Visibility,
   VisibilityOff,
@@ -55,11 +44,17 @@ import {
   VideoLibrary,
   Description,
   Settings,
-} from '@mui/icons-material';
-import { useRouter, useParams } from 'next/navigation';
-import { useAuth } from '../../../contexts/AuthContext';
-import { courseService, Course, Section, Video, CreateCourseRequest } from '../../../services/courseService';
-import { Navbar } from '../../../components/Navigation/Navbar';
+} from "@mui/icons-material";
+import { useRouter, useParams } from "next/navigation";
+import { useAuth } from "../../../contexts/AuthContext";
+import {
+  courseService,
+  Course,
+  Section,
+  Video,
+  CreateCourseRequest,
+} from "../../../services/courseService";
+import { Navbar } from "../../../components/Navigation/Navbar";
 
 export default function EditCoursePage() {
   const router = useRouter();
@@ -69,23 +64,26 @@ export default function EditCoursePage() {
   const [course, setCourse] = useState<Course | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [editMode, setEditMode] = useState(false);
   const [showAddSectionDialog, setShowAddSectionDialog] = useState(false);
   const [showAddVideoDialog, setShowAddVideoDialog] = useState(false);
-  const [selectedSection, setSelectedSection] = useState<{ title: string; videos?: Omit<Video, '_id'>[] } | null>(null);
-  const [newSectionTitle, setNewSectionTitle] = useState('');
-  const [newVideoTitle, setNewVideoTitle] = useState('');
-  const [newVideoDescription, setNewVideoDescription] = useState('');
-  const [newVideoUrl, setNewVideoUrl] = useState('');
-  const [newVideoMinutes, setNewVideoMinutes] = useState('');
-  const [newVideoSeconds, setNewVideoSeconds] = useState('');
+  const [selectedSection, setSelectedSection] = useState<{
+    title: string;
+    videos?: Omit<Video, "_id">[];
+  } | null>(null);
+  const [newSectionTitle, setNewSectionTitle] = useState("");
+  const [newVideoTitle, setNewVideoTitle] = useState("");
+  const [newVideoDescription, setNewVideoDescription] = useState("");
+  const [newVideoUrl, setNewVideoUrl] = useState("");
+  const [newVideoMinutes, setNewVideoMinutes] = useState("");
+  const [newVideoSeconds, setNewVideoSeconds] = useState("");
   const [activeStep, setActiveStep] = useState(0);
 
   const [formData, setFormData] = useState<Partial<CreateCourseRequest>>({
-    title: '',
-    description: '',
+    title: "",
+    description: "",
     price: 0,
     sections: [],
   });
@@ -104,11 +102,10 @@ export default function EditCoursePage() {
             sections: courseData.sections,
           });
         } else {
-          setError('Curso no encontrado');
+          setError("Curso no encontrado");
         }
-      } catch (error) {
-        console.error('Error fetching course data:', error);
-        setError('No se pudo cargar la información del curso');
+      } catch {
+        setError("No se pudo cargar la información del curso");
       } finally {
         setIsLoading(false);
       }
@@ -119,32 +116,36 @@ export default function EditCoursePage() {
     }
   }, [courseId]);
 
-  const handleInputChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: field === 'price' ? parseFloat(e.target.value) || 0 : e.target.value
-    }));
-  };
+  const handleInputChange =
+    (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
+      setFormData((prev) => ({
+        ...prev,
+        [field]:
+          field === "price" ? parseFloat(e.target.value) || 0 : e.target.value,
+      }));
+    };
 
   const handleSave = async () => {
     try {
       setIsSaving(true);
-      setError('');
-      setSuccess('');
+      setError("");
+      setSuccess("");
 
       if (!course) return;
 
-      const updatedCourse = await courseService.updateCourse(courseId, formData);
+      const updatedCourse = await courseService.updateCourse(
+        courseId,
+        formData,
+      );
       if (updatedCourse) {
         setCourse(updatedCourse);
         setEditMode(false);
-        setSuccess('Curso actualizado correctamente');
+        setSuccess("Curso actualizado correctamente");
       } else {
-        setError('Error al actualizar el curso');
+        setError("Error al actualizar el curso");
       }
-    } catch (error) {
-      setError('Error al actualizar el curso');
-      console.error('Error updating course:', error);
+    } catch {
+      setError("Error al actualizar el curso");
     } finally {
       setIsSaving(false);
     }
@@ -153,21 +154,21 @@ export default function EditCoursePage() {
   const handlePublishCourse = async () => {
     try {
       setIsSaving(true);
-      setError('');
-      setSuccess('');
+      setError("");
+      setSuccess("");
 
       if (!course) return;
 
-      const publishedCourse = await courseService.toggleCourseVisibility(courseId);
+      const publishedCourse =
+        await courseService.toggleCourseVisibility(courseId);
       if (publishedCourse) {
         setCourse(publishedCourse);
-        setSuccess('Curso publicado exitosamente');
+        setSuccess("Curso publicado exitosamente");
       } else {
-        setError('Error al publicar el curso');
+        setError("Error al publicar el curso");
       }
-    } catch (error) {
-      setError('Error al publicar el curso');
-      console.error('Error publishing course:', error);
+    } catch {
+      setError("Error al publicar el curso");
     } finally {
       setIsSaving(false);
     }
@@ -176,21 +177,25 @@ export default function EditCoursePage() {
   const handleToggleVisibility = async () => {
     try {
       setIsSaving(true);
-      setError('');
-      setSuccess('');
+      setError("");
+      setSuccess("");
 
       if (!course) return;
 
-      const updatedCourse = await courseService.toggleCourseVisibility(courseId);
+      const updatedCourse =
+        await courseService.toggleCourseVisibility(courseId);
       if (updatedCourse) {
         setCourse(updatedCourse);
-        setSuccess(course.isVisible ? 'Curso ocultado exitosamente' : 'Curso publicado exitosamente');
+        setSuccess(
+          course.isVisible
+            ? "Curso ocultado exitosamente"
+            : "Curso publicado exitosamente",
+        );
       } else {
-        setError('Error al cambiar la visibilidad del curso');
+        setError("Error al cambiar la visibilidad del curso");
       }
-    } catch (error) {
-      setError('Error al cambiar la visibilidad del curso');
-      console.error('Error toggling course visibility:', error);
+    } catch {
+      setError("Error al cambiar la visibilidad del curso");
     } finally {
       setIsSaving(false);
     }
@@ -199,134 +204,126 @@ export default function EditCoursePage() {
   const handleAddSection = () => {
     if (!newSectionTitle.trim()) return;
 
-    const newSection: Omit<Section, '_id'> = {
+    const newSection: Omit<Section, "_id"> = {
       title: newSectionTitle.trim(),
-      description: '',
+      description: "",
       order: (formData.sections?.length || 0) + 1,
       videos: [],
     };
 
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       sections: [...(prev.sections || []), newSection],
     }));
 
-    setNewSectionTitle('');
+    setNewSectionTitle("");
     setShowAddSectionDialog(false);
   };
 
   const handleAddVideo = async () => {
-    if (!newVideoTitle.trim() || !newVideoUrl.trim() || !selectedSection) return;
-    
+    if (!newVideoTitle.trim() || !newVideoUrl.trim() || !selectedSection)
+      return;
+
     const minutes = parseInt(newVideoMinutes) || 0;
     const seconds = parseInt(newVideoSeconds) || 0;
-    
-    // Validar que no sean negativos
+
     if (minutes < 0 || seconds < 0) {
-      setError('Los minutos y segundos no pueden ser negativos');
+      setError("Los minutos y segundos no pueden ser negativos");
       return;
     }
-    
-    // Validar que los segundos no excedan 59
+
     if (seconds > 59) {
-      setError('Los segundos no pueden ser mayores a 59');
+      setError("Los segundos no pueden ser mayores a 59");
       return;
     }
-    
+
     const totalSeconds = minutes * 60 + seconds;
-    
-    // Validación más estricta para la duración
+
     if (!minutes && !seconds) {
-      setError('Debes ingresar al menos minutos o segundos');
+      setError("Debes ingresar al menos minutos o segundos");
       return;
     }
-    
+
     if (totalSeconds <= 0) {
-      setError('La duración debe ser mayor a 0');
+      setError("La duración debe ser mayor a 0");
       return;
     }
-    
-    // Asegurar que sea un número entero positivo
+
     if (!Number.isInteger(totalSeconds) || totalSeconds <= 0) {
-      setError('La duración debe ser un número entero positivo');
+      setError("La duración debe ser un número entero positivo");
       return;
     }
 
     try {
       setIsSaving(true);
-      setError('');
+      setError("");
 
-                const newVideo: Omit<Video, '_id'> = {
+      const newVideo: Omit<Video, "_id"> = {
         title: newVideoTitle.trim(),
         description: newVideoDescription.trim(),
         url: newVideoUrl.trim(),
-        duration: totalSeconds, // Usar la duración total en segundos
+        duration: totalSeconds,
         order: (selectedSection.videos?.length || 0) + 1,
       };
 
-      console.log('New video object:', newVideo);
-      console.log('Duration in seconds:', totalSeconds);
-      console.log('Duration type:', typeof totalSeconds);
-
-      // Crear los datos actualizados para enviar al backend
       const updatedFormData = {
         ...formData,
         sections: formData.sections?.map((section) => {
           if (section.title === selectedSection.title) {
             return {
               ...section,
-              videos: [...(section.videos || []), newVideo]
+              videos: [...(section.videos || []), newVideo],
             };
           }
           return section;
-        })
+        }),
       };
-
-      console.log('Data being sent to backend:', updatedFormData);
-      console.log('Sections being sent:', updatedFormData.sections);
-
-      // Guardar inmediatamente en el backend con los datos actualizados
-      const updatedCourse = await courseService.updateCourse(courseId, updatedFormData);
+      const updatedCourse = await courseService.updateCourse(
+        courseId,
+        updatedFormData,
+      );
       if (updatedCourse) {
         setCourse(updatedCourse);
-        // Actualizar también el estado local del formulario
         setFormData(updatedFormData);
-        setSuccess('Video agregado y guardado correctamente');
+        setSuccess("Video agregado y guardado correctamente");
       } else {
-        setError('Error al guardar el video en el backend');
+        setError("Error al guardar el video en el backend");
       }
-
-      // Limpiar el formulario
-      setNewVideoTitle('');
-      setNewVideoDescription('');
-      setNewVideoUrl('');
-      setNewVideoMinutes('');
-      setNewVideoSeconds('');
+      setNewVideoTitle("");
+      setNewVideoDescription("");
+      setNewVideoUrl("");
+      setNewVideoMinutes("");
+      setNewVideoSeconds("");
       setSelectedSection(null);
       setShowAddVideoDialog(false);
-
-    } catch (error) {
-      setError('Error al agregar el video');
-      console.error('Error adding video:', error);
+    } catch {
+      setError("Error al agregar el video");
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleRemoveSection = (sectionTitle: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      sections: prev.sections?.filter(section => section.title !== sectionTitle),
+      sections: prev.sections?.filter(
+        (section) => section.title !== sectionTitle,
+      ),
     }));
   };
 
   const handleRemoveVideo = (sectionTitle: string, videoTitle: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      sections: prev.sections?.map(section => 
-        section.title === sectionTitle 
-          ? { ...section, videos: section.videos?.filter(video => video.title !== videoTitle) || [] }
-          : section
+      sections: prev.sections?.map((section) =>
+        section.title === sectionTitle
+          ? {
+              ...section,
+              videos:
+                section.videos?.filter((video) => video.title !== videoTitle) ||
+                [],
+            }
+          : section,
       ),
     }));
   };
@@ -342,25 +339,33 @@ export default function EditCoursePage() {
 
   const steps = [
     {
-      label: 'Información Básica',
-      description: 'Título, descripción y precio del curso',
+      label: "Información Básica",
+      description: "Título, descripción y precio del curso",
       icon: <Description />,
     },
     {
-      label: 'Secciones y Videos',
-      description: 'Organiza el contenido del curso',
+      label: "Secciones y Videos",
+      description: "Organiza el contenido del curso",
       icon: <VideoLibrary />,
     },
     {
-      label: 'Configuración',
-      description: 'Visibilidad y estado del curso',
+      label: "Configuración",
+      description: "Visibilidad y estado del curso",
       icon: <Settings />,
     },
   ];
 
   if (isLoading) {
     return (
-      <Box sx={{ minHeight: '100vh', backgroundColor: '#f8f9fa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Box
+        sx={{
+          minHeight: "100vh",
+          backgroundColor: "#f8f9fa",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
         <CircularProgress size={60} />
       </Box>
     );
@@ -368,10 +373,10 @@ export default function EditCoursePage() {
 
   if (!course) {
     return (
-      <Box sx={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
+      <Box sx={{ minHeight: "100vh", backgroundColor: "#f8f9fa" }}>
         <Navbar currentPage="courses" />
         <Container maxWidth="lg" sx={{ py: 4 }}>
-          <Paper sx={{ p: 6, textAlign: 'center' }}>
+          <Paper sx={{ p: 6, textAlign: "center" }}>
             <Typography variant="h5" color="text.secondary">
               Curso no encontrado.
             </Typography>
@@ -382,17 +387,18 @@ export default function EditCoursePage() {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
+    <Box sx={{ minHeight: "100vh", backgroundColor: "#f8f9fa" }}>
       <Navbar currentPage="courses" />
-      
+
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        {/* Header */}
-        <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
-          <IconButton onClick={() => router.push('/teacher/courses')}>
+        <Box sx={{ mb: 4, display: "flex", alignItems: "center", gap: 2 }}>
+          <IconButton onClick={() => router.push("/teacher/courses")}>
             <ArrowBack />
           </IconButton>
           <Typography variant="h3" component="h1" sx={{ fontWeight: 700 }}>
-            {courseId === 'new' ? 'Crear Nuevo Curso' : `Editar: ${course.title}`}
+            {courseId === "new"
+              ? "Crear Nuevo Curso"
+              : `Editar: ${course.title}`}
           </Typography>
         </Box>
 
@@ -408,7 +414,6 @@ export default function EditCoursePage() {
           </Alert>
         )}
 
-        {/* Stepper para navegación */}
         <Paper sx={{ p: 3, mb: 4 }}>
           <Stepper activeStep={activeStep} orientation="horizontal">
             {steps.map((step, index) => (
@@ -416,7 +421,7 @@ export default function EditCoursePage() {
                 <StepLabel
                   icon={step.icon}
                   onClick={() => setActiveStep(index)}
-                  sx={{ cursor: 'pointer' }}
+                  sx={{ cursor: "pointer" }}
                 >
                   {step.label}
                 </StepLabel>
@@ -425,21 +430,37 @@ export default function EditCoursePage() {
           </Stepper>
         </Paper>
 
-        {/* Contenido del Stepper */}
         <Box sx={{ mb: 4 }}>
           {activeStep === 0 && (
             <Paper sx={{ p: 4 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h5" component="h2" sx={{ fontWeight: 600 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 3,
+                }}
+              >
+                <Typography
+                  variant="h5"
+                  component="h2"
+                  sx={{ fontWeight: 600 }}
+                >
                   Información Básica
                 </Typography>
                 <Button
-                  variant={editMode ? 'outlined' : 'contained'}
+                  variant={editMode ? "outlined" : "contained"}
                   startIcon={editMode ? <Save /> : <Edit />}
                   onClick={editMode ? handleSave : () => setEditMode(true)}
                   disabled={isSaving}
                 >
-                  {isSaving ? <CircularProgress size={20} /> : (editMode ? 'Guardar' : 'Editar')}
+                  {isSaving ? (
+                    <CircularProgress size={20} />
+                  ) : editMode ? (
+                    "Guardar"
+                  ) : (
+                    "Editar"
+                  )}
                 </Button>
               </Box>
 
@@ -448,26 +469,26 @@ export default function EditCoursePage() {
                   fullWidth
                   label="Título del Curso"
                   value={formData.title}
-                  onChange={handleInputChange('title')}
+                  onChange={handleInputChange("title")}
                   disabled={!editMode}
                 />
-                
+
                 <TextField
                   fullWidth
                   multiline
                   rows={4}
                   label="Descripción"
                   value={formData.description}
-                  onChange={handleInputChange('description')}
+                  onChange={handleInputChange("description")}
                   disabled={!editMode}
                 />
-                
+
                 <TextField
                   fullWidth
                   type="number"
                   label="Precio ($)"
                   value={formData.price}
-                  onChange={handleInputChange('price')}
+                  onChange={handleInputChange("price")}
                   disabled={!editMode}
                   InputProps={{
                     startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>,
@@ -479,8 +500,19 @@ export default function EditCoursePage() {
 
           {activeStep === 1 && (
             <Paper sx={{ p: 4 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h5" component="h2" sx={{ fontWeight: 600 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 3,
+                }}
+              >
+                <Typography
+                  variant="h5"
+                  component="h2"
+                  sx={{ fontWeight: 600 }}
+                >
                   Secciones y Videos
                 </Typography>
                 {editMode && (
@@ -499,7 +531,14 @@ export default function EditCoursePage() {
                   {formData.sections.map((section, sectionIndex) => (
                     <Accordion key={sectionIndex} defaultExpanded>
                       <AccordionSummary expandIcon={<ExpandMore />}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 2,
+                            width: "100%",
+                          }}
+                        >
                           <DragIndicator color="action" />
                           <Typography variant="h6" sx={{ fontWeight: 600 }}>
                             {section.title}
@@ -513,7 +552,14 @@ export default function EditCoursePage() {
                         </Box>
                       </AccordionSummary>
                       {editMode && (
-                        <Box sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}>
+                        <Box
+                          sx={{
+                            position: "absolute",
+                            top: 8,
+                            right: 8,
+                            zIndex: 1,
+                          }}
+                        >
                           <IconButton
                             size="small"
                             onClick={() => handleRemoveSection(section.title)}
@@ -525,46 +571,74 @@ export default function EditCoursePage() {
                       )}
                       <AccordionDetails>
                         {section.description && (
-                          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ mb: 2 }}
+                          >
                             {section.description}
                           </Typography>
                         )}
 
-                        {/* Videos de la Sección */}
                         <Box sx={{ mb: 2 }}>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              mb: 1,
+                            }}
+                          >
+                            <Typography
+                              variant="subtitle2"
+                              sx={{ fontWeight: 600 }}
+                            >
                               Videos
                             </Typography>
                             {editMode && (
                               <Button
                                 size="small"
-                                startIcon={isSaving ? <CircularProgress size={16} /> : <Add />}
+                                startIcon={
+                                  isSaving ? (
+                                    <CircularProgress size={16} />
+                                  ) : (
+                                    <Add />
+                                  )
+                                }
                                 onClick={() => {
                                   setSelectedSection(section);
                                   setShowAddVideoDialog(true);
                                 }}
                                 disabled={isSaving}
                               >
-                                {isSaving ? 'Guardando...' : 'Agregar Video'}
+                                {isSaving ? "Guardando..." : "Agregar Video"}
                               </Button>
                             )}
                           </Box>
-                          
+
                           {section.videos && section.videos.length > 0 ? (
                             <List dense>
                               {section.videos.map((video, videoIndex) => (
                                 <ListItem key={videoIndex} sx={{ px: 0 }}>
                                   <ListItemText
                                     primary={video.title}
-                                    secondaryTypographyProps={{ component: 'div' }}
+                                    secondaryTypographyProps={{
+                                      component: "div",
+                                    }}
                                     secondary={
-                                      <Box display="flex" alignItems="center" gap={2}>
+                                      <Box
+                                        display="flex"
+                                        alignItems="center"
+                                        gap={2}
+                                      >
                                         <Typography variant="caption">
                                           {formatDuration(video.duration || 0)}
                                         </Typography>
                                         {video.description && (
-                                          <Typography variant="caption" color="text.secondary">
+                                          <Typography
+                                            variant="caption"
+                                            color="text.secondary"
+                                          >
                                             {video.description}
                                           </Typography>
                                         )}
@@ -576,7 +650,12 @@ export default function EditCoursePage() {
                                       <IconButton
                                         edge="end"
                                         size="small"
-                                        onClick={() => handleRemoveVideo(section.title, video.title)}
+                                        onClick={() =>
+                                          handleRemoveVideo(
+                                            section.title,
+                                            video.title,
+                                          )
+                                        }
                                         color="error"
                                       >
                                         <Delete />
@@ -597,8 +676,10 @@ export default function EditCoursePage() {
                   ))}
                 </Box>
               ) : (
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <VideoLibrary sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
+                <Box sx={{ textAlign: "center", py: 4 }}>
+                  <VideoLibrary
+                    sx={{ fontSize: 60, color: "text.secondary", mb: 2 }}
+                  />
                   <Typography variant="h6" color="text.secondary">
                     No hay secciones en este curso
                   </Typography>
@@ -619,32 +700,50 @@ export default function EditCoursePage() {
 
           {activeStep === 2 && (
             <Paper sx={{ p: 4 }}>
-              <Typography variant="h5" component="h2" sx={{ fontWeight: 600, mb: 3 }}>
+              <Typography
+                variant="h5"
+                component="h2"
+                sx={{ fontWeight: 600, mb: 3 }}
+              >
                 Configuración del Curso
               </Typography>
 
               <Box display="flex" flexDirection="column" gap={3}>
                 <Card>
                   <CardContent>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                      <Typography variant="h6" component="h3" sx={{ fontWeight: 600 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        mb: 2,
+                      }}
+                    >
+                      <Typography
+                        variant="h6"
+                        component="h3"
+                        sx={{ fontWeight: 600 }}
+                      >
                         Estado del Curso
                       </Typography>
                       <Chip
-                        label={course.isVisible ? 'Publicado' : 'Borrador'}
-                        color={course.isVisible ? 'success' : 'default'}
+                        label={course.isVisible ? "Publicado" : "Borrador"}
+                        color={course.isVisible ? "success" : "default"}
                         icon={course.isVisible ? <Visibility /> : <Drafts />}
                       />
                     </Box>
-                    
-                    <Typography variant="body2" color="text.secondary" paragraph>
-                      {course.isVisible 
-                        ? 'Tu curso está visible para todos los estudiantes y puede ser comprado.'
-                        : 'Tu curso está en modo borrador y solo tú puedes verlo.'
-                      }
+
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      paragraph
+                    >
+                      {course.isVisible
+                        ? "Tu curso está visible para todos los estudiantes y puede ser comprado."
+                        : "Tu curso está en modo borrador y solo tú puedes verlo."}
                     </Typography>
 
-                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                    <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
                       {!course.isVisible ? (
                         <Button
                           variant="contained"
@@ -652,7 +751,11 @@ export default function EditCoursePage() {
                           onClick={handlePublishCourse}
                           disabled={isSaving}
                         >
-                          {isSaving ? <CircularProgress size={20} /> : 'Publicar Curso'}
+                          {isSaving ? (
+                            <CircularProgress size={20} />
+                          ) : (
+                            "Publicar Curso"
+                          )}
                         </Button>
                       ) : (
                         <Button
@@ -661,7 +764,11 @@ export default function EditCoursePage() {
                           onClick={handleToggleVisibility}
                           disabled={isSaving}
                         >
-                          {isSaving ? <CircularProgress size={20} /> : 'Ocultar Curso'}
+                          {isSaving ? (
+                            <CircularProgress size={20} />
+                          ) : (
+                            "Ocultar Curso"
+                          )}
                         </Button>
                       )}
                     </Box>
@@ -670,10 +777,14 @@ export default function EditCoursePage() {
 
                 <Card>
                   <CardContent>
-                    <Typography variant="h6" component="h3" sx={{ fontWeight: 600, mb: 2 }}>
+                    <Typography
+                      variant="h6"
+                      component="h3"
+                      sx={{ fontWeight: 600, mb: 2 }}
+                    >
                       Información del Curso
                     </Typography>
-                    
+
                     <Box display="flex" flexDirection="column" gap={2}>
                       <Box display="flex" justifyContent="space-between">
                         <Typography variant="body2" color="text.secondary">
@@ -683,16 +794,20 @@ export default function EditCoursePage() {
                           {formData.sections?.length || 0}
                         </Typography>
                       </Box>
-                      
+
                       <Box display="flex" justifyContent="space-between">
                         <Typography variant="body2" color="text.secondary">
                           Videos Totales:
                         </Typography>
                         <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {formData.sections?.reduce((total, section) => total + (section.videos?.length || 0), 0) || 0}
+                          {formData.sections?.reduce(
+                            (total, section) =>
+                              total + (section.videos?.length || 0),
+                            0,
+                          ) || 0}
                         </Typography>
                       </Box>
-                      
+
                       <Box display="flex" justifyContent="space-between">
                         <Typography variant="body2" color="text.secondary">
                           Duración Total:
@@ -701,24 +816,30 @@ export default function EditCoursePage() {
                           {formatDuration(course.totalDuration || 0)}
                         </Typography>
                       </Box>
-                      
+
                       {course.isVisible && (
                         <>
                           <Box display="flex" justifyContent="space-between">
                             <Typography variant="body2" color="text.secondary">
                               Estudiantes:
                             </Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            <Typography
+                              variant="body2"
+                              sx={{ fontWeight: 600 }}
+                            >
                               {course.totalStudents || 0}
                             </Typography>
                           </Box>
-                          
+
                           <Box display="flex" justifyContent="space-between">
                             <Typography variant="body2" color="text.secondary">
                               Calificación:
                             </Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                              {course.rating?.toFixed(1) || '0.0'}
+                            <Typography
+                              variant="body2"
+                              sx={{ fontWeight: 600 }}
+                            >
+                              {course.rating?.toFixed(1) || "0.0"}
                             </Typography>
                           </Box>
                         </>
@@ -731,17 +852,20 @@ export default function EditCoursePage() {
           )}
         </Box>
 
-        {/* Navegación del Stepper */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
           <Button
             disabled={activeStep === 0}
-            onClick={() => setActiveStep((prevActiveStep) => prevActiveStep - 1)}
+            onClick={() =>
+              setActiveStep((prevActiveStep) => prevActiveStep - 1)
+            }
           >
             Anterior
           </Button>
           <Button
             variant="contained"
-            onClick={() => setActiveStep((prevActiveStep) => prevActiveStep + 1)}
+            onClick={() =>
+              setActiveStep((prevActiveStep) => prevActiveStep + 1)
+            }
             disabled={activeStep === steps.length - 1}
           >
             Siguiente
@@ -749,8 +873,12 @@ export default function EditCoursePage() {
         </Box>
       </Container>
 
-      {/* Dialog para agregar sección */}
-      <Dialog open={showAddSectionDialog} onClose={() => setShowAddSectionDialog(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={showAddSectionDialog}
+        onClose={() => setShowAddSectionDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Agregar Nueva Sección</DialogTitle>
         <DialogContent>
           <TextField
@@ -762,13 +890,21 @@ export default function EditCoursePage() {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowAddSectionDialog(false)}>Cancelar</Button>
-          <Button onClick={handleAddSection} variant="contained">Agregar</Button>
+          <Button onClick={() => setShowAddSectionDialog(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={handleAddSection} variant="contained">
+            Agregar
+          </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Dialog para agregar video */}
-      <Dialog open={showAddVideoDialog} onClose={() => setShowAddVideoDialog(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={showAddVideoDialog}
+        onClose={() => setShowAddVideoDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Agregar Nuevo Video</DialogTitle>
         <DialogContent>
           <TextField
@@ -795,7 +931,7 @@ export default function EditCoursePage() {
             placeholder="https://example.com/video.mp4"
             sx={{ mb: 2 }}
           />
-          <Box sx={{ display: 'flex', gap: 2 }}>
+          <Box sx={{ display: "flex", gap: 2 }}>
             <TextField
               fullWidth
               type="number"
@@ -803,7 +939,10 @@ export default function EditCoursePage() {
               value={newVideoMinutes}
               onChange={(e) => {
                 const value = e.target.value;
-                if (value === '' || (parseInt(value) >= 0 && parseInt(value) <= 999)) {
+                if (
+                  value === "" ||
+                  (parseInt(value) >= 0 && parseInt(value) <= 999)
+                ) {
                   setNewVideoMinutes(value);
                 }
               }}
@@ -818,7 +957,10 @@ export default function EditCoursePage() {
               value={newVideoSeconds}
               onChange={(e) => {
                 const value = e.target.value;
-                if (value === '' || (parseInt(value) >= 0 && parseInt(value) <= 59)) {
+                if (
+                  value === "" ||
+                  (parseInt(value) >= 0 && parseInt(value) <= 59)
+                ) {
                   setNewVideoSeconds(value);
                 }
               }}
@@ -827,25 +969,31 @@ export default function EditCoursePage() {
               helperText="0-59 segundos"
             />
           </Box>
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ mt: 1, display: "block" }}
+          >
             Ejemplo: 5 minutos y 30 segundos = 5:30
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowAddVideoDialog(false)} disabled={isSaving}>
+          <Button
+            onClick={() => setShowAddVideoDialog(false)}
+            disabled={isSaving}
+          >
             Cancelar
           </Button>
-          <Button 
-            onClick={handleAddVideo} 
-            variant="contained" 
+          <Button
+            onClick={handleAddVideo}
+            variant="contained"
             disabled={isSaving}
             startIcon={isSaving ? <CircularProgress size={20} /> : <Add />}
           >
-            {isSaving ? 'Guardando...' : 'Agregar'}
+            {isSaving ? "Guardando..." : "Agregar"}
           </Button>
         </DialogActions>
       </Dialog>
     </Box>
   );
 }
-

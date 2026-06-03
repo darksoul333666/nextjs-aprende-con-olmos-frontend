@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Container,
   Typography,
@@ -25,7 +25,7 @@ import {
   Select,
   MenuItem,
   Fab,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Add,
   Edit,
@@ -40,11 +40,16 @@ import {
   Delete,
   ArrowBack,
   PlayArrow,
-} from '@mui/icons-material';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '../../contexts/AuthContext';
-import { courseService, Course, DraftCourse, TeacherCourse } from '../../services/courseService';
-import { Navbar } from '../../components/Navigation/Navbar';
+} from "@mui/icons-material";
+import { useRouter } from "next/navigation";
+import { useAuth } from "../../contexts/AuthContext";
+import {
+  courseService,
+  Course,
+  DraftCourse,
+  TeacherCourse,
+} from "../../services/courseService";
+import { Navbar } from "../../components/Navigation/Navbar";
 
 export default function TeacherCoursesPage() {
   const router = useRouter();
@@ -54,15 +59,17 @@ export default function TeacherCoursesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [selectedCourse, setSelectedCourse] = useState<TeacherCourse | null>(null);
+  const [selectedCourse, setSelectedCourse] = useState<TeacherCourse | null>(
+    null,
+  );
 
   const [newCourse, setNewCourse] = useState({
-    title: '',
-    description: '',
+    title: "",
+    description: "",
     price: 0,
   });
 
@@ -73,30 +80,29 @@ export default function TeacherCoursesPage() {
 
     try {
       setIsLoading(true);
-      setError(''); // Limpiar errores previos
-      console.log('🔄 Iniciando carga de cursos...');
-      
+      setError(""); // Limpiar errores previos
+
       const [coursesData, draftsData] = await Promise.all([
         courseService.getTeacherCoursesWithStats(),
-        courseService.getDraftCourses()
+        courseService.getDraftCourses(),
       ]);
-      
-      console.log('✅ Cursos obtenidos:', coursesData);
-      console.log('✅ Borradores obtenidos:', draftsData);
-      
+
       setCourses(coursesData.courses);
       setDrafts(draftsData);
       setIsInitialized(true);
-    } catch (error) {
-      console.error('❌ Error fetching courses:', error);
-      
+    } catch {
       // Verificar si es un error de conexión
-      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        setError('Backend no disponible. Por favor, ejecuta el backend en http://localhost:3200 y recarga la página.');
+      if (
+        error instanceof TypeError &&
+        error.message.includes("Failed to fetch")
+      ) {
+        setError(
+          "Backend no disponible. Por favor, ejecuta el backend en http://localhost:3200 y recarga la página.",
+        );
       } else {
-        setError('Error al cargar los cursos. Por favor, intenta de nuevo.');
+        setError("Error al cargar los cursos. Por favor, intenta de nuevo.");
       }
-      
+
       // NO redirigir, solo mostrar el error
       setIsInitialized(true); // Marcar como inicializado para evitar reintentos
     } finally {
@@ -114,9 +120,9 @@ export default function TeacherCoursesPage() {
     setAuthChecked(true);
 
     // Verificar autenticación y rol
-    if (!isAuthenticated || user?.role !== 'maestro') {
+    if (!isAuthenticated || user?.role !== "maestro") {
       // Usuario no autenticado o no es maestro
-      router.push('/');
+      router.push("/");
       return;
     }
 
@@ -126,30 +132,34 @@ export default function TeacherCoursesPage() {
 
   const handleRetry = () => {
     setIsInitialized(false);
-    setError('');
+    setError("");
     fetchCourses();
   };
 
   const checkBackendConnection = async () => {
     try {
-      const response = await fetch('http://localhost:3200/api/health');
+      const response = await fetch("http://localhost:3200/api/health");
       if (response.ok) {
-        setSuccess('Backend conectado correctamente. Recargando...');
+        setSuccess("Backend conectado correctamente. Recargando...");
         setTimeout(() => {
           window.location.reload();
         }, 2000);
       } else {
-        setError('Backend responde pero con error. Verifica los logs del servidor.');
+        setError(
+          "Backend responde pero con error. Verifica los logs del servidor.",
+        );
       }
-    } catch (error) {
-      setError('Backend no disponible. Asegúrate de que esté ejecutándose en http://localhost:3200');
+    } catch {
+      setError(
+        "Backend no disponible. Asegúrate de que esté ejecutándose en http://localhost:3200",
+      );
     }
   };
 
   const handleCreateDraft = async () => {
     try {
       if (!newCourse.title.trim()) {
-        setError('El título del curso es obligatorio');
+        setError("El título del curso es obligatorio");
         return;
       }
 
@@ -160,46 +170,51 @@ export default function TeacherCoursesPage() {
       });
 
       if (createdDraft) {
-        setSuccess('Borrador creado exitosamente');
+        setSuccess("Borrador creado exitosamente");
         setShowCreateDialog(false);
-        setNewCourse({ title: '', description: '', price: 0 });
+        setNewCourse({ title: "", description: "", price: 0 });
         fetchCourses();
       } else {
-        setError('Error al crear el borrador');
+        setError("Error al crear el borrador");
       }
-    } catch (error) {
-      console.error('Error creating draft:', error);
-      setError('Error al crear el borrador');
+    } catch {
+      setError("Error al crear el borrador");
     }
   };
 
   const handlePublishCourse = async (course: Course) => {
     try {
-      const publishedCourse = await courseService.toggleCourseVisibility(course._id);
+      const publishedCourse = await courseService.toggleCourseVisibility(
+        course._id,
+      );
       if (publishedCourse) {
-        setSuccess('Curso publicado exitosamente');
+        setSuccess("Curso publicado exitosamente");
         fetchCourses();
       } else {
-        setError('Error al publicar el curso');
+        setError("Error al publicar el curso");
       }
-    } catch (error) {
-      console.error('Error publishing course:', error);
-      setError('Error al publicar el curso');
+    } catch {
+      setError("Error al publicar el curso");
     }
   };
 
   const handleToggleVisibility = async (course: Course) => {
     try {
-      const updatedCourse = await courseService.toggleCourseVisibility(course._id);
+      const updatedCourse = await courseService.toggleCourseVisibility(
+        course._id,
+      );
       if (updatedCourse) {
-        setSuccess(course.isVisible ? 'Curso ocultado exitosamente' : 'Curso publicado exitosamente');
+        setSuccess(
+          course.isVisible
+            ? "Curso ocultado exitosamente"
+            : "Curso publicado exitosamente",
+        );
         fetchCourses();
       } else {
-        setError('Error al cambiar la visibilidad del curso');
+        setError("Error al cambiar la visibilidad del curso");
       }
-    } catch (error) {
-      console.error('Error toggling course visibility:', error);
-      setError('Error al cambiar la visibilidad del curso');
+    } catch {
+      setError("Error al cambiar la visibilidad del curso");
     }
   };
 
@@ -208,13 +223,12 @@ export default function TeacherCoursesPage() {
 
     try {
       // Aquí implementarías la lógica de eliminación si existe el endpoint
-      setSuccess('Curso eliminado exitosamente');
+      setSuccess("Curso eliminado exitosamente");
       setShowDeleteDialog(false);
       setSelectedCourse(null);
       fetchCourses();
-    } catch (error) {
-      console.error('Error deleting course:', error);
-      setError('Error al eliminar el curso');
+    } catch {
+      setError("Error al eliminar el curso");
     }
   };
 
@@ -232,33 +246,53 @@ export default function TeacherCoursesPage() {
     router.push(`/course/${courseId}?preview=true`);
   };
 
-
   // Mostrar loading mientras se verifica la autenticación o se cargan los datos
-  if (isAuthenticated === undefined || !authChecked || isLoading || !isInitialized) {
+  if (
+    isAuthenticated === undefined ||
+    !authChecked ||
+    isLoading ||
+    !isInitialized
+  ) {
     return (
-      <Box sx={{ minHeight: '100vh', backgroundColor: '#f8f9fa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Box
+        sx={{
+          minHeight: "100vh",
+          backgroundColor: "#f8f9fa",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
         <CircularProgress size={60} />
       </Box>
     );
   }
 
   // Si no está autenticado o no es maestro, mostrar loading (el useEffect se encarga del redirect)
-  if (!isAuthenticated || user?.role !== 'maestro') {
+  if (!isAuthenticated || user?.role !== "maestro") {
     return (
-      <Box sx={{ minHeight: '100vh', backgroundColor: '#f8f9fa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Box
+        sx={{
+          minHeight: "100vh",
+          backgroundColor: "#f8f9fa",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
         <CircularProgress size={60} />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
+    <Box sx={{ minHeight: "100vh", backgroundColor: "#f8f9fa" }}>
       <Navbar currentPage="teacher" />
-      
+
       <Container maxWidth="lg" sx={{ py: 4 }}>
         {/* Header */}
-        <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
-          <IconButton onClick={() => router.push('/teacher')}>
+        <Box sx={{ mb: 4, display: "flex", alignItems: "center", gap: 2 }}>
+          <IconButton onClick={() => router.push("/teacher")}>
             <ArrowBack />
           </IconButton>
           <Typography variant="h3" component="h1" sx={{ fontWeight: 700 }}>
@@ -267,10 +301,10 @@ export default function TeacherCoursesPage() {
         </Box>
 
         {error && (
-          <Alert 
-            severity="error" 
-            sx={{ mb: 2 }} 
-            onClose={() => setError('')}
+          <Alert
+            severity="error"
+            sx={{ mb: 2 }}
+            onClose={() => setError("")}
             action={
               <Button color="inherit" size="small" onClick={handleRetry}>
                 Reintentar
@@ -282,21 +316,31 @@ export default function TeacherCoursesPage() {
         )}
 
         {success && (
-          <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>
+          <Alert
+            severity="success"
+            sx={{ mb: 2 }}
+            onClose={() => setSuccess("")}
+          >
             {success}
           </Alert>
         )}
 
         {/* Acciones */}
         <Paper sx={{ p: 3, mb: 4 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <Typography variant="h5" component="h2" sx={{ fontWeight: 600 }}>
               Gestionar Cursos
             </Typography>
-            <Box sx={{ display: 'flex', gap: 2 }}>
+            <Box sx={{ display: "flex", gap: 2 }}>
               <Button
                 variant="outlined"
-                onClick={() => router.push('/teacher/courses/create')}
+                onClick={() => router.push("/teacher/courses/create")}
               >
                 Crear Nuevo Curso
               </Button>
@@ -312,18 +356,26 @@ export default function TeacherCoursesPage() {
         </Paper>
 
         {isLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+          <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
             <CircularProgress size={60} />
           </Box>
         ) : error && courses.length === 0 && drafts.length === 0 ? (
-          <Paper sx={{ p: 6, textAlign: 'center' }}>
-            <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 600, color: 'error.main' }}>
+          <Paper sx={{ p: 6, textAlign: "center" }}>
+            <Typography
+              variant="h5"
+              component="h2"
+              gutterBottom
+              sx={{ fontWeight: 600, color: "error.main" }}
+            >
               Backend No Disponible
             </Typography>
             <Typography variant="body1" color="text.secondary" paragraph>
-              No se pudo conectar con el servidor backend. Asegúrate de que esté ejecutándose en http://localhost:3200
+              No se pudo conectar con el servidor backend. Asegúrate de que esté
+              ejecutándose en http://localhost:3200
             </Typography>
-            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', mt: 3 }}>
+            <Box
+              sx={{ display: "flex", gap: 2, justifyContent: "center", mt: 3 }}
+            >
               <Button
                 variant="contained"
                 onClick={checkBackendConnection}
@@ -331,30 +383,48 @@ export default function TeacherCoursesPage() {
               >
                 Verificar Conexión
               </Button>
-              <Button
-                variant="outlined"
-                onClick={handleRetry}
-                sx={{ mt: 2 }}
-              >
+              <Button variant="outlined" onClick={handleRetry} sx={{ mt: 2 }}>
                 Reintentar
               </Button>
             </Box>
           </Paper>
         ) : (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {/* Sección de Cursos Publicados */}
             <Paper sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h5" component="h2" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 3,
+                }}
+              >
+                <Typography
+                  variant="h5"
+                  component="h2"
+                  sx={{
+                    fontWeight: 600,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                  }}
+                >
                   <Visibility color="success" />
                   Cursos Publicados ({courses.length})
                 </Typography>
               </Box>
 
               {courses.length === 0 ? (
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <School sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
-                  <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+                <Box sx={{ textAlign: "center", py: 4 }}>
+                  <School
+                    sx={{ fontSize: 60, color: "text.secondary", mb: 2 }}
+                  />
+                  <Typography
+                    variant="h6"
+                    gutterBottom
+                    sx={{ fontWeight: 600 }}
+                  >
                     No tienes cursos publicados
                   </Typography>
                   <Typography variant="body2" color="text.secondary" paragraph>
@@ -362,20 +432,39 @@ export default function TeacherCoursesPage() {
                   </Typography>
                 </Box>
               ) : (
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }, gap: 3 }}>
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: {
+                      xs: "1fr",
+                      md: "repeat(2, 1fr)",
+                      lg: "repeat(3, 1fr)",
+                    },
+                    gap: 3,
+                  }}
+                >
                   {courses.map((course, index) => (
                     <Box key={course.id || `course-${index}`}>
-                      <Card sx={{ 
-                        height: '100%',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        position: 'relative',
-                        '&:hover': {
-                          boxShadow: 4,
-                        }
-                      }}>
+                      <Card
+                        sx={{
+                          height: "100%",
+                          display: "flex",
+                          flexDirection: "column",
+                          position: "relative",
+                          "&:hover": {
+                            boxShadow: 4,
+                          },
+                        }}
+                      >
                         {/* Estado del Curso */}
-                        <Box sx={{ position: 'absolute', top: 16, right: 16, zIndex: 1 }}>
+                        <Box
+                          sx={{
+                            position: "absolute",
+                            top: 16,
+                            right: 16,
+                            zIndex: 1,
+                          }}
+                        >
                           <Chip
                             label="Publicado"
                             color="success"
@@ -388,12 +477,13 @@ export default function TeacherCoursesPage() {
                         <Box
                           sx={{
                             height: 200,
-                            background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: 'white',
-                            position: 'relative',
+                            background:
+                              "linear-gradient(45deg, #667eea 30%, #764ba2 90%)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "white",
+                            position: "relative",
                           }}
                         >
                           <School sx={{ fontSize: 60 }} />
@@ -401,11 +491,11 @@ export default function TeacherCoursesPage() {
                             label={`$${course.price || 0}`}
                             color="primary"
                             sx={{
-                              position: 'absolute',
+                              position: "absolute",
                               top: 16,
                               left: 16,
-                              bgcolor: 'white',
-                              color: 'primary.main',
+                              bgcolor: "white",
+                              color: "primary.main",
                               fontWeight: 600,
                             }}
                           />
@@ -415,26 +505,57 @@ export default function TeacherCoursesPage() {
                           <Typography variant="h6" component="h3" gutterBottom>
                             {course.title}
                           </Typography>
-                          
-                          <Typography variant="body2" color="text.secondary" paragraph>
+
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            paragraph
+                          >
                             {course.description}
                           </Typography>
 
                           {/* Estadísticas del Curso */}
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 2,
+                              mb: 2,
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 0.5,
+                              }}
+                            >
                               <AccessTime fontSize="small" />
                               <Typography variant="caption">
-                                {formatDuration(course.stats.totalDuration || 0)}
+                                {formatDuration(
+                                  course.stats.totalDuration || 0,
+                                )}
                               </Typography>
                             </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 0.5,
+                              }}
+                            >
                               <School fontSize="small" />
                               <Typography variant="caption">
                                 {course.stats.sectionsCount || 0} secciones
                               </Typography>
                             </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 0.5,
+                              }}
+                            >
                               <People fontSize="small" />
                               <Typography variant="caption">
                                 {course.stats.totalStudents || 0} estudiantes
@@ -456,7 +577,9 @@ export default function TeacherCoursesPage() {
                           <Button
                             variant="outlined"
                             size="small"
-                            onClick={() => router.push(`/courses/edit/${course.id}`)}
+                            onClick={() =>
+                              router.push(`/courses/edit/${course.id}`)
+                            }
                             sx={{ flex: 1 }}
                           >
                             Editar
@@ -465,7 +588,9 @@ export default function TeacherCoursesPage() {
                             variant="outlined"
                             size="small"
                             startIcon={<VisibilityOff />}
-                            onClick={() => handleToggleVisibility(course as any)}
+                            onClick={() =>
+                              handleToggleVisibility(course as any)
+                            }
                             sx={{ flex: 1 }}
                           >
                             Ocultar
@@ -480,17 +605,39 @@ export default function TeacherCoursesPage() {
 
             {/* Sección de Borradores */}
             <Paper sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h5" component="h2" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 3,
+                }}
+              >
+                <Typography
+                  variant="h5"
+                  component="h2"
+                  sx={{
+                    fontWeight: 600,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                  }}
+                >
                   <Drafts color="warning" />
                   Borradores ({drafts.length})
                 </Typography>
               </Box>
 
               {drafts.length === 0 ? (
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <Drafts sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
-                  <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+                <Box sx={{ textAlign: "center", py: 4 }}>
+                  <Drafts
+                    sx={{ fontSize: 60, color: "text.secondary", mb: 2 }}
+                  />
+                  <Typography
+                    variant="h6"
+                    gutterBottom
+                    sx={{ fontWeight: 600 }}
+                  >
                     No tienes borradores
                   </Typography>
                   <Typography variant="body2" color="text.secondary" paragraph>
@@ -506,20 +653,39 @@ export default function TeacherCoursesPage() {
                   </Button>
                 </Box>
               ) : (
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }, gap: 3 }}>
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: {
+                      xs: "1fr",
+                      md: "repeat(2, 1fr)",
+                      lg: "repeat(3, 1fr)",
+                    },
+                    gap: 3,
+                  }}
+                >
                   {drafts.map((draft, index) => (
                     <Box key={draft.id || `draft-${index}`}>
-                      <Card sx={{ 
-                        height: '100%',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        position: 'relative',
-                        '&:hover': {
-                          boxShadow: 4,
-                        }
-                      }}>
+                      <Card
+                        sx={{
+                          height: "100%",
+                          display: "flex",
+                          flexDirection: "column",
+                          position: "relative",
+                          "&:hover": {
+                            boxShadow: 4,
+                          },
+                        }}
+                      >
                         {/* Estado del Curso */}
-                        <Box sx={{ position: 'absolute', top: 16, right: 16, zIndex: 1 }}>
+                        <Box
+                          sx={{
+                            position: "absolute",
+                            top: 16,
+                            right: 16,
+                            zIndex: 1,
+                          }}
+                        >
                           <Chip
                             label="Borrador"
                             color="warning"
@@ -532,12 +698,13 @@ export default function TeacherCoursesPage() {
                         <Box
                           sx={{
                             height: 200,
-                            background: 'linear-gradient(45deg, #ff9800 30%, #f57c00 90%)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: 'white',
-                            position: 'relative',
+                            background:
+                              "linear-gradient(45deg, #ff9800 30%, #f57c00 90%)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "white",
+                            position: "relative",
                           }}
                         >
                           <Drafts sx={{ fontSize: 60 }} />
@@ -545,11 +712,11 @@ export default function TeacherCoursesPage() {
                             label={`$${draft.price || 0}`}
                             color="primary"
                             sx={{
-                              position: 'absolute',
+                              position: "absolute",
                               top: 16,
                               left: 16,
-                              bgcolor: 'white',
-                              color: 'primary.main',
+                              bgcolor: "white",
+                              color: "primary.main",
                               fontWeight: 600,
                             }}
                           />
@@ -559,14 +726,19 @@ export default function TeacherCoursesPage() {
                           <Typography variant="h6" component="h3" gutterBottom>
                             {draft.title}
                           </Typography>
-                          
-                          <Typography variant="body2" color="text.secondary" paragraph>
+
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            paragraph
+                          >
                             {draft.description}
                           </Typography>
 
                           {/* Fecha de creación */}
                           <Typography variant="caption" color="text.secondary">
-                            Creado: {new Date(draft.createdAt).toLocaleDateString()}
+                            Creado:{" "}
+                            {new Date(draft.createdAt).toLocaleDateString()}
                           </Typography>
                         </CardContent>
 
@@ -574,7 +746,9 @@ export default function TeacherCoursesPage() {
                           <Button
                             variant="contained"
                             size="small"
-                            onClick={() => router.push(`/teacher/courses/edit/${draft.id}`)}
+                            onClick={() =>
+                              router.push(`/teacher/courses/edit/${draft.id}`)
+                            }
                             sx={{ flex: 1 }}
                           >
                             Completar
@@ -583,7 +757,9 @@ export default function TeacherCoursesPage() {
                             variant="outlined"
                             size="small"
                             startIcon={<Edit />}
-                            onClick={() => router.push(`/teacher/courses/edit/${draft.id}`)}
+                            onClick={() =>
+                              router.push(`/teacher/courses/edit/${draft.id}`)
+                            }
                             sx={{ flex: 1 }}
                           >
                             Editar
@@ -600,14 +776,21 @@ export default function TeacherCoursesPage() {
       </Container>
 
       {/* Dialog para crear curso */}
-      <Dialog open={showCreateDialog} onClose={() => setShowCreateDialog(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={showCreateDialog}
+        onClose={() => setShowCreateDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Crear Nuevo Curso</DialogTitle>
         <DialogContent>
           <TextField
             fullWidth
             label="Título del Curso"
             value={newCourse.title}
-            onChange={(e) => setNewCourse(prev => ({ ...prev, title: e.target.value }))}
+            onChange={(e) =>
+              setNewCourse((prev) => ({ ...prev, title: e.target.value }))
+            }
             sx={{ mt: 2, mb: 2 }}
             required
           />
@@ -617,7 +800,9 @@ export default function TeacherCoursesPage() {
             rows={4}
             label="Descripción"
             value={newCourse.description}
-            onChange={(e) => setNewCourse(prev => ({ ...prev, description: e.target.value }))}
+            onChange={(e) =>
+              setNewCourse((prev) => ({ ...prev, description: e.target.value }))
+            }
             sx={{ mb: 2 }}
           />
           <TextField
@@ -625,7 +810,12 @@ export default function TeacherCoursesPage() {
             type="number"
             label="Precio ($)"
             value={newCourse.price}
-            onChange={(e) => setNewCourse(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
+            onChange={(e) =>
+              setNewCourse((prev) => ({
+                ...prev,
+                price: parseFloat(e.target.value) || 0,
+              }))
+            }
             InputProps={{
               startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>,
             }}
@@ -633,21 +823,31 @@ export default function TeacherCoursesPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowCreateDialog(false)}>Cancelar</Button>
-          <Button onClick={handleCreateDraft} variant="contained">Crear Borrador</Button>
+          <Button onClick={handleCreateDraft} variant="contained">
+            Crear Borrador
+          </Button>
         </DialogActions>
       </Dialog>
 
       {/* Dialog para confirmar eliminación */}
-      <Dialog open={showDeleteDialog} onClose={() => setShowDeleteDialog(false)}>
+      <Dialog
+        open={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+      >
         <DialogTitle>Confirmar Eliminación</DialogTitle>
         <DialogContent>
           <Typography>
-            ¿Estás seguro de que quieres eliminar el curso &quot;{selectedCourse?.title}&quot;? Esta acción no se puede deshacer.
+            ¿Estás seguro de que quieres eliminar el curso &quot;
+            {selectedCourse?.title}&quot;? Esta acción no se puede deshacer.
           </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowDeleteDialog(false)}>Cancelar</Button>
-          <Button onClick={handleDeleteCourse} color="error" variant="contained">
+          <Button
+            onClick={handleDeleteCourse}
+            color="error"
+            variant="contained"
+          >
             Eliminar
           </Button>
         </DialogActions>
@@ -657,7 +857,7 @@ export default function TeacherCoursesPage() {
       <Fab
         color="primary"
         aria-label="Crear curso"
-        sx={{ position: 'fixed', bottom: 16, right: 16 }}
+        sx={{ position: "fixed", bottom: 16, right: 16 }}
         onClick={() => setShowCreateDialog(true)}
       >
         <Add />

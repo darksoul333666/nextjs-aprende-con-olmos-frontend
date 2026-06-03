@@ -1,1 +1,1 @@
-export { StripePayment } from './StripePayment';
+export { StripePayment } from "./StripePayment";

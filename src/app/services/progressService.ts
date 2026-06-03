@@ -1,4 +1,4 @@
-import { apiService } from './api';
+import { apiService } from "./api";
 
 export interface CourseProgress {
   _id: string;
@@ -18,17 +18,31 @@ export interface VideoProgress {
 
 class ProgressService {
   async getCourseProgress(courseId: string): Promise<CourseProgress> {
-    const response = await apiService.get<CourseProgress>(`/progress/${courseId}`);
+    const response = await apiService.get<CourseProgress>(
+      `/progress/${courseId}`,
+    );
     return response.data!;
   }
 
-  async markVideoCompleted(courseId: string, videoId: string): Promise<CourseProgress> {
-    const response = await apiService.post<CourseProgress>(`/progress/${courseId}/video/${videoId}`);
+  async markVideoCompleted(
+    courseId: string,
+    videoId: string,
+  ): Promise<CourseProgress> {
+    const response = await apiService.post<CourseProgress>(
+      `/progress/${courseId}/video/${videoId}`,
+    );
     return response.data!;
   }
 
-  async updateVideoProgress(courseId: string, videoId: string, progress: number): Promise<CourseProgress> {
-    const response = await apiService.patch<CourseProgress>(`/progress/${courseId}/video/${videoId}`, { progress });
+  async updateVideoProgress(
+    courseId: string,
+    videoId: string,
+    progress: number,
+  ): Promise<CourseProgress> {
+    const response = await apiService.patch<CourseProgress>(
+      `/progress/${courseId}/video/${videoId}`,
+      { progress },
+    );
     return response.data!;
   }
 }

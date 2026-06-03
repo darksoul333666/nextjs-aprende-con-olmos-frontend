@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Container,
   Typography,
@@ -21,7 +21,7 @@ import {
   MenuItem,
   Avatar,
   CircularProgress,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Search,
   AccessTime,
@@ -32,14 +32,18 @@ import {
   Visibility,
   CheckCircle,
   PlayArrow,
-} from '@mui/icons-material';
-import { Navbar } from '../components/Navigation/Navbar';
-import { StripePayment } from '../components/StripePayment';
-import { CourseCard } from '../components/CourseCard/CourseCard';
-import { courseService, Course, CourseFilters } from '../services/courseService';
-import { stripeService } from '../services/stripeService';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '../contexts/AuthContext';
+} from "@mui/icons-material";
+import { Navbar } from "../components/Navigation/Navbar";
+import { StripePayment } from "../components/StripePayment";
+import { CourseCard } from "../components/CourseCard/CourseCard";
+import {
+  courseService,
+  Course,
+  CourseFilters,
+} from "../services/courseService";
+import { stripeService } from "../services/stripeService";
+import { useRouter } from "next/navigation";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function CoursesPage() {
   const router = useRouter();
@@ -48,10 +52,10 @@ export default function CoursesPage() {
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
   const [purchasedCourseIds, setPurchasedCourseIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [priceFilter, setPriceFilter] = useState('all');
-  const [durationFilter, setDurationFilter] = useState('all');
-  
+  const [searchTerm, setSearchTerm] = useState("");
+  const [priceFilter, setPriceFilter] = useState("all");
+  const [durationFilter, setDurationFilter] = useState("all");
+
   // Estado para el modal de pago
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
@@ -61,35 +65,34 @@ export default function CoursesPage() {
       try {
         setIsLoading(true);
         const coursesData = await courseService.getCourses();
-        console.log('Cursos obtenidos:', coursesData);
-        
+
         const coursesArray = Array.isArray(coursesData) ? coursesData : [];
         setCourses(coursesArray);
         setFilteredCourses(coursesArray);
-        
+
         // Verificar si el backend proporciona isPurchased correctamente
-        const hasPurchasedCourses = coursesArray.some(course => course.isPurchased === true);
-        
+        const hasPurchasedCourses = coursesArray.some(
+          (course) => course.isPurchased === true,
+        );
+
         // Si no hay cursos marcados como comprados, usar el método alternativo
         if (!hasPurchasedCourses && user) {
           try {
             const purchasesResponse = await stripeService.getPurchases();
-            console.log('Compras de Stripe:', purchasesResponse);
-            
-            if (purchasesResponse.purchases && Array.isArray(purchasesResponse.purchases)) {
+
+            if (
+              purchasesResponse.purchases &&
+              Array.isArray(purchasesResponse.purchases)
+            ) {
               const purchasedIds = purchasesResponse.purchases
-                .filter(purchase => purchase.status === 'completed')
-                .map(purchase => purchase.courseId._id);
-              
-              console.log('IDs de cursos comprados:', purchasedIds);
+                .filter((purchase) => purchase.status === "completed")
+                .map((purchase) => purchase.courseId._id);
+
               setPurchasedCourseIds(purchasedIds);
             }
-          } catch (purchaseError) {
-            console.error('Error obteniendo compras:', purchaseError);
-          }
+          } catch (purchaseError) {}
         }
-      } catch (error) {
-        console.error('Error fetching courses:', error);
+      } catch {
         setCourses([]);
         setPurchasedCourseIds([]);
         setFilteredCourses([]);
@@ -107,22 +110,23 @@ export default function CoursesPage() {
 
     // Filtro por búsqueda
     if (searchTerm) {
-      filtered = filtered.filter(course =>
-        course.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        course.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(
+        (course) =>
+          course.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          course.description?.toLowerCase().includes(searchTerm.toLowerCase()),
       );
     }
 
     // Filtro por precio
-    if (priceFilter !== 'all') {
-      filtered = filtered.filter(course => {
+    if (priceFilter !== "all") {
+      filtered = filtered.filter((course) => {
         const price = course.price || 0;
         switch (priceFilter) {
-          case 'low':
+          case "low":
             return price < 300;
-          case 'medium':
+          case "medium":
             return price >= 300 && price < 500;
-          case 'high':
+          case "high":
             return price >= 500;
           default:
             return true;
@@ -131,15 +135,15 @@ export default function CoursesPage() {
     }
 
     // Filtro por duración
-    if (durationFilter !== 'all') {
-      filtered = filtered.filter(course => {
+    if (durationFilter !== "all") {
+      filtered = filtered.filter((course) => {
         const hours = (course.totalDuration || 0) / 3600;
         switch (durationFilter) {
-          case 'short':
+          case "short":
             return hours < 20;
-          case 'medium':
+          case "medium":
             return hours >= 20 && hours < 40;
-          case 'long':
+          case "long":
             return hours >= 40;
           default:
             return true;
@@ -164,15 +168,14 @@ export default function CoursesPage() {
     if (course.isPurchased !== undefined) {
       return course.isPurchased;
     }
-    
+
     // Fallback al método anterior si el backend no proporciona el campo
     return purchasedCourseIds.includes(course._id);
   };
 
   const handleCourseClick = (courseId: string) => {
     if (!courseId) {
-      console.error('Error: El curso no tiene un ID válido');
-      alert('Error: El curso no tiene un ID válido');
+      alert("Error: El curso no tiene un ID válido");
       return;
     }
     router.push(`/course/${courseId}`);
@@ -202,20 +205,33 @@ export default function CoursesPage() {
 
   if (isLoading) {
     return (
-      <Box sx={{ minHeight: '100vh', backgroundColor: '#f8f9fa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Box
+        sx={{
+          minHeight: "100vh",
+          backgroundColor: "#f8f9fa",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
         <CircularProgress size={60} />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
+    <Box sx={{ minHeight: "100vh", backgroundColor: "#f8f9fa" }}>
       <Navbar currentPage="courses" />
-      
+
       <Container maxWidth="lg" sx={{ py: 4 }}>
         {/* Header */}
         <Box sx={{ mb: 4 }}>
-          <Typography variant="h3" component="h1" gutterBottom sx={{ fontWeight: 700 }}>
+          <Typography
+            variant="h3"
+            component="h1"
+            gutterBottom
+            sx={{ fontWeight: 700 }}
+          >
             Cursos Disponibles
           </Typography>
           <Typography variant="body1" color="text.secondary">
@@ -231,8 +247,12 @@ export default function CoursesPage() {
               Filtros
             </Typography>
           </Box>
-          
-          <Box display="flex" flexDirection={{ xs: 'column', md: 'row' }} gap={3}>
+
+          <Box
+            display="flex"
+            flexDirection={{ xs: "column", md: "row" }}
+            gap={3}
+          >
             <TextField
               fullWidth
               placeholder="Buscar cursos..."
@@ -246,7 +266,7 @@ export default function CoursesPage() {
                 ),
               }}
             />
-            
+
             <FormControl fullWidth>
               <InputLabel>Precio</InputLabel>
               <Select
@@ -260,7 +280,7 @@ export default function CoursesPage() {
                 <MenuItem value="high">Más de $500</MenuItem>
               </Select>
             </FormControl>
-            
+
             <FormControl fullWidth>
               <InputLabel>Duración</InputLabel>
               <Select
@@ -280,17 +300,32 @@ export default function CoursesPage() {
         {/* Resultados */}
         <Box sx={{ mb: 4 }}>
           <Typography variant="h6" gutterBottom>
-            {filteredCourses.length} curso{filteredCourses.length !== 1 ? 's' : ''} encontrado{filteredCourses.length !== 1 ? 's' : ''}
+            {filteredCourses.length} curso
+            {filteredCourses.length !== 1 ? "s" : ""} encontrado
+            {filteredCourses.length !== 1 ? "s" : ""}
           </Typography>
         </Box>
 
         {/* Lista de Cursos */}
         {filteredCourses.length === 0 ? (
-          <Paper sx={{ p: 6, textAlign: 'center' }}>
-            <Avatar sx={{ bgcolor: 'primary.main', width: 80, height: 80, mx: 'auto', mb: 3 }}>
+          <Paper sx={{ p: 6, textAlign: "center" }}>
+            <Avatar
+              sx={{
+                bgcolor: "primary.main",
+                width: 80,
+                height: 80,
+                mx: "auto",
+                mb: 3,
+              }}
+            >
               <Search sx={{ fontSize: 40 }} />
             </Avatar>
-            <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 600 }}>
+            <Typography
+              variant="h5"
+              component="h2"
+              gutterBottom
+              sx={{ fontWeight: 600 }}
+            >
               No se encontraron cursos
             </Typography>
             <Typography variant="body1" color="text.secondary">
@@ -311,17 +346,23 @@ export default function CoursesPage() {
         )}
 
         {/* Call to Action */}
-        <Paper sx={{ p: 4, mt: 4, textAlign: 'center' }}>
-          <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 600 }}>
+        <Paper sx={{ p: 4, mt: 4, textAlign: "center" }}>
+          <Typography
+            variant="h5"
+            component="h2"
+            gutterBottom
+            sx={{ fontWeight: 600 }}
+          >
             ¿Necesitas ayuda para elegir?
           </Typography>
           <Typography variant="body1" color="text.secondary" paragraph>
-            Contacta al maestro para recibir asesoría personalizada sobre qué curso es mejor para ti
+            Contacta al maestro para recibir asesoría personalizada sobre qué
+            curso es mejor para ti
           </Typography>
           <Button
             variant="outlined"
             size="large"
-            onClick={() => router.push('/teacher')}
+            onClick={() => router.push("/teacher")}
           >
             Contactar al Maestro
           </Button>
@@ -336,7 +377,9 @@ export default function CoursesPage() {
           courseId={selectedCourse._id}
           courseTitle={selectedCourse.title}
           courseDescription={selectedCourse.description}
-          courseThumbnail={selectedCourse.thumbnail || '/placeholder-course.jpg'}
+          courseThumbnail={
+            selectedCourse.thumbnail || "/placeholder-course.jpg"
+          }
           coursePrice={selectedCourse.price || 0}
           onSuccess={handlePaymentSuccess}
         />

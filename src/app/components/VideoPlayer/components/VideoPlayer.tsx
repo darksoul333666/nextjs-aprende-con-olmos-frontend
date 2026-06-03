@@ -1,26 +1,26 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { 
-  Box, 
-  IconButton, 
-  Slider, 
-  Typography, 
+import React, { useRef, useState, useEffect, useCallback } from "react";
+import {
+  Box,
+  IconButton,
+  Slider,
+  Typography,
   Tooltip,
   Fade,
   LinearProgress,
-  Chip
-} from '@mui/material';
-import { 
-  PlayArrow, 
-  Pause, 
-  VolumeUp, 
+  Chip,
+} from "@mui/material";
+import {
+  PlayArrow,
+  Pause,
+  VolumeUp,
   VolumeOff,
   Fullscreen,
   FullscreenExit,
   SkipNext,
-  SkipPrevious
-} from '@mui/icons-material';
-import screenfull from 'screenfull';
-import ReactPlayer from 'react-player';
+  SkipPrevious,
+} from "@mui/icons-material";
+import screenfull from "screenfull";
+import ReactPlayer from "react-player";
 
 interface VideoPlayerProps {
   url: string;
@@ -39,19 +39,19 @@ interface VideoPlayerProps {
 
 // Helper function to check if URL is YouTube
 const isYouTubeUrl = (url: string): boolean => {
-  return url.includes('youtube.com') || url.includes('youtu.be');
+  return url.includes("youtube.com") || url.includes("youtu.be");
 };
 
 // Helper function to extract YouTube video ID
 const getYouTubeVideoId = (url: string): string | null => {
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
   const match = url.match(regExp);
-  return (match && match[2].length === 11) ? match[2] : null;
+  return match && match[2].length === 11 ? match[2] : null;
 };
 
-export const VideoPlayer: React.FC<VideoPlayerProps> = ({ 
-  url, 
-  fullScreen = false, 
+export const VideoPlayer: React.FC<VideoPlayerProps> = ({
+  url,
+  fullScreen = false,
   title,
   onNext,
   onPrevious,
@@ -61,11 +61,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onEnded,
   autoPlay = false,
   showControls = true,
-  className
+  className,
 }) => {
   // Debug: Log video URL
-  console.log('VideoPlayer received URL:', url);
-  console.log('VideoPlayer props:', { url, title, fullScreen, autoPlay });
   const videoRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [playing, setPlaying] = useState(autoPlay);
@@ -75,7 +73,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [muted, setMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControlsOverlay, setShowControlsOverlay] = useState(true);
-  const [controlsTimeout, setControlsTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [controlsTimeout, setControlsTimeout] = useState<NodeJS.Timeout | null>(
+    null,
+  );
   const [isHovering, setIsHovering] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSeeking, setIsSeeking] = useState(false);
@@ -88,7 +88,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   // Monitor URL changes
   useEffect(() => {
-    console.log('VideoPlayer URL changed to:', url);
     if (url) {
       setIsLoading(true);
       setIsSeeking(false); // Reset seeking state when URL changes
@@ -108,49 +107,51 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   // Handle play/pause
   const handlePlayPause = useCallback(() => {
-    console.log('Toggle play/pause, current state:', playing);
     setPlaying(!playing);
   }, [playing]);
 
   // Handle seek
   const handleSeek = useCallback((_: Event, newValue: number | number[]) => {
     const seekTo = newValue as number;
-    console.log('Seeking to:', seekTo);
-    
+
     // Validar que el valor sea un número finito
     if (!isFinite(seekTo) || isNaN(seekTo)) {
-      console.warn('Invalid seek value:', seekTo);
       return;
     }
-    
+
     setIsSeeking(true);
-    
+
     if (videoRef.current && videoRef.current.duration) {
       // Asegurar que el valor esté dentro del rango válido
-      const clampedValue = Math.max(0, Math.min(seekTo, videoRef.current.duration));
-      console.log('Setting currentTime to:', clampedValue);
+      const clampedValue = Math.max(
+        0,
+        Math.min(seekTo, videoRef.current.duration),
+      );
       videoRef.current.currentTime = clampedValue;
     }
   }, []);
 
   // Handle volume change
-  const handleVolumeChange = useCallback((_: Event, newValue: number | number[]) => {
-    const newVolume = newValue as number;
-    setVolume(newVolume);
-    if (videoRef.current) {
-      videoRef.current.volume = newVolume;
-    }
-    if (newVolume === 0) {
-      setMuted(true);
-    } else if (muted) {
-      setMuted(false);
-    }
-  }, [muted]);
+  const handleVolumeChange = useCallback(
+    (_: Event, newValue: number | number[]) => {
+      const newVolume = newValue as number;
+      setVolume(newVolume);
+      if (videoRef.current) {
+        videoRef.current.volume = newVolume;
+      }
+      if (newVolume === 0) {
+        setMuted(true);
+      } else if (muted) {
+        setMuted(false);
+      }
+    },
+    [muted],
+  );
 
   // Handle mute toggle
   const handleMuteToggle = useCallback(() => {
@@ -167,7 +168,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       setIsFullscreen(!isFullscreen);
     }
   }, [isFullscreen]);
-
 
   // Handle loaded metadata
   const handleLoadedMetadata = useCallback(() => {
@@ -226,41 +226,50 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
-      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+      if (
+        event.target instanceof HTMLInputElement ||
+        event.target instanceof HTMLTextAreaElement
+      ) {
         return;
       }
-      
+
       switch (event.code) {
-        case 'Space':
+        case "Space":
           event.preventDefault();
           handlePlayPause();
           break;
-        case 'ArrowRight':
+        case "ArrowRight":
           event.preventDefault();
           if (videoRef.current) {
             videoRef.current.currentTime = Math.min(currentTime + 10, duration);
           }
           break;
-        case 'ArrowLeft':
+        case "ArrowLeft":
           event.preventDefault();
           if (videoRef.current) {
             videoRef.current.currentTime = Math.max(currentTime - 10, 0);
           }
           break;
-        case 'KeyM':
+        case "KeyM":
           event.preventDefault();
           handleMuteToggle();
           break;
-        case 'KeyF':
+        case "KeyF":
           event.preventDefault();
           handleFullscreen();
           break;
       }
     };
 
-    document.addEventListener('keydown', handleKeyPress);
-    return () => document.removeEventListener('keydown', handleKeyPress);
-  }, [handlePlayPause, handleMuteToggle, handleFullscreen, currentTime, duration]);
+    document.addEventListener("keydown", handleKeyPress);
+    return () => document.removeEventListener("keydown", handleKeyPress);
+  }, [
+    handlePlayPause,
+    handleMuteToggle,
+    handleFullscreen,
+    currentTime,
+    duration,
+  ]);
 
   // Set initial volume
   useEffect(() => {
@@ -274,15 +283,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       ref={containerRef}
       className={className}
       sx={{
-        width: '100%',
-        maxWidth: fullScreen ? '100%' : 640,
-        aspectRatio: '16 / 9',
-        position: 'relative',
-        backgroundColor: '#000',
+        width: "100%",
+        maxWidth: fullScreen ? "100%" : 640,
+        aspectRatio: "16 / 9",
+        position: "relative",
+        backgroundColor: "#000",
         borderRadius: fullScreen ? 0 : 2,
-        overflow: 'hidden',
-        cursor: 'pointer',
-        '&:hover .controls-overlay': {
+        overflow: "hidden",
+        cursor: "pointer",
+        "&:hover .controls-overlay": {
           opacity: 1,
         },
       }}
@@ -301,24 +310,21 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             muted: muted,
             volume: volume,
             onPlay: () => {
-              console.log('Video started playing');
               setPlaying(true);
               setIsLoading(false);
             },
             onPause: () => {
-              console.log('Video paused');
               setPlaying(false);
             },
             onTimeUpdate: () => {
               const player = videoRef.current;
               if (!player) return;
-              
-              console.log('onTimeUpdate', player.currentTime);
+
               if (!player.duration) return;
-              
+
               setCurrentTime(player.currentTime);
               onProgress?.(player.currentTime / player.duration);
-              
+
               // Si estábamos buscando, terminar el estado de búsqueda
               if (isSeeking) {
                 setIsSeeking(false);
@@ -327,48 +333,42 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             onDurationChange: () => {
               const player = videoRef.current;
               if (!player) return;
-              
-              console.log('onDurationChange', player.duration);
+
               setDuration(player.duration);
             },
             onProgress: () => {
               const player = videoRef.current;
               if (!player || !player.buffered?.length) return;
-              
-              console.log('onProgress');
+
               // No necesitamos actualizar el estado aquí, onTimeUpdate se encarga
             },
             onEnded: () => {
-              console.log('Video ended');
               setPlaying(false);
               handleEnded();
             },
             onError: (e: any) => {
-              console.error('Video error:', e);
               setIsLoading(false);
             },
             onWaiting: () => {
-              console.log('Video waiting/buffering');
               // Solo mostrar loading si no estamos buscando
               if (!isSeeking) {
                 setIsLoading(true);
               }
             },
             onCanPlay: () => {
-              console.log('Video can play');
               setIsLoading(false);
-            }
+            },
           })}
         </div>
       ) : (
         <Box
           sx={{
-            width: '100%',
-            height: '100%',
-            backgroundColor: 'black',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            width: "100%",
+            height: "100%",
+            backgroundColor: "black",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
           <Typography variant="body2" color="white">
@@ -381,19 +381,19 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       {isLoading && (
         <Box
           sx={{
-            position: 'absolute',
+            position: "absolute",
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            bgcolor: 'rgba(0,0,0,0.7)',
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            bgcolor: "rgba(0,0,0,0.7)",
             zIndex: 1,
           }}
         >
-          <LinearProgress sx={{ width: '60%' }} />
+          <LinearProgress sx={{ width: "60%" }} />
         </Box>
       )}
 
@@ -401,22 +401,22 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       {!playing && showControls && !isYouTubeUrl(url) && (
         <Box
           sx={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
             zIndex: 2,
           }}
         >
           <IconButton
             onClick={handlePlayPause}
             sx={{
-              bgcolor: 'rgba(0,0,0,0.7)',
-              color: 'white',
+              bgcolor: "rgba(0,0,0,0.7)",
+              color: "white",
               width: 80,
               height: 80,
-              '&:hover': {
-                bgcolor: 'rgba(0,0,0,0.8)',
+              "&:hover": {
+                bgcolor: "rgba(0,0,0,0.8)",
               },
             }}
           >
@@ -431,17 +431,17 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           <Box
             className="controls-overlay"
             sx={{
-              position: 'absolute',
+              position: "absolute",
               bottom: 0,
               left: 0,
               right: 0,
-              background: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
-              color: 'white',
+              background: "linear-gradient(transparent, rgba(0,0,0,0.8))",
+              color: "white",
               px: 2,
               py: 1,
               zIndex: 3,
               opacity: 0,
-              transition: 'opacity 0.3s ease',
+              transition: "opacity 0.3s ease",
             }}
           >
             {/* Progress bar */}
@@ -453,19 +453,19 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 value={isFinite(currentTime) ? Math.max(currentTime, 0) : 0}
                 onChange={handleSeek}
                 sx={{
-                  color: 'rgba(41, 50, 218, 0.7)',
-                  '& .MuiSlider-track': {
-                    backgroundColor: 'rgba(41, 50, 218, 0.7)',
+                  color: "rgba(41, 50, 218, 0.7)",
+                  "& .MuiSlider-track": {
+                    backgroundColor: "rgba(41, 50, 218, 0.7)",
                   },
-                  '& .MuiSlider-rail': {
-                    backgroundColor: 'rgba(255,255,255,0.3)',
+                  "& .MuiSlider-rail": {
+                    backgroundColor: "rgba(255,255,255,0.3)",
                   },
-                  '& .MuiSlider-thumb': {
+                  "& .MuiSlider-thumb": {
                     width: 12,
                     height: 12,
-                    backgroundColor: 'rgba(41, 50, 218, 0.7)',
-                    '&:hover': {
-                      boxShadow: '0 0 0 8px rgba(41, 50, 218, 0.16)',
+                    backgroundColor: "rgba(41, 50, 218, 0.7)",
+                    "&:hover": {
+                      boxShadow: "0 0 0 8px rgba(41, 50, 218, 0.16)",
                     },
                   },
                 }}
@@ -473,14 +473,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             </Box>
 
             {/* Controls row */}
-            <Box display="flex" alignItems="center" justifyContent="space-between">
+            <Box
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+            >
               <Box display="flex" alignItems="center" gap={1}>
                 {/* Previous button */}
                 {hasPrevious && (
                   <Tooltip title="Video anterior">
-                    <IconButton 
+                    <IconButton
                       onClick={onPrevious}
-                      sx={{ color: 'white', opacity: 0.8 }}
+                      sx={{ color: "white", opacity: 0.8 }}
                     >
                       <SkipPrevious />
                     </IconButton>
@@ -488,11 +492,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 )}
 
                 {/* Play/Pause button */}
-                <Tooltip title={playing ? 'Pausar' : 'Reproducir'}>
-                  <IconButton 
-                    onClick={handlePlayPause}
-                    sx={{ color: 'white' }}
-                  >
+                <Tooltip title={playing ? "Pausar" : "Reproducir"}>
+                  <IconButton onClick={handlePlayPause} sx={{ color: "white" }}>
                     {playing ? <Pause /> : <PlayArrow />}
                   </IconButton>
                 </Tooltip>
@@ -500,9 +501,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 {/* Next button */}
                 {hasNext && (
                   <Tooltip title="Siguiente video">
-                    <IconButton 
+                    <IconButton
                       onClick={onNext}
-                      sx={{ color: 'white', opacity: 0.8 }}
+                      sx={{ color: "white", opacity: 0.8 }}
                     >
                       <SkipNext />
                     </IconButton>
@@ -511,15 +512,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
                 {/* Volume controls */}
                 <Box display="flex" alignItems="center" gap={1}>
-                  <Tooltip title={muted ? 'Activar sonido' : 'Silenciar'}>
-                    <IconButton 
+                  <Tooltip title={muted ? "Activar sonido" : "Silenciar"}>
+                    <IconButton
                       onClick={handleMuteToggle}
-                      sx={{ color: 'white' }}
+                      sx={{ color: "white" }}
                     >
                       {muted ? <VolumeOff /> : <VolumeUp />}
                     </IconButton>
                   </Tooltip>
-                  
+
                   <Slider
                     min={0}
                     max={1}
@@ -527,18 +528,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                     value={muted ? 0 : volume}
                     onChange={handleVolumeChange}
                     sx={{
-                      width: 80, 
-                      color: 'rgba(41, 50, 218, 0.7)',
-                      '& .MuiSlider-track': {
-                        backgroundColor: 'rgba(41, 50, 218, 0.7)',
+                      width: 80,
+                      color: "rgba(41, 50, 218, 0.7)",
+                      "& .MuiSlider-track": {
+                        backgroundColor: "rgba(41, 50, 218, 0.7)",
                       },
-                      '& .MuiSlider-rail': {
-                        backgroundColor: 'rgba(255,255,255,0.3)',
+                      "& .MuiSlider-rail": {
+                        backgroundColor: "rgba(255,255,255,0.3)",
                       },
-                      '& .MuiSlider-thumb': {
-                        backgroundColor: 'rgba(41, 50, 218, 0.7)',
-                        '&:hover': {
-                          boxShadow: '0 0 0 8px rgba(41, 50, 218, 0.16)',
+                      "& .MuiSlider-thumb": {
+                        backgroundColor: "rgba(41, 50, 218, 0.7)",
+                        "&:hover": {
+                          boxShadow: "0 0 0 8px rgba(41, 50, 218, 0.16)",
                         },
                       },
                     }}
@@ -547,16 +548,17 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
                 {/* Time display */}
                 <Typography variant="caption" sx={{ ml: 2, opacity: 0.8 }}>
-                  {formatTime(isNaN(currentTime) ? 0 : currentTime)} / {formatTime(isNaN(duration) ? 0 : duration)}
+                  {formatTime(isNaN(currentTime) ? 0 : currentTime)} /{" "}
+                  {formatTime(isNaN(duration) ? 0 : duration)}
                 </Typography>
               </Box>
 
               <Box display="flex" alignItems="center" gap={1}>
                 {/* Additional controls */}
                 <Tooltip title="Pantalla completa">
-                  <IconButton 
+                  <IconButton
                     onClick={handleFullscreen}
-                    sx={{ color: 'white' }}
+                    sx={{ color: "white" }}
                   >
                     {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
                   </IconButton>
@@ -566,12 +568,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
             {/* Title */}
             {title && (
-              <Typography 
-                variant="subtitle2" 
-                sx={{ 
-                  mt: 1, 
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  mt: 1,
                   opacity: 0.9,
-                  fontWeight: 500 
+                  fontWeight: 500,
                 }}
               >
                 {title}
@@ -585,7 +587,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       {showControlsOverlay && !isYouTubeUrl(url) && (
         <Box
           sx={{
-            position: 'absolute',
+            position: "absolute",
             top: 16,
             right: 16,
             zIndex: 4,
@@ -594,18 +596,21 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           <Chip
             label="Espacio: Reproducir/Pausar | ←→: Avanzar/Retroceder | M: Mute | F: Fullscreen"
             size="small"
-            sx={isFullscreen ? {
-              bgcolor: 'rgba(41, 50, 218, 0.7)',
-              padding: '2rem',
-              color: 'white',
-              fontSize: '1.7rem',
-            } : {
-              bgcolor: 'rgba(41, 50, 218, 0.7)',
-              padding: '0.5rem 1rem',
-              color: 'white',
-              fontSize: '.7rem',
+            sx={
+              isFullscreen
+                ? {
+                    bgcolor: "rgba(41, 50, 218, 0.7)",
+                    padding: "2rem",
+                    color: "white",
+                    fontSize: "1.7rem",
+                  }
+                : {
+                    bgcolor: "rgba(41, 50, 218, 0.7)",
+                    padding: "0.5rem 1rem",
+                    color: "white",
+                    fontSize: ".7rem",
+                  }
             }
-          }
           />
         </Box>
       )}

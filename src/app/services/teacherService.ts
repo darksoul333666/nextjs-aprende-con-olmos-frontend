@@ -1,4 +1,4 @@
-import { apiService } from './api';
+import { apiService } from "./api";
 
 export interface Teacher {
   _id: string;
@@ -47,36 +47,36 @@ export interface UpdateTeacherRequest {
 class TeacherService {
   // Obtener información del maestro (público) - GET /api/teachers
   async getTeacher(): Promise<Teacher> {
-    const response = await apiService.get<{teacher: Teacher}>('/teachers');
+    const response = await apiService.get<{ teacher: Teacher }>("/teachers");
     if (!response.data?.teacher) {
-      throw new Error('No se pudo obtener la información del maestro');
+      throw new Error("No se pudo obtener la información del maestro");
     }
     return response.data.teacher;
   }
 
   // Obtener perfil del maestro (solo maestros) - GET /api/teachers/me
   async getTeacherProfile(): Promise<Teacher> {
-    const response = await apiService.get<{teacher: Teacher}>('/teachers/me');
+    const response = await apiService.get<{ teacher: Teacher }>("/teachers/me");
     if (!response.data) {
-      throw new Error('No se pudo obtener el perfil del maestro');
+      throw new Error("No se pudo obtener el perfil del maestro");
     }
     return response.data.teacher;
   }
 
   // Actualizar perfil del maestro (solo maestros) - PUT /api/teachers/me
   async updateTeacher(data: UpdateTeacherRequest): Promise<Teacher> {
-    const response = await apiService.put<Teacher>('/teachers/me', data);
+    const response = await apiService.put<Teacher>("/teachers/me", data);
     if (!response.data) {
-      throw new Error('No se pudo actualizar el perfil del maestro');
+      throw new Error("No se pudo actualizar el perfil del maestro");
     }
     return response.data;
   }
 
   // Obtener estadísticas del maestro autenticado - GET /api/teachers/stats
   async getTeacherStats(): Promise<TeacherStats> {
-    const response = await apiService.get<TeacherStats>('/teachers/stats');
+    const response = await apiService.get<TeacherStats>("/teachers/stats");
     if (!response.data) {
-      throw new Error('No se pudieron obtener las estadísticas del maestro');
+      throw new Error("No se pudieron obtener las estadísticas del maestro");
     }
     return response.data;
   }

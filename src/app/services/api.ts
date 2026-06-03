@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:3200/api';
+const API_BASE_URL = "http://localhost:3200/api";
 
 interface ApiResponse<T> {
   success: boolean;
@@ -9,27 +9,31 @@ interface ApiResponse<T> {
 
 class ApiService {
   private getAuthHeaders(): HeadersInit {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem("token") : null;
     return {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...(token && { Authorization: `Bearer ${token}` }),
     };
   }
 
   private async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
     const data = await response.json();
-    
+
     if (!response.ok) {
     }
-    
+
     return data;
   }
 
-  async get<T>(endpoint: string, params?: Record<string, unknown>): Promise<ApiResponse<T>> {
+  async get<T>(
+    endpoint: string,
+    params?: Record<string, unknown>,
+  ): Promise<ApiResponse<T>> {
     const url = new URL(`${API_BASE_URL}${endpoint}`);
-    
+
     if (params) {
-      Object.keys(params).forEach(key => {
+      Object.keys(params).forEach((key) => {
         if (params[key] !== undefined && params[key] !== null) {
           url.searchParams.append(key, params[key].toString());
         }
@@ -37,21 +41,20 @@ class ApiService {
     }
 
     try {
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
-    });
+      const response = await fetch(url.toString(), {
+        method: "GET",
+        headers: this.getAuthHeaders(),
+      });
 
-    return this.handleResponse<T>(response);
-    } catch (error) {
-      console.error('Error fetching:', error);
+      return this.handleResponse<T>(response);
+    } catch {
       throw error;
     }
   }
 
   async post<T>(endpoint: string, data?: unknown): Promise<ApiResponse<T>> {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      method: 'POST',
+      method: "POST",
       headers: this.getAuthHeaders(),
       body: data ? JSON.stringify(data) : undefined,
     });
@@ -61,7 +64,7 @@ class ApiService {
 
   async put<T>(endpoint: string, data?: unknown): Promise<ApiResponse<T>> {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      method: 'PUT',
+      method: "PUT",
       headers: this.getAuthHeaders(),
       body: data ? JSON.stringify(data) : undefined,
     });
@@ -71,7 +74,7 @@ class ApiService {
 
   async patch<T>(endpoint: string, data?: unknown): Promise<ApiResponse<T>> {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      method: 'PATCH',
+      method: "PATCH",
       headers: this.getAuthHeaders(),
       body: data ? JSON.stringify(data) : undefined,
     });
@@ -81,7 +84,7 @@ class ApiService {
 
   async delete<T>(endpoint: string): Promise<ApiResponse<T>> {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      method: 'DELETE',
+      method: "DELETE",
       headers: this.getAuthHeaders(),
     });
 

@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import { CircularProgress, Box } from '@mui/material';
-import { HomeStudents } from './components/HomeStudents';
-import { HomeTeacher } from './components/HomeTeacher';
-import { courseService, Course } from './services/courseService';
-import { useAuth } from './contexts/AuthContext';
+import React, { useEffect, useState } from "react";
+import { CircularProgress, Box } from "@mui/material";
+import { HomeStudents } from "./components/HomeStudents";
+import { HomeTeacher } from "./components/HomeTeacher";
+import { courseService, Course } from "./services/courseService";
+import { useAuth } from "./contexts/AuthContext";
 
 export default function Home() {
   const { user, isAuthenticated } = useAuth();
@@ -19,14 +19,14 @@ export default function Home() {
         setIsLoading(true);
         const [courses, userCoursesData] = await Promise.all([
           courseService.getCourses(),
-          isAuthenticated && user?.role === 'estudiante' ? courseService.getPurchasedCourses() : Promise.resolve([])
+          isAuthenticated && user?.role === "estudiante"
+            ? courseService.getPurchasedCourses()
+            : Promise.resolve([]),
         ]);
-        
-        // Asegurar que los datos sean arrays
+
         setAvailableCourses(Array.isArray(courses) ? courses : []);
         setUserCourses(Array.isArray(userCoursesData) ? userCoursesData : []);
-      } catch (error) {
-        console.error('Error fetching courses:', error);
+      } catch {
         setAvailableCourses([]);
         setUserCourses([]);
       } finally {
@@ -39,19 +39,28 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <Box sx={{ minHeight: '100vh', backgroundColor: '#f8f9fa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Box
+        sx={{
+          minHeight: "100vh",
+          backgroundColor: "#f8f9fa",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
         <CircularProgress size={60} />
       </Box>
     );
   }
 
-  // Renderizar el componente apropiado según el rol del usuario
-  if (user?.role === 'maestro') {
-    return <HomeTeacher availableCourses={availableCourses} isLoading={isLoading} />;
+  if (user?.role === "maestro") {
+    return (
+      <HomeTeacher availableCourses={availableCourses} isLoading={isLoading} />
+    );
   }
 
   return (
-    <HomeStudents 
+    <HomeStudents
       availableCourses={availableCourses}
       userCourses={userCourses}
       isLoading={isLoading}

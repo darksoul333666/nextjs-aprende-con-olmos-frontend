@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   Container,
   Typography,
@@ -15,7 +15,7 @@ import {
   Paper,
   Avatar,
   CircularProgress,
-} from '@mui/material';
+} from "@mui/material";
 import {
   PlayArrow,
   AccessTime,
@@ -23,18 +23,20 @@ import {
   School,
   TrendingUp,
   Book,
-} from '@mui/icons-material';
-import { Navbar } from '../components/Navigation/Navbar';
-import { courseService, Course } from '../services/courseService';
-import { progressService, CourseProgress } from '../services/progressService';
-import { useAuth } from '../contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+} from "@mui/icons-material";
+import { Navbar } from "../components/Navigation/Navbar";
+import { courseService, Course } from "../services/courseService";
+import { progressService, CourseProgress } from "../services/progressService";
+import { useAuth } from "../contexts/AuthContext";
+import { useRouter } from "next/navigation";
 
 export default function MyCoursesPage() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
   const [userCourses, setUserCourses] = useState<Course[]>([]);
-  const [courseProgress, setCourseProgress] = useState<Record<string, CourseProgress>>({});
+  const [courseProgress, setCourseProgress] = useState<
+    Record<string, CourseProgress>
+  >({});
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -53,15 +55,14 @@ export default function MyCoursesPage() {
         const progressData: Record<string, CourseProgress> = {};
         for (const course of courses) {
           try {
-            const progress = await progressService.getCourseProgress(course._id);
+            const progress = await progressService.getCourseProgress(
+              course._id,
+            );
             progressData[course._id] = progress;
-          } catch (error) {
-            console.error(`Error fetching progress for course ${course._id}:`, error);
-          }
+          } catch {}
         }
         setCourseProgress(progressData);
-      } catch (error) {
-        console.error('Error fetching user courses:', error);
+      } catch {
       } finally {
         setIsLoading(false);
       }
@@ -90,21 +91,26 @@ export default function MyCoursesPage() {
   };
 
   const handleViewAllCourses = () => {
-    router.push('/courses');
+    router.push("/courses");
   };
 
   if (!isAuthenticated) {
     return (
-      <Box sx={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
+      <Box sx={{ minHeight: "100vh", backgroundColor: "#f8f9fa" }}>
         <Navbar currentPage="my-courses" />
         <Container maxWidth="lg" sx={{ py: 4 }}>
-          <Paper sx={{ p: 6, textAlign: 'center' }}>
-            <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 600 }}>
+          <Paper sx={{ p: 6, textAlign: "center" }}>
+            <Typography
+              variant="h5"
+              component="h2"
+              gutterBottom
+              sx={{ fontWeight: 600 }}
+            >
               Debes iniciar sesión para ver tus cursos
             </Typography>
             <Button
               variant="contained"
-              onClick={() => router.push('/login')}
+              onClick={() => router.push("/login")}
               sx={{ mt: 2 }}
             >
               Iniciar Sesión
@@ -117,20 +123,33 @@ export default function MyCoursesPage() {
 
   if (isLoading) {
     return (
-      <Box sx={{ minHeight: '100vh', backgroundColor: '#f8f9fa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Box
+        sx={{
+          minHeight: "100vh",
+          backgroundColor: "#f8f9fa",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
         <CircularProgress size={60} />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
+    <Box sx={{ minHeight: "100vh", backgroundColor: "#f8f9fa" }}>
       <Navbar currentPage="my-courses" />
-      
+
       <Container maxWidth="lg" sx={{ py: 4 }}>
         {/* Header */}
         <Box sx={{ mb: 4 }}>
-          <Typography variant="h3" component="h1" gutterBottom sx={{ fontWeight: 700 }}>
+          <Typography
+            variant="h3"
+            component="h1"
+            gutterBottom
+            sx={{ fontWeight: 700 }}
+          >
             Mis Cursos
           </Typography>
           <Typography variant="body1" color="text.secondary">
@@ -140,15 +159,29 @@ export default function MyCoursesPage() {
 
         {userCourses.length === 0 ? (
           /* Estado Vacío */
-          <Paper sx={{ p: 6, textAlign: 'center' }}>
-            <Avatar sx={{ bgcolor: 'primary.main', width: 80, height: 80, mx: 'auto', mb: 3 }}>
+          <Paper sx={{ p: 6, textAlign: "center" }}>
+            <Avatar
+              sx={{
+                bgcolor: "primary.main",
+                width: 80,
+                height: 80,
+                mx: "auto",
+                mb: 3,
+              }}
+            >
               <Book sx={{ fontSize: 40 }} />
             </Avatar>
-            <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 600 }}>
+            <Typography
+              variant="h5"
+              component="h2"
+              gutterBottom
+              sx={{ fontWeight: 600 }}
+            >
               No tienes cursos aún
             </Typography>
             <Typography variant="body1" color="text.secondary" paragraph>
-              Explora nuestra colección de cursos de matemáticas y comienza tu viaje de aprendizaje.
+              Explora nuestra colección de cursos de matemáticas y comienza tu
+              viaje de aprendizaje.
             </Typography>
             <Button
               variant="contained"
@@ -164,9 +197,13 @@ export default function MyCoursesPage() {
           <Box>
             {/* Estadísticas Rápidas */}
             <Paper sx={{ p: 3, mb: 4 }}>
-              <Box display="flex" flexDirection={{ xs: 'column', md: 'row' }} gap={4}>
+              <Box
+                display="flex"
+                flexDirection={{ xs: "column", md: "row" }}
+                gap={4}
+              >
                 <Box flex={1} display="flex" alignItems="center" gap={2}>
-                  <Avatar sx={{ bgcolor: 'primary.main' }}>
+                  <Avatar sx={{ bgcolor: "primary.main" }}>
                     <Book />
                   </Avatar>
                   <Box>
@@ -179,12 +216,16 @@ export default function MyCoursesPage() {
                   </Box>
                 </Box>
                 <Box flex={1} display="flex" alignItems="center" gap={2}>
-                  <Avatar sx={{ bgcolor: 'success.main' }}>
+                  <Avatar sx={{ bgcolor: "success.main" }}>
                     <CheckCircle />
                   </Avatar>
                   <Box>
                     <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                      {userCourses.filter(course => calculateProgress(course) === 100).length}
+                      {
+                        userCourses.filter(
+                          (course) => calculateProgress(course) === 100,
+                        ).length
+                      }
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       Cursos Completados
@@ -192,12 +233,18 @@ export default function MyCoursesPage() {
                   </Box>
                 </Box>
                 <Box flex={1} display="flex" alignItems="center" gap={2}>
-                  <Avatar sx={{ bgcolor: 'warning.main' }}>
+                  <Avatar sx={{ bgcolor: "warning.main" }}>
                     <TrendingUp />
                   </Avatar>
                   <Box>
                     <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                      {Math.round(userCourses.reduce((avg, course) => avg + calculateProgress(course), 0) / userCourses.length)}%
+                      {Math.round(
+                        userCourses.reduce(
+                          (avg, course) => avg + calculateProgress(course),
+                          0,
+                        ) / userCourses.length,
+                      )}
+                      %
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       Progreso Promedio
@@ -212,28 +259,35 @@ export default function MyCoursesPage() {
               {userCourses.map((course) => {
                 const progress = calculateProgress(course);
                 const isCompleted = progress === 100;
-                
+
                 return (
-                  <Card key={course._id} sx={{ 
-                    transition: 'transform 0.2s, box-shadow 0.2s',
-                    '&:hover': {
-                      transform: 'translateY(-2px)',
-                      boxShadow: 4,
-                    }
-                  }}>
-                    <Box display="flex" flexDirection={{ xs: 'column', md: 'row' }}>
+                  <Card
+                    key={course._id}
+                    sx={{
+                      transition: "transform 0.2s, box-shadow 0.2s",
+                      "&:hover": {
+                        transform: "translateY(-2px)",
+                        boxShadow: 4,
+                      },
+                    }}
+                  >
+                    <Box
+                      display="flex"
+                      flexDirection={{ xs: "column", md: "row" }}
+                    >
                       {/* Imagen del Curso */}
                       <CardMedia
                         component="div"
                         sx={{
-                          width: { xs: '100%', md: 280 },
+                          width: { xs: "100%", md: 280 },
                           height: { xs: 200, md: 200 },
-                          background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white',
-                          position: 'relative',
+                          background:
+                            "linear-gradient(45deg, #667eea 30%, #764ba2 90%)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "white",
+                          position: "relative",
                         }}
                       >
                         <School sx={{ fontSize: 80 }} />
@@ -242,11 +296,11 @@ export default function MyCoursesPage() {
                             label="Completado"
                             color="success"
                             sx={{
-                              position: 'absolute',
+                              position: "absolute",
                               top: 16,
                               right: 16,
-                              bgcolor: 'white',
-                              color: 'success.main',
+                              bgcolor: "white",
+                              color: "success.main",
                               fontWeight: 600,
                             }}
                           />
@@ -256,38 +310,68 @@ export default function MyCoursesPage() {
                       {/* Contenido del Curso */}
                       <Box flex={1} display="flex" flexDirection="column">
                         <CardContent sx={{ flexGrow: 1 }}>
-                          <Box display="flex" alignItems="center" gap={1} mb={1}>
+                          <Box
+                            display="flex"
+                            alignItems="center"
+                            gap={1}
+                            mb={1}
+                          >
                             {isCompleted ? (
                               <CheckCircle color="success" fontSize="small" />
                             ) : (
                               <PlayArrow color="primary" fontSize="small" />
                             )}
-                            <Typography variant="caption" color={isCompleted ? 'success.main' : 'primary.main'}>
-                              {isCompleted ? 'Completado' : 'En Progreso'}
+                            <Typography
+                              variant="caption"
+                              color={
+                                isCompleted ? "success.main" : "primary.main"
+                              }
+                            >
+                              {isCompleted ? "Completado" : "En Progreso"}
                             </Typography>
                           </Box>
-                          
-                          <Typography variant="h5" component="h3" gutterBottom sx={{ fontWeight: 600 }}>
+
+                          <Typography
+                            variant="h5"
+                            component="h3"
+                            gutterBottom
+                            sx={{ fontWeight: 600 }}
+                          >
                             {course.title}
                           </Typography>
-                          
-                          <Typography variant="body2" color="text.secondary" paragraph>
+
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            paragraph
+                          >
                             {course.description}
                           </Typography>
 
                           {/* Progreso */}
                           <Box sx={{ mb: 2 }}>
-                            <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                              <Typography variant="body2" color="text.secondary">
+                            <Box
+                              display="flex"
+                              justifyContent="space-between"
+                              alignItems="center"
+                              mb={1}
+                            >
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
                                 Progreso del curso
                               </Typography>
-                              <Typography variant="body2" color="text.secondary">
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
                                 {Math.round(progress)}%
                               </Typography>
                             </Box>
-                            <LinearProgress 
-                              variant="determinate" 
-                              value={progress} 
+                            <LinearProgress
+                              variant="determinate"
+                              value={progress}
                               sx={{ height: 8, borderRadius: 4 }}
                             />
                           </Box>
@@ -312,11 +396,13 @@ export default function MyCoursesPage() {
                         <CardActions sx={{ p: 2, pt: 0 }}>
                           <Button
                             variant="contained"
-                            startIcon={isCompleted ? <CheckCircle /> : <PlayArrow />}
+                            startIcon={
+                              isCompleted ? <CheckCircle /> : <PlayArrow />
+                            }
                             onClick={() => handleContinueCourse(course._id)}
                             fullWidth
                           >
-                            {isCompleted ? 'Repasar Curso' : 'Continuar'}
+                            {isCompleted ? "Repasar Curso" : "Continuar"}
                           </Button>
                         </CardActions>
                       </Box>
@@ -327,8 +413,13 @@ export default function MyCoursesPage() {
             </Box>
 
             {/* Call to Action */}
-            <Paper sx={{ p: 4, mt: 4, textAlign: 'center' }}>
-              <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 600 }}>
+            <Paper sx={{ p: 4, mt: 4, textAlign: "center" }}>
+              <Typography
+                variant="h5"
+                component="h2"
+                gutterBottom
+                sx={{ fontWeight: 600 }}
+              >
                 ¿Quieres aprender más?
               </Typography>
               <Typography variant="body1" color="text.secondary" paragraph>

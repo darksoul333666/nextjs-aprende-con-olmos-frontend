@@ -1,7 +1,7 @@
-import { apiService } from './api';
+import { apiService } from "./api";
 
 // Importar la base URL del API
-const API_BASE_URL = 'http://localhost:3200/api';
+const API_BASE_URL = "http://localhost:3200/api";
 
 export interface StripeConfig {
   publishableKey: string;
@@ -23,7 +23,7 @@ export interface PurchaseGroup {
   stripeSessionId?: string;
   stripePaymentIntentId?: string;
   stripeCustomerId?: string;
-  status: 'pending' | 'completed' | 'cancelled' | 'refunded';
+  status: "pending" | "completed" | "cancelled" | "refunded";
   isGroupedPurchase: boolean;
   groupTotalAmount?: number;
   groupItemCount?: number;
@@ -112,9 +112,9 @@ export interface ProcessResult {
 export const stripeService = {
   // Obtener configuración de Stripe
   async getConfig(): Promise<StripeConfig> {
-    const response = await apiService.get<StripeConfig>('/stripe/config');
+    const response = await apiService.get<StripeConfig>("/stripe/config");
     if (!response.success || !response.data) {
-      throw new Error(response.message || 'Error loading Stripe config');
+      throw new Error(response.message || "Error loading Stripe config");
     }
     return response.data;
   },
@@ -122,24 +122,27 @@ export const stripeService = {
   // Crear sesión de checkout
   async createCheckoutSession(courseId: string): Promise<CheckoutSession> {
     try {
-      const response = await apiService.post<CheckoutSession>(`/stripe/create-checkout-session/${courseId}`, {
-        id: courseId
-      });
-      
+      const response = await apiService.post<CheckoutSession>(
+        `/stripe/create-checkout-session/${courseId}`,
+        {
+          id: courseId,
+        },
+      );
+
       if (!response.success) {
-        throw new Error(response.message || 'Error creating checkout session');
+        throw new Error(response.message || "Error creating checkout session");
       }
-      
+
       if (!response.data) {
-        throw new Error('No data received from server');
+        throw new Error("No data received from server");
       }
-      
+
       if (!response.data.sessionId) {
-        throw new Error('Invalid response format: missing sessionId');
+        throw new Error("Invalid response format: missing sessionId");
       }
-      
+
       return response.data;
-    } catch (error) {
+    } catch {
       throw error;
     }
   },
@@ -148,29 +151,33 @@ export const stripeService = {
   async getSessionStatus(sessionId: string): Promise<any> {
     const response = await apiService.get<any>(`/stripe/session/${sessionId}`);
     if (!response.success || !response.data) {
-      throw new Error(response.message || 'Error loading session status');
+      throw new Error(response.message || "Error loading session status");
     }
     return response.data;
   },
 
   // Procesar sesión de pago
   async processSession(sessionId: string): Promise<any> {
-    const response = await apiService.post<any>('/stripe/process-session', {
-      sessionId
+    const response = await apiService.post<any>("/stripe/process-session", {
+      sessionId,
     });
-    
+
     if (!response.success) {
-      throw new Error(response.message || 'Error processing session');
+      throw new Error(response.message || "Error processing session");
     }
-    
+
     return response.data;
   },
 
   // Obtener compras del usuario
   async getPurchases(): Promise<PurchaseGroup[]> {
-    const response = await apiService.get<{purchases: PurchaseGroup[], totalPurchases: number, totalCourses: number}>('/purchases');
+    const response = await apiService.get<{
+      purchases: PurchaseGroup[];
+      totalPurchases: number;
+      totalCourses: number;
+    }>("/purchases");
     if (!response.success || !response.data) {
-      throw new Error(response.message || 'Error loading purchases');
+      throw new Error(response.message || "Error loading purchases");
     }
     return response.data.purchases;
   },
@@ -179,23 +186,26 @@ export const stripeService = {
   async downloadReceiptPDF(purchaseGroupId: string): Promise<void> {
     try {
       // Extraer el ID real de la base de datos (remover prefijos como "individual_", "cart_", etc.)
-      const actualId = purchaseGroupId.replace(/^(individual_|cart_|group_)/, '');
-      
+      const actualId = purchaseGroupId.replace(
+        /^(individual_|cart_|group_)/,
+        "",
+      );
+
       const response = await fetch(`${API_BASE_URL}/pdf/download/${actualId}`, {
-        method: 'GET',
+        method: "GET",
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
 
       if (!response.ok) {
-        throw new Error('Error al descargar el comprobante');
+        throw new Error("Error al descargar el comprobante");
       }
 
       // Obtener el nombre del archivo del header Content-Disposition
-      const contentDisposition = response.headers.get('Content-Disposition');
+      const contentDisposition = response.headers.get("Content-Disposition");
       let filename = `comprobante_${actualId}_${Date.now()}.pdf`;
-      
+
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename="(.+)"/);
         if (filenameMatch) {
@@ -206,15 +216,14 @@ export const stripeService = {
       // Crear blob y descargar
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
       link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Error downloading PDF:', error);
+    } catch {
       throw error;
     }
   },
@@ -222,45 +231,54 @@ export const stripeService = {
   // Crear sesión de checkout para carrito
   async createCartCheckoutSession(): Promise<CartCheckoutSession> {
     try {
-      const response = await apiService.post<CartCheckoutSession>('/stripe/create-cart-checkout-session');
-      
+      const response = await apiService.post<CartCheckoutSession>(
+        "/stripe/create-cart-checkout-session",
+      );
+
       if (!response.success) {
-        throw new Error(response.message || 'Error creating cart checkout session');
+        throw new Error(
+          response.message || "Error creating cart checkout session",
+        );
       }
-      
+
       if (!response.data) {
-        throw new Error('No data received from server');
+        throw new Error("No data received from server");
       }
-      
+
       if (!response.data.sessionId) {
-        throw new Error('Invalid response format: missing sessionId');
+        throw new Error("Invalid response format: missing sessionId");
       }
-      
+
       return response.data;
-    } catch (error) {
+    } catch {
       throw error;
     }
   },
 
   // Obtener estado de sesión de carrito
   async getCartSessionStatus(sessionId: string): Promise<SessionStatus> {
-    const response = await apiService.get<SessionStatus>(`/stripe/cart-session/${sessionId}`);
+    const response = await apiService.get<SessionStatus>(
+      `/stripe/cart-session/${sessionId}`,
+    );
     if (!response.success || !response.data) {
-      throw new Error(response.message || 'Error loading cart session status');
+      throw new Error(response.message || "Error loading cart session status");
     }
     return response.data;
   },
 
   // Procesar sesión de carrito
   async processCartSession(sessionId: string): Promise<ProcessResult> {
-    const response = await apiService.post<ProcessResult>('/stripe/process-cart-session', {
-      sessionId
-    });
-    
+    const response = await apiService.post<ProcessResult>(
+      "/stripe/process-cart-session",
+      {
+        sessionId,
+      },
+    );
+
     if (!response.success || !response.data) {
-      throw new Error(response.message || 'Error processing cart session');
+      throw new Error(response.message || "Error processing cart session");
     }
-    
+
     return response.data;
-  }
+  },
 };
