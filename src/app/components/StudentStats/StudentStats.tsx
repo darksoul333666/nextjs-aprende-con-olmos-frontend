@@ -3,9 +3,10 @@
 import React from "react";
 import { Box, Typography, Avatar, Paper } from "@mui/material";
 import { School, People, AccessTime, TrendingUp } from "@mui/icons-material";
+import { Course } from "../../services/courseService";
 
 interface StudentStatsProps {
-  availableCourses: any[];
+  availableCourses: Course[];
 }
 
 export const StudentStats: React.FC<StudentStatsProps> = ({

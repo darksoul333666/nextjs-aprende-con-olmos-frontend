@@ -8,22 +8,42 @@ interface ApiResponse<T> {
 }
 
 class ApiService {
-  private getAuthHeaders(): HeadersInit {
+  private getAuthHeaders(includeContentType = true): HeadersInit {
     const token =
       typeof window !== "undefined" ? localStorage.getItem("token") : null;
     return {
-      "Content-Type": "application/json",
+      ...(includeContentType && { "Content-Type": "application/json" }),
       ...(token && { Authorization: `Bearer ${token}` }),
     };
   }
 
   private async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
-    const data = await response.json();
+    const text = await response.text();
+    const data = text
+      ? (JSON.parse(text) as ApiResponse<T>)
+      : ({ success: response.ok } as ApiResponse<T>);
 
     if (!response.ok) {
+      throw new Error(data.message || data.error || "Error en la petición");
     }
 
     return data;
+  }
+
+  private isFormData(data: unknown): data is FormData {
+    return typeof FormData !== "undefined" && data instanceof FormData;
+  }
+
+  private getBody(data?: unknown): BodyInit | undefined {
+    if (!data) {
+      return undefined;
+    }
+
+    if (this.isFormData(data)) {
+      return data;
+    }
+
+    return JSON.stringify(data);
   }
 
   async get<T>(
@@ -47,36 +67,39 @@ class ApiService {
       });
 
       return this.handleResponse<T>(response);
-    } catch {
+    } catch (error) {
       throw error;
     }
   }
 
   async post<T>(endpoint: string, data?: unknown): Promise<ApiResponse<T>> {
+    const isFormData = this.isFormData(data);
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: "POST",
-      headers: this.getAuthHeaders(),
-      body: data ? JSON.stringify(data) : undefined,
+      headers: this.getAuthHeaders(!isFormData),
+      body: this.getBody(data),
     });
 
     return this.handleResponse<T>(response);
   }
 
   async put<T>(endpoint: string, data?: unknown): Promise<ApiResponse<T>> {
+    const isFormData = this.isFormData(data);
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: "PUT",
-      headers: this.getAuthHeaders(),
-      body: data ? JSON.stringify(data) : undefined,
+      headers: this.getAuthHeaders(!isFormData),
+      body: this.getBody(data),
     });
 
     return this.handleResponse<T>(response);
   }
 
   async patch<T>(endpoint: string, data?: unknown): Promise<ApiResponse<T>> {
+    const isFormData = this.isFormData(data);
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: "PATCH",
-      headers: this.getAuthHeaders(),
-      body: data ? JSON.stringify(data) : undefined,
+      headers: this.getAuthHeaders(!isFormData),
+      body: this.getBody(data),
     });
 
     return this.handleResponse<T>(response);

@@ -90,7 +90,7 @@ export default function TeacherCoursesPage() {
       setCourses(coursesData.courses);
       setDrafts(draftsData);
       setIsInitialized(true);
-    } catch {
+    } catch (error) {
       // Verificar si es un error de conexión
       if (
         error instanceof TypeError &&
@@ -182,10 +182,10 @@ export default function TeacherCoursesPage() {
     }
   };
 
-  const handlePublishCourse = async (course: Course) => {
+  const handlePublishCourse = async (course: TeacherCourse) => {
     try {
       const publishedCourse = await courseService.toggleCourseVisibility(
-        course._id,
+        course.id,
       );
       if (publishedCourse) {
         setSuccess("Curso publicado exitosamente");
@@ -198,10 +198,10 @@ export default function TeacherCoursesPage() {
     }
   };
 
-  const handleToggleVisibility = async (course: Course) => {
+  const handleToggleVisibility = async (course: TeacherCourse) => {
     try {
       const updatedCourse = await courseService.toggleCourseVisibility(
-        course._id,
+        course.id,
       );
       if (updatedCourse) {
         setSuccess(
@@ -589,7 +589,7 @@ export default function TeacherCoursesPage() {
                             size="small"
                             startIcon={<VisibilityOff />}
                             onClick={() =>
-                              handleToggleVisibility(course as any)
+                              handleToggleVisibility(course)
                             }
                             sx={{ flex: 1 }}
                           >

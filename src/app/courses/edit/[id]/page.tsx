@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import {
   Container,
   Typography,
@@ -44,9 +44,9 @@ import {
   VideoLibrary,
   Description,
   Settings,
+  UploadFile,
 } from "@mui/icons-material";
 import { useRouter, useParams } from "next/navigation";
-import { useAuth } from "../../../contexts/AuthContext";
 import {
   courseService,
   Course,
@@ -56,11 +56,16 @@ import {
 } from "../../../services/courseService";
 import { Navbar } from "../../../components/Navigation/Navbar";
 
+type EditableVideo = Omit<Video, "_id"> & { _id?: string };
+type EditableSection = Omit<Section, "_id"> & {
+  _id?: string;
+  videos: EditableVideo[];
+};
+
 export default function EditCoursePage() {
   const router = useRouter();
   const params = useParams();
   const courseId = params.id as string;
-  const { user } = useAuth();
   const [course, setCourse] = useState<Course | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -69,16 +74,23 @@ export default function EditCoursePage() {
   const [editMode, setEditMode] = useState(false);
   const [showAddSectionDialog, setShowAddSectionDialog] = useState(false);
   const [showAddVideoDialog, setShowAddVideoDialog] = useState(false);
-  const [selectedSection, setSelectedSection] = useState<{
-    title: string;
-    videos?: Omit<Video, "_id">[];
-  } | null>(null);
+  const [selectedSection, setSelectedSection] =
+    useState<EditableSection | null>(null);
   const [newSectionTitle, setNewSectionTitle] = useState("");
   const [newVideoTitle, setNewVideoTitle] = useState("");
   const [newVideoDescription, setNewVideoDescription] = useState("");
-  const [newVideoUrl, setNewVideoUrl] = useState("");
+  const [newVideoFile, setNewVideoFile] = useState<File | null>(null);
+  const [newVideoThumbnail, setNewVideoThumbnail] = useState("");
   const [newVideoMinutes, setNewVideoMinutes] = useState("");
   const [newVideoSeconds, setNewVideoSeconds] = useState("");
+  const [showReplaceVideoDialog, setShowReplaceVideoDialog] = useState(false);
+  const [videoToReplace, setVideoToReplace] = useState<{
+    sectionId: string;
+    videoId: string;
+    title: string;
+  } | null>(null);
+  const [replacementVideoFile, setReplacementVideoFile] =
+    useState<File | null>(null);
   const [activeStep, setActiveStep] = useState(0);
 
   const [formData, setFormData] = useState<Partial<CreateCourseRequest>>({
@@ -88,19 +100,44 @@ export default function EditCoursePage() {
     sections: [],
   });
 
+  const syncCourseState = useCallback((courseData: Course) => {
+    setCourse(courseData);
+    setFormData({
+      title: courseData.title,
+      description: courseData.description,
+      price: courseData.price,
+      sections: courseData.sections,
+    });
+  }, []);
+
+  const refreshCourse = useCallback(async () => {
+    const refreshedCourse = await courseService.getCourse(courseId);
+    if (refreshedCourse) {
+      syncCourseState(refreshedCourse);
+    }
+    return refreshedCourse;
+  }, [courseId, syncCourseState]);
+
+  const resetVideoForm = () => {
+    setNewVideoTitle("");
+    setNewVideoDescription("");
+    setNewVideoFile(null);
+    setNewVideoThumbnail("");
+    setNewVideoMinutes("");
+    setNewVideoSeconds("");
+    setSelectedSection(null);
+  };
+
+  const getErrorMessage = (error: unknown, fallback: string) =>
+    error instanceof Error && error.message ? error.message : fallback;
+
   useEffect(() => {
     const fetchCourseData = async () => {
       try {
         setIsLoading(true);
         const courseData = await courseService.getCourse(courseId);
         if (courseData) {
-          setCourse(courseData);
-          setFormData({
-            title: courseData.title,
-            description: courseData.description,
-            price: courseData.price,
-            sections: courseData.sections,
-          });
+          syncCourseState(courseData);
         } else {
           setError("Curso no encontrado");
         }
@@ -114,7 +151,7 @@ export default function EditCoursePage() {
     if (courseId) {
       fetchCourseData();
     }
-  }, [courseId]);
+  }, [courseId, syncCourseState]);
 
   const handleInputChange =
     (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -133,12 +170,13 @@ export default function EditCoursePage() {
 
       if (!course) return;
 
-      const updatedCourse = await courseService.updateCourse(
-        courseId,
-        formData,
-      );
+      const updatedCourse = await courseService.updateCourse(courseId, {
+        title: formData.title,
+        description: formData.description,
+        price: formData.price,
+      });
       if (updatedCourse) {
-        setCourse(updatedCourse);
+        syncCourseState(updatedCourse);
         setEditMode(false);
         setSuccess("Curso actualizado correctamente");
       } else {
@@ -201,28 +239,43 @@ export default function EditCoursePage() {
     }
   };
 
-  const handleAddSection = () => {
+  const handleAddSection = async () => {
     if (!newSectionTitle.trim()) return;
 
-    const newSection: Omit<Section, "_id"> = {
-      title: newSectionTitle.trim(),
-      description: "",
-      order: (formData.sections?.length || 0) + 1,
-      videos: [],
-    };
+    try {
+      setIsSaving(true);
+      setError("");
+      setSuccess("");
 
-    setFormData((prev) => ({
-      ...prev,
-      sections: [...(prev.sections || []), newSection],
-    }));
+      await courseService.createCourseSection({
+        courseId,
+        title: newSectionTitle.trim(),
+        order: (formData.sections?.length || 0) + 1,
+      });
 
-    setNewSectionTitle("");
-    setShowAddSectionDialog(false);
+      const refreshedCourse = await refreshCourse();
+      if (refreshedCourse) {
+        setSuccess("Sección agregada correctamente");
+        setNewSectionTitle("");
+        setShowAddSectionDialog(false);
+      } else {
+        setError("Se creó la sección, pero no se pudo refrescar el curso");
+      }
+    } catch (error) {
+      setError(getErrorMessage(error, "Error al agregar la sección"));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleAddVideo = async () => {
-    if (!newVideoTitle.trim() || !newVideoUrl.trim() || !selectedSection)
+    if (!newVideoTitle.trim() || !newVideoFile || !selectedSection)
       return;
+
+    if (!selectedSection._id) {
+      setError("Guarda la sección antes de subir videos");
+      return;
+    }
 
     const minutes = parseInt(newVideoMinutes) || 0;
     const seconds = parseInt(newVideoSeconds) || 0;
@@ -258,74 +311,136 @@ export default function EditCoursePage() {
       setIsSaving(true);
       setError("");
 
-      const newVideo: Omit<Video, "_id"> = {
+      await courseService.uploadCourseVideo({
+        courseId,
+        sectionId: selectedSection._id,
+        file: newVideoFile,
         title: newVideoTitle.trim(),
         description: newVideoDescription.trim(),
-        url: newVideoUrl.trim(),
         duration: totalSeconds,
         order: (selectedSection.videos?.length || 0) + 1,
-      };
+        thumbnail: newVideoThumbnail.trim() || undefined,
+      });
 
-      const updatedFormData = {
-        ...formData,
-        sections: formData.sections?.map((section) => {
-          if (section.title === selectedSection.title) {
-            return {
-              ...section,
-              videos: [...(section.videos || []), newVideo],
-            };
-          }
-          return section;
-        }),
-      };
-      const updatedCourse = await courseService.updateCourse(
-        courseId,
-        updatedFormData,
-      );
-      if (updatedCourse) {
-        setCourse(updatedCourse);
-        setFormData(updatedFormData);
-        setSuccess("Video agregado y guardado correctamente");
+      const refreshedCourse = await refreshCourse();
+      if (refreshedCourse) {
+        setSuccess("Video subido y guardado correctamente");
       } else {
-        setError("Error al guardar el video en el backend");
+        setError("Video subido, pero no se pudo refrescar el curso");
       }
-      setNewVideoTitle("");
-      setNewVideoDescription("");
-      setNewVideoUrl("");
-      setNewVideoMinutes("");
-      setNewVideoSeconds("");
-      setSelectedSection(null);
+      resetVideoForm();
       setShowAddVideoDialog(false);
-    } catch {
-      setError("Error al agregar el video");
+    } catch (error) {
+      setError(getErrorMessage(error, "Error al agregar el video"));
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleRemoveSection = (sectionTitle: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      sections: prev.sections?.filter(
-        (section) => section.title !== sectionTitle,
-      ),
-    }));
+  const handleRemoveSection = async (section: EditableSection) => {
+    if (!section._id) {
+      setError("No se encontró el identificador de la sección");
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setError("");
+      setSuccess("");
+
+      await courseService.deleteCourseSection(courseId, section._id);
+      const refreshedCourse = await refreshCourse();
+      if (refreshedCourse) {
+        setSuccess("Sección eliminada correctamente");
+      } else {
+        setError("Se eliminó la sección, pero no se pudo refrescar el curso");
+      }
+    } catch (error) {
+      setError(getErrorMessage(error, "Error al eliminar la sección"));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleRemoveVideo = (sectionTitle: string, videoTitle: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      sections: prev.sections?.map((section) =>
-        section.title === sectionTitle
-          ? {
-              ...section,
-              videos:
-                section.videos?.filter((video) => video.title !== videoTitle) ||
-                [],
-            }
-          : section,
-      ),
-    }));
+  const handleRemoveVideo = async (
+    section: EditableSection,
+    video: EditableVideo,
+  ) => {
+    if (!section._id || !video._id) {
+      setError("No se encontró el identificador del video");
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setError("");
+      setSuccess("");
+
+      await courseService.deleteCourseVideo(courseId, section._id, video._id);
+      const refreshedCourse = await refreshCourse();
+      if (refreshedCourse) {
+        setSuccess("Video eliminado correctamente");
+      } else {
+        setError("Se eliminó el video, pero no se pudo refrescar el curso");
+      }
+    } catch (error) {
+      setError(getErrorMessage(error, "Error al eliminar el video"));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleOpenReplaceVideoDialog = (
+    section: EditableSection,
+    video: EditableVideo,
+  ) => {
+    if (!section._id || !video._id) {
+      setError("No se encontró el identificador del video para reemplazarlo");
+      return;
+    }
+
+    setVideoToReplace({
+      sectionId: section._id,
+      videoId: video._id,
+      title: video.title,
+    });
+    setReplacementVideoFile(null);
+    setShowReplaceVideoDialog(true);
+  };
+
+  const handleReplaceVideo = async () => {
+    if (!videoToReplace || !replacementVideoFile) {
+      setError("Selecciona un archivo para reemplazar el video");
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setError("");
+      setSuccess("");
+
+      await courseService.replaceCourseVideo({
+        courseId,
+        sectionId: videoToReplace.sectionId,
+        videoId: videoToReplace.videoId,
+        file: replacementVideoFile,
+      });
+
+      const refreshedCourse = await refreshCourse();
+      if (refreshedCourse) {
+        setSuccess("Video reemplazado correctamente");
+      } else {
+        setError("Video reemplazado, pero no se pudo refrescar el curso");
+      }
+
+      setShowReplaceVideoDialog(false);
+      setVideoToReplace(null);
+      setReplacementVideoFile(null);
+    } catch (error) {
+      setError(getErrorMessage(error, "Error al reemplazar el video"));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const formatDuration = (seconds: number): string => {
@@ -515,15 +630,14 @@ export default function EditCoursePage() {
                 >
                   Secciones y Videos
                 </Typography>
-                {editMode && (
-                  <Button
-                    variant="contained"
-                    startIcon={<Add />}
-                    onClick={() => setShowAddSectionDialog(true)}
-                  >
-                    Agregar Sección
-                  </Button>
-                )}
+                <Button
+                  variant="contained"
+                  startIcon={<Add />}
+                  onClick={() => setShowAddSectionDialog(true)}
+                  disabled={isSaving}
+                >
+                  Agregar Sección
+                </Button>
               </Box>
 
               {formData.sections && formData.sections.length > 0 ? (
@@ -551,24 +665,25 @@ export default function EditCoursePage() {
                           />
                         </Box>
                       </AccordionSummary>
-                      {editMode && (
-                        <Box
-                          sx={{
-                            position: "absolute",
-                            top: 8,
-                            right: 8,
-                            zIndex: 1,
-                          }}
+                      <Box
+                        sx={{
+                          position: "absolute",
+                          top: 8,
+                          right: 8,
+                          zIndex: 1,
+                        }}
+                      >
+                        <IconButton
+                          size="small"
+                          onClick={() =>
+                            handleRemoveSection(section as EditableSection)
+                          }
+                          color="error"
+                          disabled={isSaving}
                         >
-                          <IconButton
-                            size="small"
-                            onClick={() => handleRemoveSection(section.title)}
-                            color="error"
-                          >
-                            <Delete />
-                          </IconButton>
-                        </Box>
-                      )}
+                          <Delete />
+                        </IconButton>
+                      </Box>
                       <AccordionDetails>
                         {section.description && (
                           <Typography
@@ -595,25 +710,31 @@ export default function EditCoursePage() {
                             >
                               Videos
                             </Typography>
-                            {editMode && (
-                              <Button
-                                size="small"
-                                startIcon={
-                                  isSaving ? (
-                                    <CircularProgress size={16} />
-                                  ) : (
-                                    <Add />
-                                  )
+                            <Button
+                              size="small"
+                              startIcon={
+                                isSaving ? (
+                                  <CircularProgress size={16} />
+                                ) : (
+                                  <Add />
+                                )
+                              }
+                              onClick={() => {
+                                const editableSection =
+                                  section as EditableSection;
+                                if (!editableSection._id) {
+                                  setError(
+                                    "No se encontró el identificador de la sección. Recarga el curso e intenta de nuevo.",
+                                  );
+                                  return;
                                 }
-                                onClick={() => {
-                                  setSelectedSection(section);
-                                  setShowAddVideoDialog(true);
-                                }}
-                                disabled={isSaving}
-                              >
-                                {isSaving ? "Guardando..." : "Agregar Video"}
-                              </Button>
-                            )}
+                                setSelectedSection(editableSection);
+                                setShowAddVideoDialog(true);
+                              }}
+                              disabled={isSaving}
+                            >
+                              {isSaving ? "Guardando..." : "Agregar Video"}
+                            </Button>
                           </Box>
 
                           {section.videos && section.videos.length > 0 ? (
@@ -645,23 +766,36 @@ export default function EditCoursePage() {
                                       </Box>
                                     }
                                   />
-                                  {editMode && (
-                                    <ListItemSecondaryAction>
-                                      <IconButton
-                                        edge="end"
-                                        size="small"
-                                        onClick={() =>
-                                          handleRemoveVideo(
-                                            section.title,
-                                            video.title,
-                                          )
-                                        }
-                                        color="error"
-                                      >
-                                        <Delete />
-                                      </IconButton>
-                                    </ListItemSecondaryAction>
-                                  )}
+                                  <ListItemSecondaryAction>
+                                    <IconButton
+                                      edge="end"
+                                      size="small"
+                                      onClick={() =>
+                                        handleOpenReplaceVideoDialog(
+                                          section as EditableSection,
+                                          video as EditableVideo,
+                                        )
+                                      }
+                                      disabled={isSaving}
+                                      color="primary"
+                                    >
+                                      <UploadFile />
+                                    </IconButton>
+                                    <IconButton
+                                      edge="end"
+                                      size="small"
+                                      onClick={() =>
+                                        handleRemoveVideo(
+                                          section as EditableSection,
+                                          video as EditableVideo,
+                                        )
+                                      }
+                                      color="error"
+                                      disabled={isSaving}
+                                    >
+                                      <Delete />
+                                    </IconButton>
+                                  </ListItemSecondaryAction>
                                 </ListItem>
                               ))}
                             </List>
@@ -683,16 +817,15 @@ export default function EditCoursePage() {
                   <Typography variant="h6" color="text.secondary">
                     No hay secciones en este curso
                   </Typography>
-                  {editMode && (
-                    <Button
-                      variant="contained"
-                      startIcon={<Add />}
-                      onClick={() => setShowAddSectionDialog(true)}
-                      sx={{ mt: 2 }}
-                    >
-                      Agregar Primera Sección
-                    </Button>
-                  )}
+                  <Button
+                    variant="contained"
+                    startIcon={<Add />}
+                    onClick={() => setShowAddSectionDialog(true)}
+                    disabled={isSaving}
+                    sx={{ mt: 2 }}
+                  >
+                    Agregar Primera Sección
+                  </Button>
                 </Box>
               )}
             </Paper>
@@ -890,18 +1023,31 @@ export default function EditCoursePage() {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowAddSectionDialog(false)}>
+          <Button
+            onClick={() => setShowAddSectionDialog(false)}
+            disabled={isSaving}
+          >
             Cancelar
           </Button>
-          <Button onClick={handleAddSection} variant="contained">
-            Agregar
+          <Button
+            onClick={handleAddSection}
+            variant="contained"
+            disabled={isSaving || !newSectionTitle.trim()}
+            startIcon={isSaving ? <CircularProgress size={20} /> : <Add />}
+          >
+            {isSaving ? "Guardando..." : "Agregar"}
           </Button>
         </DialogActions>
       </Dialog>
 
       <Dialog
         open={showAddVideoDialog}
-        onClose={() => setShowAddVideoDialog(false)}
+        onClose={() => {
+          if (!isSaving) {
+            setShowAddVideoDialog(false);
+            resetVideoForm();
+          }
+        }}
         maxWidth="sm"
         fullWidth
       >
@@ -925,12 +1071,38 @@ export default function EditCoursePage() {
           />
           <TextField
             fullWidth
-            label="URL del Video"
-            value={newVideoUrl}
-            onChange={(e) => setNewVideoUrl(e.target.value)}
-            placeholder="https://example.com/video.mp4"
+            label="Miniatura (opcional)"
+            value={newVideoThumbnail}
+            onChange={(e) => setNewVideoThumbnail(e.target.value)}
+            placeholder="https://example.com/thumbnail.jpg"
             sx={{ mb: 2 }}
           />
+          <Button
+            component="label"
+            variant="outlined"
+            startIcon={<UploadFile />}
+            fullWidth
+            sx={{ mb: 1 }}
+          >
+            {newVideoFile ? "Cambiar archivo de video" : "Seleccionar video"}
+            <input
+              hidden
+              type="file"
+              accept="video/*"
+              onChange={(e) =>
+                setNewVideoFile(e.target.files?.[0] ?? null)
+              }
+            />
+          </Button>
+          {newVideoFile && (
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ mb: 2, display: "block" }}
+            >
+              Archivo seleccionado: {newVideoFile.name}
+            </Typography>
+          )}
           <Box sx={{ display: "flex", gap: 2 }}>
             <TextField
               fullWidth
@@ -979,7 +1151,10 @@ export default function EditCoursePage() {
         </DialogContent>
         <DialogActions>
           <Button
-            onClick={() => setShowAddVideoDialog(false)}
+            onClick={() => {
+              setShowAddVideoDialog(false);
+              resetVideoForm();
+            }}
             disabled={isSaving}
           >
             Cancelar
@@ -987,10 +1162,80 @@ export default function EditCoursePage() {
           <Button
             onClick={handleAddVideo}
             variant="contained"
-            disabled={isSaving}
+            disabled={isSaving || !newVideoFile}
             startIcon={isSaving ? <CircularProgress size={20} /> : <Add />}
           >
             {isSaving ? "Guardando..." : "Agregar"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={showReplaceVideoDialog}
+        onClose={() => {
+          if (!isSaving) {
+            setShowReplaceVideoDialog(false);
+            setVideoToReplace(null);
+            setReplacementVideoFile(null);
+          }
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Reemplazar Video</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Selecciona el nuevo archivo para reemplazar &quot;
+            {videoToReplace?.title}&quot;.
+          </Typography>
+          <Button
+            component="label"
+            variant="outlined"
+            startIcon={<UploadFile />}
+            fullWidth
+          >
+            {replacementVideoFile
+              ? "Cambiar archivo seleccionado"
+              : "Seleccionar nuevo video"}
+            <input
+              hidden
+              type="file"
+              accept="video/*"
+              onChange={(e) =>
+                setReplacementVideoFile(e.target.files?.[0] ?? null)
+              }
+            />
+          </Button>
+          {replacementVideoFile && (
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ mt: 1, display: "block" }}
+            >
+              Archivo seleccionado: {replacementVideoFile.name}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setShowReplaceVideoDialog(false);
+              setVideoToReplace(null);
+              setReplacementVideoFile(null);
+            }}
+            disabled={isSaving}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleReplaceVideo}
+            variant="contained"
+            disabled={isSaving || !replacementVideoFile}
+            startIcon={
+              isSaving ? <CircularProgress size={20} /> : <UploadFile />
+            }
+          >
+            {isSaving ? "Reemplazando..." : "Reemplazar"}
           </Button>
         </DialogActions>
       </Dialog>

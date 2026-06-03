@@ -100,7 +100,7 @@ export const StripePayment: React.FC<StripePaymentProps> = ({
       if (error) {
         throw new Error(error.message);
       }
-    } catch {
+    } catch (err) {
       setError(
         err instanceof Error ? err.message : "Error al procesar el pago",
       );

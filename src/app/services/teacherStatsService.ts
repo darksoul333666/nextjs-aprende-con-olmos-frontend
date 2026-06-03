@@ -49,18 +49,26 @@ export interface VideoStatsResponse {
 export const teacherStatsService = {
   async getDashboardStats(): Promise<TeacherDashboardData> {
     try {
-      const response = await apiService.get("/teachers/dashboard");
+      const response =
+        await apiService.get<TeacherDashboardData>("/teachers/dashboard");
+      if (!response.data) {
+        throw new Error("No se pudieron obtener las estadísticas");
+      }
       return response.data;
-    } catch {
+    } catch (error) {
       throw error;
     }
   },
 
   async getVideoStats(): Promise<VideoStatsResponse> {
     try {
-      const response = await apiService.get("/teachers/video-stats");
+      const response =
+        await apiService.get<VideoStatsResponse>("/teachers/video-stats");
+      if (!response.data) {
+        throw new Error("No se pudieron obtener las estadísticas de videos");
+      }
       return response.data;
-    } catch {
+    } catch (error) {
       throw error;
     }
   },

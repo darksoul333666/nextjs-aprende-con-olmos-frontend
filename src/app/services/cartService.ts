@@ -28,25 +28,11 @@ export interface Cart {
   updatedAt: string;
 }
 
-export interface CartResponse {
-  success: boolean;
-  data: {
-    cart: Cart;
-  };
-}
-
-export interface CartCountResponse {
-  success: boolean;
-  data: {
-    count: number;
-  };
-}
-
 class CartService {
   // Obtener carrito del usuario
   async getCart(): Promise<Cart | null> {
     try {
-      const response = await apiService.get<CartResponse>("/cart");
+      const response = await apiService.get<{ cart: Cart }>("/cart");
       return response.data?.cart || null;
     } catch {
       return null;
@@ -56,7 +42,7 @@ class CartService {
   // Obtener cantidad de items en el carrito
   async getCartCount(): Promise<number> {
     try {
-      const response = await apiService.get<CartCountResponse>("/cart/count");
+      const response = await apiService.get<{ count: number }>("/cart/count");
       return response.data?.count || 0;
     } catch {
       return 0;

@@ -37,6 +37,12 @@ interface VideoPlayerProps {
   className?: string;
 }
 
+type MediaPlayerElement = HTMLVideoElement & {
+  buffered?: TimeRanges;
+};
+
+const PlayerComponent = ReactPlayer as React.ElementType;
+
 // Helper function to check if URL is YouTube
 const isYouTubeUrl = (url: string): boolean => {
   return url.includes("youtube.com") || url.includes("youtu.be");
@@ -64,7 +70,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   className,
 }) => {
   // Debug: Log video URL
-  const videoRef = useRef<any>(null);
+  const videoRef = useRef<MediaPlayerElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [playing, setPlaying] = useState(autoPlay);
   const [currentTime, setCurrentTime] = useState(0);
@@ -301,10 +307,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     >
       {isMounted ? (
         <div>
-          {React.createElement(ReactPlayer as any, {
+          {React.createElement(PlayerComponent, {
             ref: videoRef,
             width: "100%",
-            src: "/test-video.mp4",
+            src: url,
             height: "100%",
             playing: playing,
             muted: muted,
@@ -346,7 +352,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               setPlaying(false);
               handleEnded();
             },
-            onError: (e: any) => {
+            onError: () => {
               setIsLoading(false);
             },
             onWaiting: () => {

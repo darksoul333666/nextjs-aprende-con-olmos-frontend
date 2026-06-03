@@ -7,7 +7,7 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
-import { cartService, Cart, CartItem } from "../services/cartService";
+import { cartService, Cart } from "../services/cartService";
 import { useAuth } from "./AuthContext";
 
 interface CartContextType {
@@ -73,7 +73,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       } else {
         throw new Error("Error al agregar al carrito");
       }
-    } catch {
+    } catch (error) {
       throw error;
     } finally {
       setIsLoading(false);
@@ -93,7 +93,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       } else {
         throw new Error("Error al remover del carrito");
       }
-    } catch {
+    } catch (error) {
       throw error;
     } finally {
       setIsLoading(false);
@@ -113,7 +113,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       } else {
         throw new Error("Error al limpiar el carrito");
       }
-    } catch {
+    } catch (error) {
       throw error;
     } finally {
       setIsLoading(false);

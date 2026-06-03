@@ -50,12 +50,19 @@ export interface CourseFilters {
   [key: string]: unknown;
 }
 
+export interface CourseSectionInput {
+  title: string;
+  description?: string;
+  order: number;
+  videos: Omit<Video, "_id">[];
+}
+
 export interface CreateCourseRequest {
   title: string;
   description: string;
   thumbnail?: string;
   price: number;
-  sections: Omit<Section, "_id">[];
+  sections: CourseSectionInput[];
 }
 
 export interface CreateDraftRequest {
@@ -66,7 +73,43 @@ export interface CreateDraftRequest {
 
 export interface CompleteCourseRequest {
   thumbnail?: string;
-  sections: Omit<Section, "_id">[];
+  sections: CourseSectionInput[];
+}
+
+export interface UploadCourseVideoRequest {
+  courseId: string;
+  sectionId: string;
+  file: File;
+  title: string;
+  description: string;
+  duration: number;
+  order?: number;
+  thumbnail?: string;
+}
+
+export interface ReplaceCourseVideoRequest {
+  courseId: string;
+  sectionId: string;
+  videoId: string;
+  file: File;
+}
+
+export interface CreateCourseSectionRequest {
+  courseId: string;
+  title: string;
+  description?: string;
+  order?: number;
+}
+
+interface VideoUploadResponse {
+  video: Video;
+  storagePath?: string;
+  url?: string;
+}
+
+interface SectionResponse {
+  section?: Section;
+  course?: Course;
 }
 
 export interface DraftCourse {
@@ -97,7 +140,35 @@ export interface TeacherCourse {
   };
 }
 
+export type TeacherCoursesSummary = Record<string, unknown>;
+
 class CourseService {
+  private mapVideo(video: Record<string, unknown>): Video {
+    return {
+      _id: (video.id || video._id) as string,
+      title: video.title as string,
+      description: (video.description as string) || "",
+      url: (video.url as string) || "",
+      duration: (video.duration as number) || 0,
+      thumbnail: video.thumbnail as string,
+      order: (video.order as number) || 0,
+      isCompleted: (video.isCompleted as boolean) || false,
+      isLocked: (video.isLocked as boolean) || false,
+    };
+  }
+
+  private mapSection(section: Record<string, unknown>): Section {
+    return {
+      _id: (section.id || section._id) as string,
+      title: section.title as string,
+      description: section.description as string,
+      order: (section.order as number) || 0,
+      videos: ((section.videos as Record<string, unknown>[]) || []).map(
+        (video) => this.mapVideo(video),
+      ),
+    };
+  }
+
   private ensureArray<T>(data: unknown): T[] {
     if (Array.isArray(data)) {
       return data;
@@ -170,26 +241,16 @@ class CourseService {
           totalDuration: (courseData.totalDuration as number) || 0,
           sections: (
             (courseData.sections as Record<string, unknown>[]) || []
-          ).map((section) => ({
-            _id: (section.id || section._id) as string, // Backend usa 'id' para sections
-            title: section.title as string,
-            description: section.description as string,
-            order: section.order as number,
-            videos: ((section.videos as Record<string, unknown>[]) || []).map(
-              (video) => ({
-                _id: (video.id || video._id) as string, // Backend usa 'id' para videos
-                title: video.title as string,
-                description: video.description as string,
-                url: video.url as string,
-                duration: video.duration as number,
-                thumbnail: video.thumbnail as string,
-                order: video.order as number,
-                isCompleted: (video.isCompleted as boolean) || false,
-                isLocked:
-                  (video.isLocked as boolean) || !responseData.canViewVideos,
-              }),
-            ),
-          })),
+          ).map((section) => {
+            const mappedSection = this.mapSection(section);
+            return {
+              ...mappedSection,
+              videos: mappedSection.videos.map((video) => ({
+                ...video,
+                isLocked: video.isLocked || !responseData.canViewVideos,
+              })),
+            };
+          }),
           price: courseData.price as number,
           isVisible: courseData.isVisible as boolean,
           isPurchased: responseData.canViewVideos || false,
@@ -228,6 +289,52 @@ class CourseService {
     } catch {
       return null;
     }
+  }
+
+  // Crear sección dentro de un curso - POST /api/courses/:courseId/sections
+  async createCourseSection({
+    courseId,
+    title,
+    description = "",
+    order,
+  }: CreateCourseSectionRequest): Promise<Section | null> {
+    const response = await apiService.post<SectionResponse>(
+      `/courses/${courseId}/sections`,
+      {
+        title,
+        description,
+        ...(order !== undefined && { order }),
+      },
+    );
+
+    if (response.data?.section) {
+      return this.mapSection(
+        response.data.section as unknown as Record<string, unknown>,
+      );
+    }
+
+    return null;
+  }
+
+  // Eliminar sección de un curso - DELETE /api/courses/:courseId/sections/:sectionId
+  async deleteCourseSection(
+    courseId: string,
+    sectionId: string,
+  ): Promise<boolean> {
+    await apiService.delete(`/courses/${courseId}/sections/${sectionId}`);
+    return true;
+  }
+
+  // Eliminar video de una sección - DELETE /api/courses/:courseId/sections/:sectionId/videos/:videoId
+  async deleteCourseVideo(
+    courseId: string,
+    sectionId: string,
+    videoId: string,
+  ): Promise<boolean> {
+    await apiService.delete(
+      `/courses/${courseId}/sections/${sectionId}/videos/${videoId}`,
+    );
+    return true;
   }
 
   // Cambiar visibilidad de un curso - PATCH /api/courses/{id}/visibility
@@ -313,14 +420,73 @@ class CourseService {
     }
   }
 
+  // Subir video a una sección - POST /api/courses/:courseId/sections/:sectionId/videos/upload
+  async uploadCourseVideo({
+    courseId,
+    sectionId,
+    file,
+    title,
+    description,
+    duration,
+    order,
+    thumbnail,
+  }: UploadCourseVideoRequest): Promise<Video> {
+    const formData = new FormData();
+    formData.append("video", file);
+    formData.append("title", title);
+    formData.append("description", description);
+    formData.append("duration", String(duration));
+
+    if (order !== undefined) {
+      formData.append("order", String(order));
+    }
+
+    if (thumbnail) {
+      formData.append("thumbnail", thumbnail);
+    }
+
+    const response = await apiService.post<VideoUploadResponse>(
+      `/courses/${courseId}/sections/${sectionId}/videos/upload`,
+      formData,
+    );
+
+    if (!response.data?.video) {
+      throw new Error(response.message || "Error al subir video");
+    }
+
+    return response.data.video;
+  }
+
+  // Reemplazar archivo de video - PATCH /api/courses/:courseId/sections/:sectionId/videos/:videoId/upload
+  async replaceCourseVideo({
+    courseId,
+    sectionId,
+    videoId,
+    file,
+  }: ReplaceCourseVideoRequest): Promise<Video> {
+    const formData = new FormData();
+    formData.append("video", file);
+
+    const response = await apiService.patch<VideoUploadResponse>(
+      `/courses/${courseId}/sections/${sectionId}/videos/${videoId}/upload`,
+      formData,
+    );
+
+    if (!response.data?.video) {
+      throw new Error(response.message || "Error al reemplazar video");
+    }
+
+    return response.data.video;
+  }
+
   // Obtener cursos del maestro con estadísticas - GET /api/courses/teacher
   async getTeacherCoursesWithStats(): Promise<{
     courses: TeacherCourse[];
-    summary: any;
+    summary: TeacherCoursesSummary;
   }> {
     const response = await apiService.get<{
       courses: TeacherCourse[];
-      summary: any;
+      summary: TeacherCoursesSummary;
     }>("/courses/teacher");
     return {
       courses: response.data?.courses || [],

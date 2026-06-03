@@ -12,7 +12,6 @@ import {
   CircularProgress,
   Card,
   CardContent,
-  CardActions,
   IconButton,
   Dialog,
   DialogTitle,
@@ -22,7 +21,6 @@ import {
   ListItem,
   ListItemText,
   ListItemSecondaryAction,
-  Divider,
   Chip,
 } from "@mui/material";
 import {
@@ -30,10 +28,6 @@ import {
   Add,
   Edit,
   Delete,
-  PlayArrow,
-  VideoLibrary,
-  Section,
-  Save,
   Publish,
 } from "@mui/icons-material";
 import { useRouter, useParams } from "next/navigation";

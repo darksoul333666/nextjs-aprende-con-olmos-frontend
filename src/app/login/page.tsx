@@ -40,7 +40,7 @@ export default function LoginPage() {
         await register(formData.email, formData.password);
       }
       router.push("/");
-    } catch {
+    } catch (error) {
       setError(error instanceof Error ? error.message : "Ocurrió un error");
     }
   };

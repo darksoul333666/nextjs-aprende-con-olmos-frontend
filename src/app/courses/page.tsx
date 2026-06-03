@@ -78,19 +78,18 @@ export default function CoursesPage() {
         // Si no hay cursos marcados como comprados, usar el método alternativo
         if (!hasPurchasedCourses && user) {
           try {
-            const purchasesResponse = await stripeService.getPurchases();
+            const purchases = await stripeService.getPurchases();
 
-            if (
-              purchasesResponse.purchases &&
-              Array.isArray(purchasesResponse.purchases)
-            ) {
-              const purchasedIds = purchasesResponse.purchases
+            if (Array.isArray(purchases)) {
+              const purchasedIds = purchases
                 .filter((purchase) => purchase.status === "completed")
-                .map((purchase) => purchase.courseId._id);
+                .flatMap((purchase) =>
+                  purchase.courses.map((item) => item.courseId._id),
+                );
 
               setPurchasedCourseIds(purchasedIds);
             }
-          } catch (purchaseError) {}
+          } catch {}
         }
       } catch {
         setCourses([]);

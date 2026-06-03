@@ -62,7 +62,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           "Respuesta de login inválida - estructura de datos incorrecta",
         );
       }
-    } catch {
+    } catch (error) {
       throw error;
     } finally {
       setIsLoading(false);
@@ -82,7 +82,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           "Respuesta de registro inválida - estructura de datos incorrecta",
         );
       }
-    } catch {
+    } catch (error) {
       throw error;
     } finally {
       setIsLoading(false);

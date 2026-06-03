@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { Suspense, useCallback, useEffect, useState } from "react";
 import {
   Container,
   Typography,
@@ -20,33 +20,99 @@ import {
   ShoppingCart,
 } from "@mui/icons-material";
 import { Navbar } from "../../components/Navigation/Navbar";
-import { stripeService } from "../../services/stripeService";
+import { stripeService, StripeData } from "../../services/stripeService";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../contexts/AuthContext";
 import { useCart } from "../../contexts/CartContext";
 
-export default function PaymentSuccessPage() {
+interface PaymentCourse {
+  id?: string;
+  _id?: string;
+  title?: string;
+  description?: string;
+}
+
+interface PaymentSession {
+  amountTotal?: number;
+}
+
+interface PaymentSummary {
+  success: boolean;
+  course?: PaymentCourse;
+  price?: number;
+  session?: PaymentSession;
+  cartPurchase?: StripeData;
+  totalAmount?: number;
+  itemCount?: number;
+  message?: string;
+  sessionId?: string;
+}
+
+const asRecord = (value: unknown): Record<string, unknown> | undefined =>
+  value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : undefined;
+
+const asString = (value: unknown): string | undefined =>
+  typeof value === "string" ? value : undefined;
+
+const asNumber = (value: unknown): number | undefined =>
+  typeof value === "number" ? value : undefined;
+
+const getCourse = (purchase: unknown): PaymentCourse | undefined => {
+  const purchaseRecord = asRecord(purchase);
+  const courseRecord = asRecord(purchaseRecord?.course) || purchaseRecord;
+
+  if (!courseRecord) {
+    return undefined;
+  }
+
+  return {
+    id: asString(courseRecord.id),
+    _id: asString(courseRecord._id),
+    title: asString(courseRecord.title),
+    description: asString(courseRecord.description),
+  };
+};
+
+const getSession = (session: unknown): PaymentSession | undefined => {
+  const sessionRecord = asRecord(session);
+
+  if (!sessionRecord) {
+    return undefined;
+  }
+
+  return {
+    amountTotal:
+      asNumber(sessionRecord.amountTotal) || asNumber(sessionRecord.amount_total),
+  };
+};
+
+function PaymentSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { clearCart } = useCart();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [purchase, setPurchase] = useState<any>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [purchase, setPurchase] = useState<PaymentSummary | null>(null);
 
-  useEffect(() => {
-    const sessionIdParam = searchParams.get("session_id");
-    if (sessionIdParam) {
-      setSessionId(sessionIdParam);
-      verifyPayment(sessionIdParam);
-    } else {
-      setError("No se encontró el ID de sesión");
+  const handlePurchaseSuccess = useCallback(
+    async (purchaseData: PaymentSummary) => {
+      setPurchase(purchaseData);
       setIsLoading(false);
-    }
-  }, [searchParams]);
 
-  const verifyPayment = async (sessionId: string) => {
+      // Limpiar el carrito después de una compra exitosa
+      try {
+        await clearCart();
+      } catch {
+        // No mostrar error al usuario, solo log
+      }
+    },
+    [clearCart],
+  );
+
+  const verifyPayment = useCallback(async (sessionId: string) => {
     try {
       setIsLoading(true);
       setError(null);
@@ -58,24 +124,24 @@ export default function PaymentSuccessPage() {
         // Verificar si la respuesta tiene la estructura esperada
         if (
           processResponse &&
-          (processResponse.success || (processResponse as any).purchase)
+          (processResponse.success || processResponse.purchase)
         ) {
           const purchase =
-            processResponse.data?.purchase || (processResponse as any).purchase;
-          const session =
-            processResponse.data?.session || (processResponse as any).session;
+            processResponse.data?.purchase || processResponse.purchase;
+          const session = processResponse.data?.session || processResponse.session;
+          const purchaseRecord = asRecord(purchase);
 
           const purchaseData = {
             success: true,
-            course: purchase?.course || purchase,
-            price: purchase?.price || 0,
-            session: session,
+            course: getCourse(purchase),
+            price: asNumber(purchaseRecord?.price) || 0,
+            session: getSession(session),
             message: "Compra procesada exitosamente",
           };
           await handlePurchaseSuccess(purchaseData);
           return;
         }
-      } catch (processError) {}
+      } catch {}
 
       // Intentar procesar como sesión de carrito
       try {
@@ -86,28 +152,28 @@ export default function PaymentSuccessPage() {
         if (
           cartProcessResponse &&
           (cartProcessResponse.success ||
-            (cartProcessResponse as any).cartPurchase)
+            cartProcessResponse.cartPurchase)
         ) {
           // Crear objeto de compra con la información del carrito
           const cartPurchase =
             cartProcessResponse.data?.cartPurchase ||
-            (cartProcessResponse as any).cartPurchase;
+            cartProcessResponse.cartPurchase;
           const sessionData =
-            (cartProcessResponse.data as any)?.session ||
-            (cartProcessResponse as any).session;
+            cartProcessResponse.data?.session || cartProcessResponse.session;
+          const cartPurchaseRecord = asRecord(cartPurchase);
 
           const purchaseData = {
             success: true,
             cartPurchase: cartPurchase,
-            session: sessionData,
-            totalAmount: cartPurchase?.totalAmount || 0,
-            itemCount: cartPurchase?.itemCount || 0,
+            session: getSession(sessionData),
+            totalAmount: asNumber(cartPurchaseRecord?.totalAmount) || 0,
+            itemCount: asNumber(cartPurchaseRecord?.itemCount) || 0,
             message: "Compra de carrito procesada exitosamente",
           };
           await handlePurchaseSuccess(purchaseData);
           return;
         }
-      } catch (cartError) {}
+      } catch {}
 
       // Si ambos métodos fallan, verificar directamente el estado de la sesión
       try {
@@ -124,7 +190,7 @@ export default function PaymentSuccessPage() {
         } else {
           setError("El pago no se completó correctamente");
         }
-      } catch (statusError) {
+      } catch {
         setError("No se pudo verificar el estado del pago");
       }
     } catch {
@@ -132,12 +198,23 @@ export default function PaymentSuccessPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [handlePurchaseSuccess]);
+
+  useEffect(() => {
+    const sessionIdParam = searchParams.get("session_id");
+    if (sessionIdParam) {
+      verifyPayment(sessionIdParam);
+    } else {
+      setError("No se encontró el ID de sesión");
+      setIsLoading(false);
+    }
+  }, [searchParams, verifyPayment]);
 
   const handleContinueCourse = () => {
     // Para compras individuales
-    if (purchase?.course?.id) {
-      router.push(`/course/${purchase.course.id}`);
+    const courseId = purchase?.course?.id || purchase?.course?._id;
+    if (courseId) {
+      router.push(`/course/${courseId}`);
     }
     // Para compras del carrito o cuando no hay curso específico
     else {
@@ -151,18 +228,6 @@ export default function PaymentSuccessPage() {
 
   const handleViewPurchases = () => {
     router.push("/my-purchases");
-  };
-
-  const handlePurchaseSuccess = async (purchaseData: any) => {
-    setPurchase(purchaseData);
-    setIsLoading(false);
-
-    // Limpiar el carrito después de una compra exitosa
-    try {
-      await clearCart();
-    } catch {
-      // No mostrar error al usuario, solo log
-    }
   };
 
   if (!isAuthenticated) {
@@ -244,7 +309,7 @@ export default function PaymentSuccessPage() {
                   sx={{ fontWeight: 600 }}
                 >
                   {purchase.course?.title ||
-                    (purchase.itemCount > 1
+                    ((purchase.itemCount || 0) > 1
                       ? `${purchase.itemCount} Cursos Comprados`
                       : "Curso Comprado")}
                 </Typography>
@@ -273,7 +338,7 @@ export default function PaymentSuccessPage() {
                     USD
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {purchase.itemCount > 1
+                    {(purchase.itemCount || 0) > 1
                       ? `${purchase.itemCount} items`
                       : "Compra realizada exitosamente"}
                   </Typography>
@@ -314,7 +379,8 @@ export default function PaymentSuccessPage() {
               <Box component="ul" sx={{ pl: 2, m: 0 }}>
                 <Typography component="li" variant="body2" paragraph>
                   <strong>Acceso inmediato:</strong> Ya puedes acceder al curso
-                  desde "Mis Compras" o haciendo clic en "Continuar Curso"
+                  desde &quot;Mis Compras&quot; o haciendo clic en
+                  &quot;Continuar Curso&quot;
                 </Typography>
                 <Typography component="li" variant="body2" paragraph>
                   <strong>Progreso guardado:</strong> Tu progreso se guardará
@@ -347,5 +413,27 @@ export default function PaymentSuccessPage() {
         )}
       </Container>
     </Box>
+  );
+}
+
+export default function PaymentSuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <Box
+          sx={{
+            minHeight: "100vh",
+            backgroundColor: "#f8f9fa",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <CircularProgress size={60} />
+        </Box>
+      }
+    >
+      <PaymentSuccessContent />
+    </Suspense>
   );
 }

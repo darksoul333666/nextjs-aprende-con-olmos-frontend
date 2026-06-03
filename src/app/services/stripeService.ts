@@ -100,13 +100,19 @@ export interface SessionStatus {
   };
 }
 
+export type StripeData = Record<string, unknown>;
+
 export interface ProcessResult {
   success: boolean;
   data: {
-    purchase?: any;
-    cartPurchase?: any;
+    purchase?: StripeData;
+    cartPurchase?: StripeData;
+    session?: StripeData;
     message: string;
   };
+  purchase?: StripeData;
+  cartPurchase?: StripeData;
+  session?: StripeData;
 }
 
 export const stripeService = {
@@ -142,14 +148,16 @@ export const stripeService = {
       }
 
       return response.data;
-    } catch {
+    } catch (error) {
       throw error;
     }
   },
 
   // Verificar estado de sesión
-  async getSessionStatus(sessionId: string): Promise<any> {
-    const response = await apiService.get<any>(`/stripe/session/${sessionId}`);
+  async getSessionStatus(sessionId: string): Promise<SessionStatus["data"]> {
+    const response = await apiService.get<SessionStatus["data"]>(
+      `/stripe/session/${sessionId}`,
+    );
     if (!response.success || !response.data) {
       throw new Error(response.message || "Error loading session status");
     }
@@ -157,12 +165,15 @@ export const stripeService = {
   },
 
   // Procesar sesión de pago
-  async processSession(sessionId: string): Promise<any> {
-    const response = await apiService.post<any>("/stripe/process-session", {
-      sessionId,
-    });
+  async processSession(sessionId: string): Promise<ProcessResult> {
+    const response = await apiService.post<ProcessResult>(
+      "/stripe/process-session",
+      {
+        sessionId,
+      },
+    );
 
-    if (!response.success) {
+    if (!response.success || !response.data) {
       throw new Error(response.message || "Error processing session");
     }
 
@@ -223,7 +234,7 @@ export const stripeService = {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-    } catch {
+    } catch (error) {
       throw error;
     }
   },
@@ -250,7 +261,7 @@ export const stripeService = {
       }
 
       return response.data;
-    } catch {
+    } catch (error) {
       throw error;
     }
   },
