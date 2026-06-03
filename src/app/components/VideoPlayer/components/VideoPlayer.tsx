@@ -97,8 +97,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     if (url) {
       setIsLoading(true);
       setIsSeeking(false); // Reset seeking state when URL changes
+      setPlaying(autoPlay);
     }
-  }, [url]);
+  }, [autoPlay, url]);
 
   // Handle buffering using standard ReactPlayer events
   const handleBuffer = useCallback(() => {
@@ -290,7 +291,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       className={className}
       sx={{
         width: "100%",
-        maxWidth: fullScreen ? "100%" : 640,
+        maxWidth: "100%",
         aspectRatio: "16 / 9",
         position: "relative",
         backgroundColor: "#000",

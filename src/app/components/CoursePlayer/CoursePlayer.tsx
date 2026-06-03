@@ -14,6 +14,7 @@ import {
   AccordionSummary,
   AccordionDetails,
   LinearProgress,
+  Chip,
 } from "@mui/material";
 import {
   PlayArrow,
@@ -28,12 +29,14 @@ import {
   Search,
   KeyboardArrowDown,
   KeyboardArrowUp,
+  Visibility,
 } from "@mui/icons-material";
 import { VideoPlayer } from "../VideoPlayer/components/VideoPlayer";
 import { Course, Video, Section } from "../../services/courseService";
 
 interface CoursePlayerProps {
   course: Course;
+  isPreviewMode?: boolean;
   onVideoComplete?: (videoId: string) => void;
   onVideoProgress?: (videoId: string, progress: number) => void;
   className?: string;
@@ -41,6 +44,7 @@ interface CoursePlayerProps {
 
 export const CoursePlayer: React.FC<CoursePlayerProps> = ({
   course,
+  isPreviewMode = false,
   onVideoComplete,
   onVideoProgress,
   className,
@@ -209,9 +213,21 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
         }}
       >
         <Box>
-          <Typography variant="h5" component="h1" gutterBottom>
-            {course.title}
-          </Typography>
+          <Box display="flex" alignItems="center" gap={1.5} flexWrap="wrap">
+            <Typography variant="h5" component="h1">
+              {course.title}
+            </Typography>
+            {isPreviewMode && (
+              <Chip
+                icon={<Visibility />}
+                label="Vista previa"
+                size="small"
+                variant="outlined"
+                color="primary"
+                sx={{ fontWeight: 600 }}
+              />
+            )}
+          </Box>
           <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
             <Box display="flex" alignItems="center" gap={1}>
               <AccessTime fontSize="small" />
@@ -234,7 +250,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
         {/* Video Player Section */}
         <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
           {/* Video Player */}
-          <Box sx={{ flex: 1, p: 2, pb: 1, minHeight: 400 }}>
+          <Box sx={{ flex: 1, p: 2, pb: 1, minHeight: 520 }}>
             {currentVideo?.url ? (
               <VideoPlayer
                 url={currentVideo.url}
@@ -245,7 +261,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
                 hasPrevious={!!previousVideo}
                 onProgress={handleVideoProgress}
                 onEnded={handleVideoEnd}
-                autoPlay={false}
+                autoPlay={true}
                 fullScreen={false}
               />
             ) : (

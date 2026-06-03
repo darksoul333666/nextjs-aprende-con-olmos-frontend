@@ -8,9 +8,8 @@ import {
   Typography,
   Box,
   Button,
-  Chip,
 } from "@mui/material";
-import { Edit, Visibility } from "@mui/icons-material";
+import { Edit } from "@mui/icons-material";
 import { CoursePlayer } from "../../components/CoursePlayer/CoursePlayer";
 import { courseService, Course } from "../../services/courseService";
 import { progressService } from "../../services/progressService";
@@ -138,26 +137,6 @@ export default function CoursePage() {
         disableGutters
         sx={{ height: "calc(100vh - 64px)", position: "relative" }}
       >
-        {/* Indicador de Preview */}
-        {isPreviewMode && (
-          <Box sx={{ position: "absolute", top: 80, left: 16, zIndex: 1000 }}>
-            <Chip
-              icon={<Visibility />}
-              label="Vista Previa"
-              color="primary"
-              variant="filled"
-              sx={{
-                bgcolor: "rgba(41, 50, 218, 0.9)",
-                color: "white",
-                fontWeight: 600,
-                "& .MuiChip-icon": {
-                  color: "white",
-                },
-              }}
-            />
-          </Box>
-        )}
-
         {/* Botón de Editar - Solo para maestros y NO en modo preview */}
         {user?.role === "maestro" && !isPreviewMode && (
           <Box sx={{ position: "absolute", top: 16, right: 16, zIndex: 1000 }}>
@@ -177,6 +156,7 @@ export default function CoursePage() {
 
         <CoursePlayer
           course={course}
+          isPreviewMode={isPreviewMode}
           onVideoComplete={handleVideoComplete}
           onVideoProgress={handleVideoProgress}
         />
