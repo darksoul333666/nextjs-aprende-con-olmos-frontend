@@ -32,6 +32,7 @@ import {
   Book,
   Group,
   Edit,
+  LocalOffer,
 } from "@mui/icons-material";
 import { Navbar } from "../components/Navigation/Navbar";
 import {
@@ -221,17 +222,26 @@ export default function TeacherPage() {
               Facebook
             </Button>
             {user?.role === "maestro" && (
-              <Button
-                variant="contained"
-                startIcon={<Edit />}
-                onClick={() => router.push("/teacher/edit")}
-                sx={{
-                  bgcolor: "secondary.main",
-                  "&:hover": { bgcolor: "secondary.dark" },
-                }}
-              >
-                Editar Perfil
-              </Button>
+              <>
+                <Button
+                  variant="contained"
+                  startIcon={<LocalOffer />}
+                  onClick={() => router.push("/teacher/promotions")}
+                >
+                  Promociones y cupones
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={<Edit />}
+                  onClick={() => router.push("/teacher/edit")}
+                  sx={{
+                    bgcolor: "secondary.main",
+                    "&:hover": { bgcolor: "secondary.dark" },
+                  }}
+                >
+                  Editar Perfil
+                </Button>
+              </>
             )}
           </Box>
         </Paper>

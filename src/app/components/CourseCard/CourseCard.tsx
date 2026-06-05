@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -25,6 +25,7 @@ import {
   People,
   AddShoppingCart,
   CreditCard,
+  LocalOffer,
 } from "@mui/icons-material";
 import { Course } from "../../services/courseService";
 import { useCart } from "../../contexts/CartContext";
@@ -48,6 +49,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
 
   const formatDuration = (seconds: number | undefined): string => {
     if (!seconds || isNaN(seconds) || seconds <= 0) {
@@ -116,8 +118,63 @@ export const CourseCard: React.FC<CourseCardProps> = ({
     }, 2000);
   };
 
+  useEffect(() => {
+    if (!course.activePromotion) {
+      return;
+    }
+
+    const interval = window.setInterval(() => setNow(Date.now()), 60000);
+    return () => window.clearInterval(interval);
+  }, [course.activePromotion]);
+
+  const getPromotionDate = (value?: string) => {
+    if (!value) {
+      return NaN;
+    }
+
+    return new Date(value).getTime();
+  };
+
+  const formatPromotionTimeLeft = (milliseconds: number) => {
+    const totalMinutes = Math.max(0, Math.ceil(milliseconds / 60000));
+    const days = Math.floor(totalMinutes / 1440);
+    const hours = Math.floor((totalMinutes % 1440) / 60);
+    const minutes = totalMinutes % 60;
+
+    if (days > 0) {
+      return `${days}d ${hours}h restantes`;
+    }
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m restantes`;
+    }
+
+    return `${minutes}m restantes`;
+  };
+
   const isCourseInCart = isInCart(course._id);
   const isCoursePurchased = course.isPurchased;
+  const promotion = course.activePromotion;
+  const promotionStartTime = getPromotionDate(
+    promotion?.startsAt || promotion?.startDate,
+  );
+  const promotionEndTime = getPromotionDate(
+    promotion?.endsAt || promotion?.endDate,
+  );
+  const hasActivePromotion = Boolean(
+    promotion &&
+      Number.isFinite(promotionEndTime) &&
+      now < promotionEndTime &&
+      (!Number.isFinite(promotionStartTime) || now >= promotionStartTime),
+  );
+  const promotionTimeLeft = hasActivePromotion
+    ? formatPromotionTimeLeft(promotionEndTime - now)
+    : "";
+  const discountedPrice =
+    hasActivePromotion && promotion
+      ? promotion.discountedPrice ??
+        Math.max(0, course.price * (1 - promotion.discountPercentage / 100))
+      : course.price;
 
   if (variant === "compact") {
     return (
@@ -204,6 +261,14 @@ export const CourseCard: React.FC<CourseCardProps> = ({
                       icon={<CheckCircle />}
                     />
                   )}
+                  {hasActivePromotion && !isCoursePurchased && promotion && (
+                    <Chip
+                      label={`${promotion.discountPercentage}% OFF`}
+                      color="warning"
+                      size="small"
+                      icon={<LocalOffer />}
+                    />
+                  )}
                 </Box>
 
                 <Typography variant="body2" color="text.secondary" paragraph>
@@ -225,9 +290,32 @@ export const CourseCard: React.FC<CourseCardProps> = ({
                   </Box>
                 </Box>
 
-                <Typography variant="h6" color="primary" fontWeight="bold">
-                  ${course.price || 0} USD
-                </Typography>
+                <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+                  {hasActivePromotion ? (
+                    <>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ textDecoration: "line-through" }}
+                      >
+                        ${course.price || 0} USD
+                      </Typography>
+                      <Typography variant="h6" color="error" fontWeight="bold">
+                        ${discountedPrice.toFixed(2)} USD
+                      </Typography>
+                      <Chip
+                        label={promotionTimeLeft}
+                        color="error"
+                        size="small"
+                        variant="outlined"
+                      />
+                    </>
+                  ) : (
+                    <Typography variant="h6" color="primary" fontWeight="bold">
+                      ${course.price || 0} USD
+                    </Typography>
+                  )}
+                </Box>
               </CardContent>
 
               {showActions && (
@@ -347,17 +435,38 @@ export const CourseCard: React.FC<CourseCardProps> = ({
 
             {/* Price Chip */}
             <Chip
-              label={`$${course.price || 0}`}
-              color="primary"
+              label={
+                hasActivePromotion
+                  ? `$${discountedPrice.toFixed(2)}`
+                  : `$${course.price || 0}`
+              }
+              color={hasActivePromotion ? "error" : "primary"}
               sx={{
                 position: "absolute",
                 top: 16,
                 right: 16,
                 bgcolor: "white",
-                color: "primary.main",
+                color: hasActivePromotion ? "error.main" : "primary.main",
                 fontWeight: 600,
               }}
             />
+
+            {/* Promotion Badge */}
+            {hasActivePromotion && !isCoursePurchased && promotion && (
+              <Chip
+                label={`${promotion.discountPercentage}% OFF`}
+                color="warning"
+                icon={<LocalOffer />}
+                sx={{
+                  position: "absolute",
+                  top: 16,
+                  left: 16,
+                  fontWeight: 700,
+                  bgcolor: "#fff3cd",
+                  color: "#8a4b00",
+                }}
+              />
+            )}
 
             {/* Purchased Badge */}
             {isCoursePurchased && (
@@ -388,6 +497,23 @@ export const CourseCard: React.FC<CourseCardProps> = ({
                   ({course.rating || 0} calificaciones)
                 </Typography>
               </Box>
+
+              {hasActivePromotion && promotion && (
+                <Box display="flex" alignItems="center" gap={1} mb={1}>
+                  <Chip
+                    label="Promoción activa"
+                    color="error"
+                    size="small"
+                    icon={<LocalOffer />}
+                  />
+                  <Chip
+                    label={promotionTimeLeft}
+                    color="warning"
+                    size="small"
+                    variant="outlined"
+                  />
+                </Box>
+              )}
 
               <Typography
                 variant="h6"
@@ -472,7 +598,10 @@ export const CourseCard: React.FC<CourseCardProps> = ({
                         transition: "transform 0.2s",
                       }}
                     >
-                      Comprar ${course.price || 0}
+                      Comprar $
+                      {hasActivePromotion
+                        ? discountedPrice.toFixed(2)
+                        : course.price || 0}
                     </Button>
                   </Box>
                 )}
@@ -505,7 +634,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
         courseTitle={course.title}
         courseDescription={course.description}
         courseThumbnail={course.thumbnail || "/placeholder-course.jpg"}
-        coursePrice={course.price || 0}
+        coursePrice={hasActivePromotion ? discountedPrice : course.price || 0}
         onSuccess={handlePaymentSuccess}
       />
     </>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useState, useEffect } from "react";
+import React, { useCallback, useRef, useState, useEffect } from "react";
 import {
   Container,
   Typography,
@@ -66,6 +66,7 @@ export default function EditCoursePage() {
   const router = useRouter();
   const params = useParams();
   const courseId = params.id as string;
+  const videoFileInputRef = useRef<HTMLInputElement | null>(null);
   const [course, setCourse] = useState<Course | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -83,6 +84,9 @@ export default function EditCoursePage() {
   const [newVideoThumbnail, setNewVideoThumbnail] = useState("");
   const [newVideoMinutes, setNewVideoMinutes] = useState("");
   const [newVideoSeconds, setNewVideoSeconds] = useState("");
+  const [isReadingVideoDuration, setIsReadingVideoDuration] = useState(false);
+  const [videoDurationDetected, setVideoDurationDetected] = useState(false);
+  const [isDraggingVideoFile, setIsDraggingVideoFile] = useState(false);
   const [showReplaceVideoDialog, setShowReplaceVideoDialog] = useState(false);
   const [videoToReplace, setVideoToReplace] = useState<{
     sectionId: string;
@@ -125,11 +129,87 @@ export default function EditCoursePage() {
     setNewVideoThumbnail("");
     setNewVideoMinutes("");
     setNewVideoSeconds("");
+    setIsReadingVideoDuration(false);
+    setVideoDurationDetected(false);
     setSelectedSection(null);
   };
 
   const getErrorMessage = (error: unknown, fallback: string) =>
     error instanceof Error && error.message ? error.message : fallback;
+
+  const extractVideoDuration = (file: File) =>
+    new Promise<number>((resolve, reject) => {
+      const video = document.createElement("video");
+      const objectUrl = URL.createObjectURL(file);
+
+      video.preload = "metadata";
+      video.onloadedmetadata = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve(video.duration);
+      };
+      video.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error("No se pudo leer la duración del video"));
+      };
+      video.src = objectUrl;
+    });
+
+  const getTitleFromFileName = (fileName: string) =>
+    fileName
+      .replace(/\.[^/.]+$/, "")
+      .replace(/[-_]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const handleVideoFileChange = async (file: File | null) => {
+    if (file && !file.type.startsWith("video/")) {
+      setError("Selecciona un archivo de video válido");
+      return;
+    }
+
+    setNewVideoFile(file);
+    setVideoDurationDetected(false);
+
+    if (!file) {
+      setNewVideoMinutes("");
+      setNewVideoSeconds("");
+      return;
+    }
+
+    if (!newVideoTitle.trim()) {
+      setNewVideoTitle(getTitleFromFileName(file.name));
+    }
+
+    try {
+      setIsReadingVideoDuration(true);
+      setError("");
+
+      const duration = await extractVideoDuration(file);
+      if (!Number.isFinite(duration) || duration <= 0) {
+        throw new Error("La duración del video no es válida");
+      }
+
+      const totalSeconds = Math.round(duration);
+      setNewVideoMinutes(String(Math.floor(totalSeconds / 60)));
+      setNewVideoSeconds(String(totalSeconds % 60));
+      setVideoDurationDetected(true);
+    } catch (error) {
+      setError(
+        getErrorMessage(
+          error,
+          "No se pudo detectar la duración del video. Ingresa la duración manualmente.",
+        ),
+      );
+    } finally {
+      setIsReadingVideoDuration(false);
+    }
+  };
+
+  const handleVideoDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDraggingVideoFile(false);
+    handleVideoFileChange(event.dataTransfer.files?.[0] ?? null);
+  };
 
   useEffect(() => {
     const fetchCourseData = async () => {
@@ -536,7 +616,22 @@ export default function EditCoursePage() {
                 <StepLabel
                   icon={step.icon}
                   onClick={() => setActiveStep(index)}
-                  sx={{ cursor: "pointer" }}
+                  sx={{
+                    cursor: "pointer",
+                    borderRadius: 1,
+                    px: 1,
+                    py: 0.5,
+                    transition: "background-color 0.2s ease, color 0.2s ease",
+                    "&:hover": {
+                      bgcolor: "action.hover",
+                    },
+                    "&:hover .MuiStepLabel-label": {
+                      color: "primary.main",
+                    },
+                    "&:hover .MuiStepLabel-iconContainer": {
+                      color: "primary.main",
+                    },
+                  }}
                 >
                   {step.label}
                 </StepLabel>
@@ -1053,12 +1148,96 @@ export default function EditCoursePage() {
       >
         <DialogTitle>Agregar Nuevo Video</DialogTitle>
         <DialogContent>
+          <Box
+            role="button"
+            tabIndex={0}
+            onClick={() => {
+              if (!isSaving) {
+                videoFileInputRef.current?.click();
+              }
+            }}
+            onKeyDown={(event) => {
+              if ((event.key === "Enter" || event.key === " ") && !isSaving) {
+                event.preventDefault();
+                videoFileInputRef.current?.click();
+              }
+            }}
+            onDragEnter={(event) => {
+              event.preventDefault();
+              setIsDraggingVideoFile(true);
+            }}
+            onDragOver={(event) => {
+              event.preventDefault();
+              setIsDraggingVideoFile(true);
+            }}
+            onDragLeave={(event) => {
+              event.preventDefault();
+              setIsDraggingVideoFile(false);
+            }}
+            onDrop={handleVideoDrop}
+            sx={{
+              mt: 2,
+              mb: 1,
+              p: 3,
+              border: "2px dashed",
+              borderColor: isDraggingVideoFile ? "primary.main" : "divider",
+              borderRadius: 2,
+              bgcolor: isDraggingVideoFile ? "action.selected" : "background.paper",
+              cursor: isSaving ? "not-allowed" : "pointer",
+              textAlign: "center",
+              transition: "border-color 0.2s ease, background-color 0.2s ease",
+              "&:hover": {
+                borderColor: "primary.main",
+                bgcolor: "action.hover",
+              },
+            }}
+          >
+            <UploadFile color="primary" sx={{ fontSize: 42, mb: 1 }} />
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+              {isReadingVideoDuration
+                ? "Leyendo duración..."
+                : newVideoFile
+                  ? "Cambiar archivo de video"
+                  : "Selecciona o arrastra tu video aquí"}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Haz click para abrir el explorador o suelta un archivo de video.
+            </Typography>
+            <input
+              ref={videoFileInputRef}
+              hidden
+              type="file"
+              accept="video/*"
+              onChange={(e) =>
+                handleVideoFileChange(e.target.files?.[0] ?? null)
+              }
+            />
+          </Box>
+          {newVideoFile && (
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ mb: 2, display: "block" }}
+            >
+              Archivo seleccionado: {newVideoFile.name}
+            </Typography>
+          )}
+          {videoDurationDetected && (
+            <Typography
+              variant="caption"
+              color="success.main"
+              sx={{ mb: 2, display: "block" }}
+            >
+              Duración detectada automáticamente. Puedes ajustarla si lo
+              necesitas.
+            </Typography>
+          )}
           <TextField
             fullWidth
             label="Título del Video"
             value={newVideoTitle}
             onChange={(e) => setNewVideoTitle(e.target.value)}
-            sx={{ mt: 2, mb: 2 }}
+            sx={{ mb: 2 }}
           />
           <TextField
             fullWidth
@@ -1077,32 +1256,6 @@ export default function EditCoursePage() {
             placeholder="https://example.com/thumbnail.jpg"
             sx={{ mb: 2 }}
           />
-          <Button
-            component="label"
-            variant="outlined"
-            startIcon={<UploadFile />}
-            fullWidth
-            sx={{ mb: 1 }}
-          >
-            {newVideoFile ? "Cambiar archivo de video" : "Seleccionar video"}
-            <input
-              hidden
-              type="file"
-              accept="video/*"
-              onChange={(e) =>
-                setNewVideoFile(e.target.files?.[0] ?? null)
-              }
-            />
-          </Button>
-          {newVideoFile && (
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{ mb: 2, display: "block" }}
-            >
-              Archivo seleccionado: {newVideoFile.name}
-            </Typography>
-          )}
           <Box sx={{ display: "flex", gap: 2 }}>
             <TextField
               fullWidth
@@ -1146,7 +1299,7 @@ export default function EditCoursePage() {
             color="text.secondary"
             sx={{ mt: 1, display: "block" }}
           >
-            Ejemplo: 5 minutos y 30 segundos = 5:30
+            La duración se calcula automáticamente al seleccionar el archivo.
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -1162,7 +1315,7 @@ export default function EditCoursePage() {
           <Button
             onClick={handleAddVideo}
             variant="contained"
-            disabled={isSaving || !newVideoFile}
+            disabled={isSaving || isReadingVideoDuration || !newVideoFile}
             startIcon={isSaving ? <CircularProgress size={20} /> : <Add />}
           >
             {isSaving ? "Guardando..." : "Agregar"}

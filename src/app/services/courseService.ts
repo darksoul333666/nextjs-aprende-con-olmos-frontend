@@ -38,6 +38,17 @@ export interface Course {
   price: number;
   isVisible: boolean;
   isPurchased?: boolean;
+  activePromotion?: CourseActivePromotion;
+}
+
+export interface CourseActivePromotion {
+  _id: string;
+  discountPercentage: number;
+  startsAt?: string;
+  endsAt?: string;
+  startDate?: string;
+  endDate?: string;
+  discountedPrice?: number;
 }
 
 export interface CourseFilters {
@@ -254,6 +265,9 @@ class CourseService {
           price: courseData.price as number,
           isVisible: courseData.isVisible as boolean,
           isPurchased: responseData.canViewVideos || false,
+          activePromotion: courseData.activePromotion as
+            | CourseActivePromotion
+            | undefined,
         };
 
         return mappedCourse;
