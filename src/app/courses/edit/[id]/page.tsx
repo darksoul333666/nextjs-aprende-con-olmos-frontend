@@ -22,6 +22,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  MenuItem,
   Stepper,
   Step,
   StepLabel,
@@ -45,11 +46,17 @@ import {
   Description,
   Settings,
   UploadFile,
+  PictureAsPdf,
+  Image,
+  Slideshow,
+  Article,
 } from "@mui/icons-material";
 import { useRouter, useParams } from "next/navigation";
 import {
   courseService,
   Course,
+  CourseResource,
+  CourseResourceType,
   Section,
   Video,
   CreateCourseRequest,
@@ -57,9 +64,11 @@ import {
 import { Navbar } from "../../../components/Navigation/Navbar";
 
 type EditableVideo = Omit<Video, "_id"> & { _id?: string };
+type EditableCourseResource = Omit<CourseResource, "_id"> & { _id?: string };
 type EditableSection = Omit<Section, "_id"> & {
   _id?: string;
   videos: EditableVideo[];
+  resources: EditableCourseResource[];
 };
 
 export default function EditCoursePage() {
@@ -67,6 +76,7 @@ export default function EditCoursePage() {
   const params = useParams();
   const courseId = params.id as string;
   const videoFileInputRef = useRef<HTMLInputElement | null>(null);
+  const resourceFileInputRef = useRef<HTMLInputElement | null>(null);
   const [course, setCourse] = useState<Course | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -87,6 +97,15 @@ export default function EditCoursePage() {
   const [isReadingVideoDuration, setIsReadingVideoDuration] = useState(false);
   const [videoDurationDetected, setVideoDurationDetected] = useState(false);
   const [isDraggingVideoFile, setIsDraggingVideoFile] = useState(false);
+  const [showAddResourceDialog, setShowAddResourceDialog] = useState(false);
+  const [selectedResourceSection, setSelectedResourceSection] =
+    useState<EditableSection | null>(null);
+  const [newResourceTitle, setNewResourceTitle] = useState("");
+  const [newResourceDescription, setNewResourceDescription] = useState("");
+  const [newResourceFile, setNewResourceFile] = useState<File | null>(null);
+  const [newResourceType, setNewResourceType] =
+    useState<CourseResourceType>("pdf");
+  const [isDraggingResourceFile, setIsDraggingResourceFile] = useState(false);
   const [showReplaceVideoDialog, setShowReplaceVideoDialog] = useState(false);
   const [videoToReplace, setVideoToReplace] = useState<{
     sectionId: string;
@@ -134,6 +153,15 @@ export default function EditCoursePage() {
     setSelectedSection(null);
   };
 
+  const resetResourceForm = () => {
+    setSelectedResourceSection(null);
+    setNewResourceTitle("");
+    setNewResourceDescription("");
+    setNewResourceFile(null);
+    setNewResourceType("pdf");
+    setIsDraggingResourceFile(false);
+  };
+
   const getErrorMessage = (error: unknown, fallback: string) =>
     error instanceof Error && error.message ? error.message : fallback;
 
@@ -160,6 +188,65 @@ export default function EditCoursePage() {
       .replace(/[-_]+/g, " ")
       .replace(/\s+/g, " ")
       .trim();
+
+  const getResourceTypeFromFile = (
+    file: File,
+  ): CourseResourceType | null => {
+    const fileName = file.name.toLowerCase();
+    const mimeType = file.type.toLowerCase();
+
+    if (
+      fileName.endsWith(".ppt") ||
+      fileName.endsWith(".pptx") ||
+      mimeType.includes("presentation")
+    ) {
+      return "powerpoint";
+    }
+
+    if (
+      fileName.endsWith(".doc") ||
+      fileName.endsWith(".docx") ||
+      mimeType.includes("wordprocessing")
+    ) {
+      return "docx";
+    }
+
+    if (fileName.endsWith(".pdf") || mimeType === "application/pdf") {
+      return "pdf";
+    }
+
+    if (mimeType.startsWith("image/")) {
+      return "image";
+    }
+
+    return null;
+  };
+
+  const getResourceTypeLabel = (type: CourseResourceType) => {
+    const labels: Record<CourseResourceType, string> = {
+      powerpoint: "PowerPoint",
+      docx: "Documento",
+      pdf: "PDF",
+      image: "Imagen",
+    };
+
+    return labels[type];
+  };
+
+  const getResourceIcon = (type: CourseResourceType) => {
+    switch (type) {
+      case "powerpoint":
+        return <Slideshow color="warning" fontSize="small" />;
+      case "docx":
+        return <Article color="primary" fontSize="small" />;
+      case "pdf":
+        return <PictureAsPdf color="error" fontSize="small" />;
+      case "image":
+        return <Image color="success" fontSize="small" />;
+      default:
+        return <Description color="action" fontSize="small" />;
+    }
+  };
 
   const handleVideoFileChange = async (file: File | null) => {
     if (file && !file.type.startsWith("video/")) {
@@ -209,6 +296,35 @@ export default function EditCoursePage() {
     event.preventDefault();
     setIsDraggingVideoFile(false);
     handleVideoFileChange(event.dataTransfer.files?.[0] ?? null);
+  };
+
+  const handleResourceFileChange = (file: File | null) => {
+    if (!file) {
+      setNewResourceFile(null);
+      return;
+    }
+
+    const detectedType = getResourceTypeFromFile(file);
+    if (!detectedType) {
+      setError(
+        "Selecciona un archivo PDF, PowerPoint, Word o imagen válido.",
+      );
+      return;
+    }
+
+    setError("");
+    setNewResourceFile(file);
+    setNewResourceType(detectedType);
+
+    if (!newResourceTitle.trim()) {
+      setNewResourceTitle(getTitleFromFileName(file.name));
+    }
+  };
+
+  const handleResourceDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDraggingResourceFile(false);
+    handleResourceFileChange(event.dataTransfer.files?.[0] ?? null);
   };
 
   useEffect(() => {
@@ -417,6 +533,47 @@ export default function EditCoursePage() {
     }
   };
 
+  const handleAddResource = async () => {
+    if (!newResourceTitle.trim() || !newResourceFile || !selectedResourceSection) {
+      return;
+    }
+
+    if (!selectedResourceSection._id) {
+      setError("Guarda la sección antes de subir recursos");
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setError("");
+      setSuccess("");
+
+      await courseService.uploadCourseResource({
+        courseId,
+        sectionId: selectedResourceSection._id,
+        file: newResourceFile,
+        title: newResourceTitle.trim(),
+        description: newResourceDescription.trim() || undefined,
+        type: newResourceType,
+        order: (selectedResourceSection.resources?.length || 0) + 1,
+      });
+
+      const refreshedCourse = await refreshCourse();
+      if (refreshedCourse) {
+        setSuccess("Recurso subido y guardado correctamente");
+      } else {
+        setError("Recurso subido, pero no se pudo refrescar el curso");
+      }
+
+      resetResourceForm();
+      setShowAddResourceDialog(false);
+    } catch (error) {
+      setError(getErrorMessage(error, "Error al agregar el recurso"));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleRemoveSection = async (section: EditableSection) => {
     if (!section._id) {
       setError("No se encontró el identificador de la sección");
@@ -465,6 +622,38 @@ export default function EditCoursePage() {
       }
     } catch (error) {
       setError(getErrorMessage(error, "Error al eliminar el video"));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleRemoveResource = async (
+    section: EditableSection,
+    resource: EditableCourseResource,
+  ) => {
+    if (!section._id || !resource._id) {
+      setError("No se encontró el identificador del recurso");
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setError("");
+      setSuccess("");
+
+      await courseService.deleteCourseResource(
+        courseId,
+        section._id,
+        resource._id,
+      );
+      const refreshedCourse = await refreshCourse();
+      if (refreshedCourse) {
+        setSuccess("Recurso eliminado correctamente");
+      } else {
+        setError("Se eliminó el recurso, pero no se pudo refrescar el curso");
+      }
+    } catch (error) {
+      setError(getErrorMessage(error, "Error al eliminar el recurso"));
     } finally {
       setIsSaving(false);
     }
@@ -539,7 +728,7 @@ export default function EditCoursePage() {
       icon: <Description />,
     },
     {
-      label: "Secciones y Videos",
+      label: "Secciones y Recursos",
       description: "Organiza el contenido del curso",
       icon: <VideoLibrary />,
     },
@@ -723,7 +912,7 @@ export default function EditCoursePage() {
                   component="h2"
                   sx={{ fontWeight: 600 }}
                 >
-                  Secciones y Videos
+                  Secciones, Videos y Recursos
                 </Typography>
                 <Button
                   variant="contained"
@@ -756,6 +945,12 @@ export default function EditCoursePage() {
                             label={`${section.videos?.length || 0} videos`}
                             size="small"
                             color="primary"
+                            variant="outlined"
+                          />
+                          <Chip
+                            label={`${section.resources?.length || 0} recursos`}
+                            size="small"
+                            color="secondary"
                             variant="outlined"
                           />
                         </Box>
@@ -897,6 +1092,111 @@ export default function EditCoursePage() {
                           ) : (
                             <Typography variant="body2" color="text.secondary">
                               No hay videos en esta sección
+                            </Typography>
+                          )}
+                        </Box>
+
+                        <Box>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              mb: 1,
+                            }}
+                          >
+                            <Typography
+                              variant="subtitle2"
+                              sx={{ fontWeight: 600 }}
+                            >
+                              Recursos
+                            </Typography>
+                            <Button
+                              size="small"
+                              startIcon={
+                                isSaving ? (
+                                  <CircularProgress size={16} />
+                                ) : (
+                                  <UploadFile />
+                                )
+                              }
+                              onClick={() => {
+                                const editableSection =
+                                  section as EditableSection;
+                                if (!editableSection._id) {
+                                  setError(
+                                    "No se encontró el identificador de la sección. Recarga el curso e intenta de nuevo.",
+                                  );
+                                  return;
+                                }
+                                setSelectedResourceSection(editableSection);
+                                setShowAddResourceDialog(true);
+                              }}
+                              disabled={isSaving}
+                            >
+                              {isSaving ? "Guardando..." : "Agregar Recurso"}
+                            </Button>
+                          </Box>
+
+                          {section.resources && section.resources.length > 0 ? (
+                            <List dense>
+                              {section.resources.map((resource, resourceIndex) => (
+                                <ListItem key={resourceIndex} sx={{ px: 0 }}>
+                                  <Box sx={{ mr: 1.5, display: "flex" }}>
+                                    {getResourceIcon(resource.type)}
+                                  </Box>
+                                  <ListItemText
+                                    primary={resource.title}
+                                    secondaryTypographyProps={{
+                                      component: "div",
+                                    }}
+                                    secondary={
+                                      <Box
+                                        display="flex"
+                                        alignItems="center"
+                                        gap={1}
+                                        flexWrap="wrap"
+                                      >
+                                        <Chip
+                                          label={getResourceTypeLabel(
+                                            resource.type,
+                                          )}
+                                          size="small"
+                                          variant="outlined"
+                                        />
+                                        {resource.description && (
+                                          <Typography
+                                            variant="caption"
+                                            color="text.secondary"
+                                          >
+                                            {resource.description}
+                                          </Typography>
+                                        )}
+                                      </Box>
+                                    }
+                                  />
+                                  <ListItemSecondaryAction>
+                                    <IconButton
+                                      edge="end"
+                                      size="small"
+                                      onClick={() =>
+                                        handleRemoveResource(
+                                          section as EditableSection,
+                                          resource as EditableCourseResource,
+                                        )
+                                      }
+                                      color="error"
+                                      disabled={isSaving}
+                                    >
+                                      <Delete />
+                                    </IconButton>
+                                  </ListItemSecondaryAction>
+                                </ListItem>
+                              ))}
+                            </List>
+                          ) : (
+                            <Typography variant="body2" color="text.secondary">
+                              No hay recursos en esta sección
                             </Typography>
                           )}
                         </Box>
@@ -1316,6 +1616,145 @@ export default function EditCoursePage() {
             onClick={handleAddVideo}
             variant="contained"
             disabled={isSaving || isReadingVideoDuration || !newVideoFile}
+            startIcon={isSaving ? <CircularProgress size={20} /> : <Add />}
+          >
+            {isSaving ? "Guardando..." : "Agregar"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={showAddResourceDialog}
+        onClose={() => {
+          if (!isSaving) {
+            setShowAddResourceDialog(false);
+            resetResourceForm();
+          }
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Agregar Nuevo Recurso</DialogTitle>
+        <DialogContent>
+          <Box
+            role="button"
+            tabIndex={0}
+            onClick={() => {
+              if (!isSaving) {
+                resourceFileInputRef.current?.click();
+              }
+            }}
+            onKeyDown={(event) => {
+              if ((event.key === "Enter" || event.key === " ") && !isSaving) {
+                event.preventDefault();
+                resourceFileInputRef.current?.click();
+              }
+            }}
+            onDragEnter={(event) => {
+              event.preventDefault();
+              setIsDraggingResourceFile(true);
+            }}
+            onDragOver={(event) => {
+              event.preventDefault();
+              setIsDraggingResourceFile(true);
+            }}
+            onDragLeave={(event) => {
+              event.preventDefault();
+              setIsDraggingResourceFile(false);
+            }}
+            onDrop={handleResourceDrop}
+            sx={{
+              mt: 2,
+              mb: 1,
+              p: 3,
+              border: "2px dashed",
+              borderColor: isDraggingResourceFile ? "primary.main" : "divider",
+              borderRadius: 2,
+              bgcolor: isDraggingResourceFile
+                ? "action.selected"
+                : "background.paper",
+              cursor: isSaving ? "not-allowed" : "pointer",
+              textAlign: "center",
+              transition: "border-color 0.2s ease, background-color 0.2s ease",
+              "&:hover": {
+                borderColor: "primary.main",
+                bgcolor: "action.hover",
+              },
+            }}
+          >
+            <UploadFile color="primary" sx={{ fontSize: 42, mb: 1 }} />
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+              {newResourceFile
+                ? "Cambiar archivo del recurso"
+                : "Selecciona o arrastra tu recurso aquí"}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              PDF, PowerPoint, Word o imágenes.
+            </Typography>
+            <input
+              ref={resourceFileInputRef}
+              hidden
+              type="file"
+              accept=".ppt,.pptx,.doc,.docx,.pdf,image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+              onChange={(e) =>
+                handleResourceFileChange(e.target.files?.[0] ?? null)
+              }
+            />
+          </Box>
+          {newResourceFile && (
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ mb: 2, display: "block" }}
+            >
+              Archivo seleccionado: {newResourceFile.name}
+            </Typography>
+          )}
+          <TextField
+            fullWidth
+            label="Título del Recurso"
+            value={newResourceTitle}
+            onChange={(e) => setNewResourceTitle(e.target.value)}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            fullWidth
+            select
+            label="Tipo de archivo"
+            value={newResourceType}
+            onChange={(e) =>
+              setNewResourceType(e.target.value as CourseResourceType)
+            }
+            sx={{ mb: 2 }}
+          >
+            <MenuItem value="powerpoint">PowerPoint</MenuItem>
+            <MenuItem value="docx">Documento Word</MenuItem>
+            <MenuItem value="pdf">PDF</MenuItem>
+            <MenuItem value="image">Imagen</MenuItem>
+          </TextField>
+          <TextField
+            fullWidth
+            multiline
+            rows={2}
+            label="Descripción (opcional)"
+            value={newResourceDescription}
+            onChange={(e) => setNewResourceDescription(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setShowAddResourceDialog(false);
+              resetResourceForm();
+            }}
+            disabled={isSaving}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleAddResource}
+            variant="contained"
+            disabled={isSaving || !newResourceFile || !newResourceTitle.trim()}
             startIcon={isSaving ? <CircularProgress size={20} /> : <Add />}
           >
             {isSaving ? "Guardando..." : "Agregar"}

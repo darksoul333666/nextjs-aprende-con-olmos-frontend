@@ -30,9 +30,20 @@ import {
   KeyboardArrowDown,
   KeyboardArrowUp,
   Visibility,
+  Download,
+  PictureAsPdf,
+  Image,
+  Slideshow,
+  Article,
+  Description,
 } from "@mui/icons-material";
 import { VideoPlayer } from "../VideoPlayer/components/VideoPlayer";
-import { Course, Video, Section } from "../../services/courseService";
+import {
+  Course,
+  CourseResource,
+  CourseResourceType,
+  Video,
+} from "../../services/courseService";
 
 interface CoursePlayerProps {
   course: Course;
@@ -63,6 +74,13 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
       return [];
     }
     return course.sections.flatMap((section) => section.videos || []);
+  }, [course?.sections]);
+
+  const allResources = useMemo(() => {
+    if (!course?.sections || !Array.isArray(course.sections)) {
+      return [];
+    }
+    return course.sections.flatMap((section) => section.resources || []);
   }, [course?.sections]);
 
   // Get current video
@@ -99,6 +117,10 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
 
   // Calculate course progress
   const courseProgress = useMemo(() => {
+    if (allVideos.length === 0) {
+      return 0;
+    }
+
     const completedVideos = allVideos.filter(
       (video) => video.isCompleted,
     ).length;
@@ -122,6 +144,44 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
     }
     return `${minutes}m`;
   };
+
+  const getResourceTypeLabel = (type: CourseResourceType) => {
+    const labels: Record<CourseResourceType, string> = {
+      powerpoint: "PowerPoint",
+      docx: "Documento",
+      pdf: "PDF",
+      image: "Imagen",
+    };
+
+    return labels[type];
+  };
+
+  const getResourceIcon = (resource: CourseResource) => {
+    if (resource.isLocked) {
+      return <Lock fontSize="small" color="action" />;
+    }
+
+    switch (resource.type) {
+      case "powerpoint":
+        return <Slideshow fontSize="small" color="warning" />;
+      case "docx":
+        return <Article fontSize="small" color="primary" />;
+      case "pdf":
+        return <PictureAsPdf fontSize="small" color="error" />;
+      case "image":
+        return <Image fontSize="small" color="success" />;
+      default:
+        return <Description fontSize="small" color="action" />;
+    }
+  };
+
+  const handleResourceDownload = useCallback((resource: CourseResource) => {
+    if (resource.isLocked || !resource.url) {
+      return;
+    }
+
+    window.open(resource.url, "_blank", "noopener,noreferrer");
+  }, []);
 
   // Handle video selection
   const handleVideoSelect = useCallback((video: Video) => {
@@ -371,7 +431,8 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
             <Box display="flex" alignItems="center" gap={1}>
               <Typography variant="body2" color="text.secondary">
                 {allVideos.filter((v) => v.isCompleted).length} de{" "}
-                {allVideos.length} lecciones completadas
+                {allVideos.length} lecciones completadas •{" "}
+                {allResources.length} recursos
               </Typography>
             </Box>
           </Box>
@@ -414,6 +475,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
                           {(section.videos || []).length} lecciones •{" "}
+                          {(section.resources || []).length} recursos •{" "}
                           {formatDuration(
                             (section.videos || []).reduce(
                               (sum, v) => sum + v.duration,
@@ -502,6 +564,92 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
                         );
                       })}
                     </List>
+                    {(section.resources || []).length > 0 && (
+                      <Box sx={{ borderTop: 1, borderColor: "divider" }}>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{
+                            display: "block",
+                            px: 4,
+                            pt: 1.5,
+                            pb: 0.5,
+                            fontWeight: 600,
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          Recursos descargables
+                        </Typography>
+                        <List dense sx={{ p: 0 }}>
+                          {(section.resources || []).map((resource) => (
+                            <ListItem
+                              key={resource._id}
+                              disablePadding
+                              sx={{
+                                "&:hover": {
+                                  backgroundColor: "action.hover",
+                                },
+                              }}
+                            >
+                              <ListItemButton
+                                onClick={() => handleResourceDownload(resource)}
+                                disabled={resource.isLocked || !resource.url}
+                                sx={{ pl: 4 }}
+                              >
+                                <ListItemIcon sx={{ minWidth: 36 }}>
+                                  {getResourceIcon(resource)}
+                                </ListItemIcon>
+                                <ListItemText
+                                  primary={
+                                    <Typography
+                                      variant="body2"
+                                      sx={{
+                                        color: resource.isLocked
+                                          ? "text.disabled"
+                                          : "text.primary",
+                                      }}
+                                    >
+                                      {resource.title}
+                                    </Typography>
+                                  }
+                                  secondary={
+                                    <Box
+                                      display="flex"
+                                      alignItems="center"
+                                      gap={1}
+                                      flexWrap="wrap"
+                                    >
+                                      <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                      >
+                                        {getResourceTypeLabel(resource.type)}
+                                      </Typography>
+                                      {resource.description && (
+                                        <Typography
+                                          variant="caption"
+                                          color="text.secondary"
+                                        >
+                                          {resource.description}
+                                        </Typography>
+                                      )}
+                                    </Box>
+                                  }
+                                  secondaryTypographyProps={{ component: "div" }}
+                                />
+                                {!resource.isLocked && resource.url && (
+                                  <Download
+                                    fontSize="small"
+                                    color="action"
+                                    sx={{ ml: 1 }}
+                                  />
+                                )}
+                              </ListItemButton>
+                            </ListItem>
+                          ))}
+                        </List>
+                      </Box>
+                    )}
                   </AccordionDetails>
                 </Accordion>
               ))
@@ -521,8 +669,9 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
               startIcon={<Book />}
               fullWidth
               size="small"
+              disabled={allResources.length === 0}
             >
-              Recursos del curso
+              Recursos del curso ({allResources.length})
             </Button>
           </Box>
         </Paper>

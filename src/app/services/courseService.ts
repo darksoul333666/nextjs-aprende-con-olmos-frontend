@@ -12,12 +12,28 @@ export interface Video {
   isLocked?: boolean;
 }
 
+export type CourseResourceType = "powerpoint" | "docx" | "pdf" | "image";
+
+export interface CourseResource {
+  _id: string;
+  title: string;
+  description?: string;
+  url: string;
+  type: CourseResourceType;
+  fileName?: string;
+  mimeType?: string;
+  size?: number;
+  order: number;
+  isLocked?: boolean;
+}
+
 export interface Section {
   _id: string;
   title: string;
   description?: string;
   order: number;
   videos: Video[];
+  resources: CourseResource[];
 }
 
 export interface Course {
@@ -66,6 +82,7 @@ export interface CourseSectionInput {
   description?: string;
   order: number;
   videos: Omit<Video, "_id">[];
+  resources?: Omit<CourseResource, "_id">[];
 }
 
 export interface CreateCourseRequest {
@@ -105,6 +122,16 @@ export interface ReplaceCourseVideoRequest {
   file: File;
 }
 
+export interface UploadCourseResourceRequest {
+  courseId: string;
+  sectionId: string;
+  file: File;
+  title: string;
+  description?: string;
+  type: CourseResourceType;
+  order?: number;
+}
+
 export interface CreateCourseSectionRequest {
   courseId: string;
   title: string;
@@ -114,6 +141,12 @@ export interface CreateCourseSectionRequest {
 
 interface VideoUploadResponse {
   video: Video;
+  storagePath?: string;
+  url?: string;
+}
+
+interface ResourceUploadResponse {
+  resource: CourseResource;
   storagePath?: string;
   url?: string;
 }
@@ -154,6 +187,62 @@ export interface TeacherCourse {
 export type TeacherCoursesSummary = Record<string, unknown>;
 
 class CourseService {
+  private mapResourceType(resource: Record<string, unknown>): CourseResourceType {
+    const rawType = String(
+      resource.type || resource.fileType || resource.resourceType || "",
+    ).toLowerCase();
+    const mimeType = String(resource.mimeType || resource.mimetype || "").toLowerCase();
+    const fileName = String(resource.fileName || resource.name || "").toLowerCase();
+
+    if (
+      rawType.includes("powerpoint") ||
+      rawType.includes("ppt") ||
+      mimeType.includes("presentation") ||
+      fileName.endsWith(".ppt") ||
+      fileName.endsWith(".pptx")
+    ) {
+      return "powerpoint";
+    }
+
+    if (
+      rawType.includes("doc") ||
+      mimeType.includes("wordprocessing") ||
+      fileName.endsWith(".doc") ||
+      fileName.endsWith(".docx")
+    ) {
+      return "docx";
+    }
+
+    if (
+      rawType.includes("pdf") ||
+      mimeType.includes("pdf") ||
+      fileName.endsWith(".pdf")
+    ) {
+      return "pdf";
+    }
+
+    return "image";
+  }
+
+  private mapResource(resource: Record<string, unknown>): CourseResource {
+    return {
+      _id: (resource.id || resource._id) as string,
+      title:
+        (resource.title as string) ||
+        (resource.fileName as string) ||
+        (resource.name as string) ||
+        "Recurso",
+      description: resource.description as string,
+      url: (resource.url || resource.fileUrl || resource.downloadUrl) as string,
+      type: this.mapResourceType(resource),
+      fileName: (resource.fileName || resource.name) as string,
+      mimeType: (resource.mimeType || resource.mimetype) as string,
+      size: resource.size as number,
+      order: (resource.order as number) || 0,
+      isLocked: (resource.isLocked as boolean) || false,
+    };
+  }
+
   private mapVideo(video: Record<string, unknown>): Video {
     return {
       _id: (video.id || video._id) as string,
@@ -177,6 +266,11 @@ class CourseService {
       videos: ((section.videos as Record<string, unknown>[]) || []).map(
         (video) => this.mapVideo(video),
       ),
+      resources: (
+        (section.resources as Record<string, unknown>[]) ||
+        (section.files as Record<string, unknown>[]) ||
+        []
+      ).map((resource) => this.mapResource(resource)),
     };
   }
 
@@ -259,6 +353,10 @@ class CourseService {
               videos: mappedSection.videos.map((video) => ({
                 ...video,
                 isLocked: video.isLocked || !responseData.canViewVideos,
+              })),
+              resources: mappedSection.resources.map((resource) => ({
+                ...resource,
+                isLocked: resource.isLocked || !responseData.canViewVideos,
               })),
             };
           }),
@@ -347,6 +445,18 @@ class CourseService {
   ): Promise<boolean> {
     await apiService.delete(
       `/courses/${courseId}/sections/${sectionId}/videos/${videoId}`,
+    );
+    return true;
+  }
+
+  // Eliminar recurso de una sección - DELETE /api/courses/:courseId/sections/:sectionId/resources/:resourceId
+  async deleteCourseResource(
+    courseId: string,
+    sectionId: string,
+    resourceId: string,
+  ): Promise<boolean> {
+    await apiService.delete(
+      `/courses/${courseId}/sections/${sectionId}/resources/${resourceId}`,
     );
     return true;
   }
@@ -491,6 +601,43 @@ class CourseService {
     }
 
     return response.data.video;
+  }
+
+  // Subir recurso a una sección - POST /api/courses/:courseId/sections/:sectionId/resources/upload
+  async uploadCourseResource({
+    courseId,
+    sectionId,
+    file,
+    title,
+    description,
+    type,
+    order,
+  }: UploadCourseResourceRequest): Promise<CourseResource> {
+    const formData = new FormData();
+    formData.append("resource", file);
+    formData.append("title", title);
+    formData.append("type", type);
+
+    if (description) {
+      formData.append("description", description);
+    }
+
+    if (order !== undefined) {
+      formData.append("order", String(order));
+    }
+
+    const response = await apiService.post<ResourceUploadResponse>(
+      `/courses/${courseId}/sections/${sectionId}/resources/upload`,
+      formData,
+    );
+
+    if (!response.data?.resource) {
+      throw new Error(response.message || "Error al subir recurso");
+    }
+
+    return this.mapResource(
+      response.data.resource as unknown as Record<string, unknown>,
+    );
   }
 
   // Obtener cursos del maestro con estadísticas - GET /api/courses/teacher

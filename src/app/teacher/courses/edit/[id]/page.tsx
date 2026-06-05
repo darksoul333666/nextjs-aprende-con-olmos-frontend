@@ -137,6 +137,7 @@ export default function EditCoursePage() {
       description: sectionForm.description,
       order: sections.length + 1,
       videos: editingSection?.videos || [],
+      resources: editingSection?.resources || [],
     };
 
     if (editingSection) {
