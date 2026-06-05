@@ -22,7 +22,6 @@ import {
   CheckCircle,
   Error as ErrorIcon,
 } from "@mui/icons-material";
-import { loadStripe } from "@stripe/stripe-js";
 import { stripeService, StripeConfig } from "../../services/stripeService";
 
 interface StripePaymentProps {
@@ -33,6 +32,10 @@ interface StripePaymentProps {
   courseDescription: string;
   courseThumbnail: string;
   coursePrice: number;
+  originalPrice?: number;
+  discountLabel?: string;
+  discountPercentage?: number;
+  discountType?: "promotion" | "scholarship" | "none";
   onSuccess?: () => void;
 }
 
@@ -44,6 +47,10 @@ export const StripePayment: React.FC<StripePaymentProps> = ({
   courseDescription,
   courseThumbnail,
   coursePrice,
+  originalPrice,
+  discountLabel,
+  discountPercentage = 0,
+  discountType = "none",
   onSuccess,
 }) => {
   const [stripeConfig, setStripeConfig] = useState<StripeConfig | null>(null);
@@ -85,21 +92,14 @@ export const StripePayment: React.FC<StripePaymentProps> = ({
         );
       }
 
-      // Cargar Stripe
-      const stripe = await loadStripe(stripeConfig!.publishableKey);
-
-      if (!stripe) {
-        throw new Error("Error al cargar Stripe");
+      if (!session.url) {
+        throw new Error("No se recibió la URL de pago de Stripe");
       }
 
-      // Redirigir a Stripe Checkout
-      const { error } = await stripe.redirectToCheckout({
-        sessionId: session.sessionId,
-      });
-
-      if (error) {
-        throw new Error(error.message);
-      }
+      // Cerrar el modal antes de salir evita que quede bloqueado al volver.
+      setIsProcessing(false);
+      onClose();
+      window.location.href = session.url;
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Error al procesar el pago",
@@ -115,6 +115,12 @@ export const StripePayment: React.FC<StripePaymentProps> = ({
       onClose();
     }
   };
+
+  const hasDiscount =
+    discountType !== "none" &&
+    discountPercentage > 0 &&
+    originalPrice !== undefined &&
+    originalPrice > coursePrice;
 
   return (
     <Dialog
@@ -175,13 +181,36 @@ export const StripePayment: React.FC<StripePaymentProps> = ({
                     >
                       {courseDescription}
                     </Typography>
-                    <Typography variant="h6" color="primary" fontWeight="bold">
+                    {hasDiscount && (
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ textDecoration: "line-through" }}
+                      >
+                        ${originalPrice.toFixed(2)} USD
+                      </Typography>
+                    )}
+                    <Typography
+                      variant="h6"
+                      color={hasDiscount ? "error" : "primary"}
+                      fontWeight="bold"
+                    >
                       ${coursePrice.toFixed(2)} USD
                     </Typography>
                   </Box>
                 </Box>
               </CardContent>
             </Card>
+
+            {hasDiscount && (
+              <Alert
+                severity={discountType === "scholarship" ? "success" : "info"}
+                sx={{ mb: 2 }}
+              >
+                {discountLabel ||
+                  `${discountPercentage}% de descuento aplicado`}
+              </Alert>
+            )}
 
             {/* Información de seguridad */}
             <Box display="flex" alignItems="center" gap={1} mb={2}>
@@ -201,9 +230,22 @@ export const StripePayment: React.FC<StripePaymentProps> = ({
               <Box display="flex" justifyContent="space-between" mb={1}>
                 <Typography variant="body2">{courseTitle}</Typography>
                 <Typography variant="body2" fontWeight="bold">
-                  ${coursePrice.toFixed(2)}
+                  $
+                  {(hasDiscount ? originalPrice : coursePrice)?.toFixed(2)}
                 </Typography>
               </Box>
+              {hasDiscount && (
+                <Box display="flex" justifyContent="space-between" mb={1}>
+                  <Typography variant="body2">
+                    {discountType === "scholarship"
+                      ? "Descuento por beca"
+                      : "Descuento promocional"}
+                  </Typography>
+                  <Typography variant="body2" color="success.main">
+                    -${((originalPrice || 0) - coursePrice).toFixed(2)}
+                  </Typography>
+                </Box>
+              )}
               <Box display="flex" justifyContent="space-between" mb={1}>
                 <Typography variant="body2">Impuestos</Typography>
                 <Typography variant="body2">$0.00</Typography>

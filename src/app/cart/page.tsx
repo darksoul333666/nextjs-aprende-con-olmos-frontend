@@ -27,14 +27,18 @@ import {
 } from "@mui/icons-material";
 import { Navbar } from "../components/Navigation/Navbar";
 import { useCart } from "../contexts/CartContext";
+import { useAuth } from "../contexts/AuthContext";
 import { stripeService } from "../services/stripeService";
+import { getActiveScholarshipDiscount } from "../utils/pricing";
 import { useRouter } from "next/navigation";
 
 export default function CartPage() {
   const { cart, isLoading, removeFromCart, clearCart } = useCart();
+  const { user } = useAuth();
   const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const scholarshipDiscount = getActiveScholarshipDiscount(user);
 
   const handleRemoveItem = async (courseId: string) => {
     try {
@@ -63,6 +67,7 @@ export default function CartPage() {
       const checkoutSession = await stripeService.createCartCheckoutSession();
 
       // Redirigir a Stripe Checkout
+      setIsProcessing(false);
       window.location.href = checkoutSession.url;
     } catch {
       setError("Error al procesar el pago. Inténtalo de nuevo.");
@@ -275,6 +280,12 @@ export default function CartPage() {
                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
                   Resumen del Pedido
                 </Typography>
+
+                {scholarshipDiscount > 0 && (
+                  <Alert severity="success" sx={{ mb: 2 }}>
+                    Tu beca del {scholarshipDiscount}% se aplicará al pagar.
+                  </Alert>
+                )}
 
                 <Divider sx={{ my: 2 }} />
 

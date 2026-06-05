@@ -42,6 +42,7 @@ import {
   CourseFilters,
 } from "../services/courseService";
 import { stripeService } from "../services/stripeService";
+import { getCoursePriceDisplay } from "../utils/pricing";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -369,20 +370,29 @@ export default function CoursesPage() {
       </Container>
 
       {/* Modal de Pago con Stripe */}
-      {selectedCourse && (
-        <StripePayment
-          open={paymentModalOpen}
-          onClose={handlePaymentClose}
-          courseId={selectedCourse._id}
-          courseTitle={selectedCourse.title}
-          courseDescription={selectedCourse.description}
-          courseThumbnail={
-            selectedCourse.thumbnail || "/placeholder-course.jpg"
-          }
-          coursePrice={selectedCourse.price || 0}
-          onSuccess={handlePaymentSuccess}
-        />
-      )}
+      {selectedCourse &&
+        (() => {
+          const priceDisplay = getCoursePriceDisplay(selectedCourse, user);
+
+          return (
+            <StripePayment
+              open={paymentModalOpen}
+              onClose={handlePaymentClose}
+              courseId={selectedCourse._id}
+              courseTitle={selectedCourse.title}
+              courseDescription={selectedCourse.description}
+              courseThumbnail={
+                selectedCourse.thumbnail || "/placeholder-course.jpg"
+              }
+              coursePrice={priceDisplay.finalPrice}
+              originalPrice={priceDisplay.originalPrice}
+              discountLabel={priceDisplay.discountLabel}
+              discountPercentage={priceDisplay.discountPercentage}
+              discountType={priceDisplay.discountType}
+              onSuccess={handlePaymentSuccess}
+            />
+          );
+        })()}
     </Box>
   );
 }

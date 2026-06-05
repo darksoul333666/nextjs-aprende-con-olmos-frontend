@@ -34,6 +34,16 @@ export interface UpsertScholarshipRequest {
 }
 
 class ScholarshipService {
+  private normalizeScholarshipSummary(
+    data: Record<string, unknown>,
+  ): StudentScholarshipSummary {
+    return {
+      _id: (data._id || data.id) as string,
+      discountPercentage: (data.discountPercentage as number) || 0,
+      isActive: data.isActive !== false,
+    };
+  }
+
   private normalizeStudent(data: Record<string, unknown>): ScholarshipStudent {
     const scholarship = data.scholarship as
       | Record<string, unknown>
@@ -45,12 +55,7 @@ class ScholarshipService {
       email: data.email as string,
       name: data.name as string | undefined,
       scholarship: scholarship
-        ? {
-            _id: (scholarship._id || scholarship.id) as string,
-            discountPercentage:
-              (scholarship.discountPercentage as number) || 0,
-            isActive: scholarship.isActive !== false,
-          }
+        ? this.normalizeScholarshipSummary(scholarship)
         : null,
     };
   }
@@ -90,6 +95,16 @@ class ScholarshipService {
     return scholarships.map((scholarship) =>
       this.normalizeScholarship(scholarship),
     );
+  }
+
+  async getMyScholarship(): Promise<StudentScholarshipSummary | null> {
+    const response = await apiService.get<{
+      scholarship?: Record<string, unknown> | null;
+    }>("/promotions/scholarships/me");
+
+    return response.data?.scholarship
+      ? this.normalizeScholarshipSummary(response.data.scholarship)
+      : null;
   }
 
   async upsertScholarship(

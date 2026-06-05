@@ -511,6 +511,48 @@ Respuesta esperada:
 }
 ```
 
+### Consultar Mi Beca
+
+Endpoint:
+
+`GET /api/promotions/scholarships/me`
+
+Auth:
+
+- Requiere token JWT.
+- Usuario con rol `estudiante`.
+
+Uso:
+
+- El frontend lo consulta al montar la sesión y después del login.
+- Sirve para mostrar en la UX que el estudiante tiene una beca activa antes de llegar a Stripe.
+
+Respuesta esperada si el estudiante tiene beca:
+
+```json
+{
+  "success": true,
+  "data": {
+    "scholarship": {
+      "_id": "66f000000000000000000040",
+      "discountPercentage": 50,
+      "isActive": true
+    }
+  }
+}
+```
+
+Respuesta esperada si no tiene beca:
+
+```json
+{
+  "success": true,
+  "data": {
+    "scholarship": null
+  }
+}
+```
+
 ### Listar Becas
 
 Endpoint:

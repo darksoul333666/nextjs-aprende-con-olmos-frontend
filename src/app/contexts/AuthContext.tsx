@@ -8,6 +8,7 @@ import React, {
   ReactNode,
 } from "react";
 import { authService, User } from "../services/authService";
+import { scholarshipService } from "../services/scholarshipService";
 
 interface AuthContextType {
   user: User | null;
@@ -37,6 +38,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
 
+  const loadStudentScholarship = async (currentUser: User) => {
+    if (currentUser.role !== "estudiante") {
+      return;
+    }
+
+    try {
+      const scholarship = await scholarshipService.getMyScholarship();
+      const updatedUser = { ...currentUser, scholarship };
+      setUser(updatedUser);
+      authService.saveCurrentUser(updatedUser);
+    } catch {}
+  };
+
   useEffect(() => {
     // Mark as mounted to prevent hydration mismatch
     setIsMounted(true);
@@ -45,6 +59,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const currentUser = authService.getCurrentUser();
     if (currentUser) {
       setUser(currentUser);
+      loadStudentScholarship(currentUser);
     }
     setIsLoading(false);
   }, []);
@@ -57,6 +72,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // El servicio ahora devuelve directamente { user, token }
       if (response.user) {
         setUser(response.user);
+        await loadStudentScholarship(response.user);
       } else {
         throw new Error(
           "Respuesta de login inválida - estructura de datos incorrecta",
@@ -77,6 +93,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // El servicio ahora devuelve directamente { user, token }
       if (response.user) {
         setUser(response.user);
+        await loadStudentScholarship(response.user);
       } else {
         throw new Error(
           "Respuesta de registro inválida - estructura de datos incorrecta",

@@ -5,6 +5,18 @@ export interface User {
   email: string;
   role: "estudiante" | "maestro";
   name?: string;
+  scholarship?: {
+    _id?: string;
+    discountPercentage: number;
+    isActive?: boolean;
+  } | null;
+  activeScholarship?: {
+    _id?: string;
+    discountPercentage: number;
+    isActive?: boolean;
+  } | null;
+  scholarshipDiscountPercentage?: number;
+  scholarshipDiscount?: number;
 }
 
 export interface LoginRequest {
@@ -78,6 +90,11 @@ class AuthService {
   logout(): void {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+  }
+
+  saveCurrentUser(user: User): void {
+    if (typeof window === "undefined") return;
+    localStorage.setItem("user", JSON.stringify(user));
   }
 
   getCurrentUser(): User | null {

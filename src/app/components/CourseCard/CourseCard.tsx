@@ -29,8 +29,10 @@ import {
 } from "@mui/icons-material";
 import { Course } from "../../services/courseService";
 import { useCart } from "../../contexts/CartContext";
+import { useAuth } from "../../contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { StripePayment } from "../StripePayment/StripePayment";
+import { getCoursePriceDisplay } from "../../utils/pricing";
 
 interface CourseCardProps {
   course: Course;
@@ -45,6 +47,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
 }) => {
   const router = useRouter();
   const { addToCart, isInCart, isLoading } = useCart();
+  const { user } = useAuth();
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
@@ -170,11 +173,9 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   const promotionTimeLeft = hasActivePromotion
     ? formatPromotionTimeLeft(promotionEndTime - now)
     : "";
-  const discountedPrice =
-    hasActivePromotion && promotion
-      ? promotion.discountedPrice ??
-        Math.max(0, course.price * (1 - promotion.discountPercentage / 100))
-      : course.price;
+  const priceDisplay = getCoursePriceDisplay(course, user, now);
+  const hasScholarshipDiscount =
+    priceDisplay.scholarshipDiscount > 0 && !isCoursePurchased;
 
   if (variant === "compact") {
     return (
@@ -269,6 +270,14 @@ export const CourseCard: React.FC<CourseCardProps> = ({
                       icon={<LocalOffer />}
                     />
                   )}
+                  {hasScholarshipDiscount && (
+                    <Chip
+                      label={`Beca ${priceDisplay.scholarshipDiscount}%`}
+                      color="success"
+                      size="small"
+                      icon={<School />}
+                    />
+                  )}
                 </Box>
 
                 <Typography variant="body2" color="text.secondary" paragraph>
@@ -291,21 +300,29 @@ export const CourseCard: React.FC<CourseCardProps> = ({
                 </Box>
 
                 <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
-                  {hasActivePromotion ? (
+                  {priceDisplay.hasDiscount && !isCoursePurchased ? (
                     <>
                       <Typography
                         variant="body2"
                         color="text.secondary"
                         sx={{ textDecoration: "line-through" }}
                       >
-                        ${course.price || 0} USD
+                        ${priceDisplay.originalPrice.toFixed(2)} USD
                       </Typography>
                       <Typography variant="h6" color="error" fontWeight="bold">
-                        ${discountedPrice.toFixed(2)} USD
+                        ${priceDisplay.finalPrice.toFixed(2)} USD
                       </Typography>
                       <Chip
-                        label={promotionTimeLeft}
-                        color="error"
+                        label={
+                          priceDisplay.discountType === "scholarship"
+                            ? priceDisplay.discountLabel
+                            : promotionTimeLeft
+                        }
+                        color={
+                          priceDisplay.discountType === "scholarship"
+                            ? "success"
+                            : "error"
+                        }
                         size="small"
                         variant="outlined"
                       />
@@ -436,17 +453,24 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             {/* Price Chip */}
             <Chip
               label={
-                hasActivePromotion
-                  ? `$${discountedPrice.toFixed(2)}`
-                  : `$${course.price || 0}`
+                priceDisplay.hasDiscount && !isCoursePurchased
+                  ? `$${priceDisplay.finalPrice.toFixed(2)}`
+                  : `$${priceDisplay.originalPrice || 0}`
               }
-              color={hasActivePromotion ? "error" : "primary"}
+              color={
+                priceDisplay.hasDiscount && !isCoursePurchased
+                  ? "error"
+                  : "primary"
+              }
               sx={{
                 position: "absolute",
                 top: 16,
                 right: 16,
                 bgcolor: "white",
-                color: hasActivePromotion ? "error.main" : "primary.main",
+                color:
+                  priceDisplay.hasDiscount && !isCoursePurchased
+                    ? "error.main"
+                    : "primary.main",
                 fontWeight: 600,
               }}
             />
@@ -512,6 +536,24 @@ export const CourseCard: React.FC<CourseCardProps> = ({
                     size="small"
                     variant="outlined"
                   />
+                </Box>
+              )}
+              {hasScholarshipDiscount && (
+                <Box display="flex" alignItems="center" gap={1} mb={1}>
+                  <Chip
+                    label={`Beca ${priceDisplay.scholarshipDiscount}% para ti`}
+                    color="success"
+                    size="small"
+                    icon={<School />}
+                  />
+                  {priceDisplay.discountType === "scholarship" && (
+                    <Chip
+                      label={`Pagas $${priceDisplay.finalPrice.toFixed(2)}`}
+                      color="success"
+                      size="small"
+                      variant="outlined"
+                    />
+                  )}
                 </Box>
               )}
 
@@ -599,9 +641,9 @@ export const CourseCard: React.FC<CourseCardProps> = ({
                       }}
                     >
                       Comprar $
-                      {hasActivePromotion
-                        ? discountedPrice.toFixed(2)
-                        : course.price || 0}
+                      {priceDisplay.hasDiscount
+                        ? priceDisplay.finalPrice.toFixed(2)
+                        : priceDisplay.originalPrice || 0}
                     </Button>
                   </Box>
                 )}
@@ -634,7 +676,11 @@ export const CourseCard: React.FC<CourseCardProps> = ({
         courseTitle={course.title}
         courseDescription={course.description}
         courseThumbnail={course.thumbnail || "/placeholder-course.jpg"}
-        coursePrice={hasActivePromotion ? discountedPrice : course.price || 0}
+        coursePrice={priceDisplay.finalPrice}
+        originalPrice={priceDisplay.originalPrice}
+        discountLabel={priceDisplay.discountLabel}
+        discountPercentage={priceDisplay.discountPercentage}
+        discountType={priceDisplay.discountType}
         onSuccess={handlePaymentSuccess}
       />
     </>

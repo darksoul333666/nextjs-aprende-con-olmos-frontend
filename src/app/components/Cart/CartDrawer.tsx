@@ -25,8 +25,10 @@ import {
   ArrowForward,
 } from "@mui/icons-material";
 import { useCart } from "../../contexts/CartContext";
+import { useAuth } from "../../contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { stripeService } from "../../services/stripeService";
+import { getActiveScholarshipDiscount } from "../../utils/pricing";
 
 interface CartDrawerProps {
   open: boolean;
@@ -35,8 +37,10 @@ interface CartDrawerProps {
 
 export const CartDrawer: React.FC<CartDrawerProps> = ({ open, onClose }) => {
   const { cart, isLoading, removeFromCart, clearCart } = useCart();
+  const { user } = useAuth();
   const router = useRouter();
   const [isProcessing, setIsProcessing] = React.useState(false);
+  const scholarshipDiscount = getActiveScholarshipDiscount(user);
 
   const handleRemoveItem = async (courseId: string) => {
     try {
@@ -58,6 +62,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ open, onClose }) => {
       const checkoutSession = await stripeService.createCartCheckoutSession();
 
       // Redirigir a Stripe Checkout
+      setIsProcessing(false);
       window.location.href = checkoutSession.url;
     } catch {
       setIsProcessing(false);
@@ -190,6 +195,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ open, onClose }) => {
         {/* Footer */}
         {cart && cart.items.length > 0 && (
           <Box sx={{ p: 2, borderTop: 1, borderColor: "divider" }}>
+            {scholarshipDiscount > 0 && (
+              <Alert severity="success" sx={{ mb: 2 }}>
+                Tu beca del {scholarshipDiscount}% se aplicará al pagar.
+              </Alert>
+            )}
             <Box sx={{ mb: 2 }}>
               <Box
                 display="flex"
