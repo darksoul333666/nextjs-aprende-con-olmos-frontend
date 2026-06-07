@@ -10,11 +10,18 @@ import {
   ListItemText,
   IconButton,
   Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  MenuItem,
   Accordion,
   AccordionSummary,
   AccordionDetails,
   LinearProgress,
   Chip,
+  Alert,
 } from "@mui/material";
 import {
   PlayArrow,
@@ -44,6 +51,12 @@ import {
   CourseResourceType,
   Video,
 } from "../../services/courseService";
+import {
+  CourseEvaluation,
+  EvaluationAnswerInput,
+  EvaluationQuestion,
+  evaluationService,
+} from "../../services/evaluationService";
 
 interface CoursePlayerProps {
   course: Course;
@@ -67,6 +80,23 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
   const [videoProgress, setVideoProgress] = useState<Record<string, number>>(
     {},
   );
+  const [activeEvaluation, setActiveEvaluation] =
+    useState<CourseEvaluation | null>(null);
+  const [evaluationAnswers, setEvaluationAnswers] = useState<
+    Record<string, string | boolean>
+  >({});
+  const [evaluationResult, setEvaluationResult] = useState<string | null>(null);
+  const [evaluationError, setEvaluationError] = useState<string | null>(null);
+  const [completedEvaluationIds, setCompletedEvaluationIds] = useState<
+    Set<string>
+  >(new Set());
+  const [triggeredEvaluationIds, setTriggeredEvaluationIds] = useState<
+    Set<string>
+  >(new Set());
+  const [fetchedEvaluations, setFetchedEvaluations] = useState<
+    CourseEvaluation[]
+  >([]);
+  const [isSubmittingEvaluation, setIsSubmittingEvaluation] = useState(false);
 
   // Get all videos from all sections
   const allVideos = useMemo(() => {
@@ -82,6 +112,10 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
     }
     return course.sections.flatMap((section) => section.resources || []);
   }, [course?.sections]);
+
+  const allEvaluations = useMemo(() => {
+    return course.evaluations?.length ? course.evaluations : fetchedEvaluations;
+  }, [course.evaluations, fetchedEvaluations]);
 
   // Get current video
   const currentVideo = useMemo(() => {
@@ -183,13 +217,111 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
     window.open(resource.url, "_blank", "noopener,noreferrer");
   }, []);
 
-  // Handle video selection
-  const handleVideoSelect = useCallback((video: Video) => {
-    if (video.isLocked) {
-      return; // Show purchase prompt or unlock message
+  const isEvaluationCompleted = useCallback(
+    (evaluation: CourseEvaluation) =>
+      evaluation.isCompleted || completedEvaluationIds.has(evaluation._id),
+    [completedEvaluationIds],
+  );
+
+  const getEntityId = useCallback((value: unknown) => {
+    if (!value) {
+      return "";
     }
-    setCurrentVideoId(video._id);
+
+    if (typeof value === "string") {
+      return value;
+    }
+
+    if (typeof value === "object") {
+      const record = value as Record<string, unknown>;
+      return String(record._id || record.id || "");
+    }
+
+    return String(value);
   }, []);
+
+  const getVideoEvaluations = useCallback(
+    (videoId: string, trigger: CourseEvaluation["trigger"]) =>
+      allEvaluations.filter(
+        (evaluation) =>
+          getEntityId(evaluation.videoId) === videoId &&
+          evaluation.trigger === trigger &&
+          !evaluation.isLocked,
+      ),
+    [allEvaluations, getEntityId],
+  );
+
+  const getBlockingEvaluation = useCallback(
+    (video: Video | null | undefined, trigger: CourseEvaluation["trigger"]) => {
+      if (!video) {
+        return null;
+      }
+
+      return (
+        getVideoEvaluations(video._id, trigger).find(
+          (evaluation) =>
+            evaluation.isRequired && !isEvaluationCompleted(evaluation),
+        ) || null
+      );
+    },
+    [getVideoEvaluations, isEvaluationCompleted],
+  );
+
+  const openEvaluation = useCallback((evaluation: CourseEvaluation) => {
+    setActiveEvaluation(evaluation);
+    setEvaluationAnswers({});
+    setEvaluationResult(null);
+    setEvaluationError(null);
+  }, []);
+
+  const getQuestionAnswerValue = (question: EvaluationQuestion) => {
+    const questionId = question._id || String(question.order);
+    return evaluationAnswers[questionId];
+  };
+
+  // Handle video selection
+  const handleVideoSelect = useCallback(
+    (video: Video) => {
+      if (video.isLocked) {
+        return; // Show purchase prompt or unlock message
+      }
+
+      const selectedVideoIndex = allVideos.findIndex(
+        (item) => item._id === video._id,
+      );
+      const isMovingForward =
+        currentVideo &&
+        selectedVideoIndex > -1 &&
+        currentVideoIndex > -1 &&
+        selectedVideoIndex > currentVideoIndex;
+
+      if (isMovingForward) {
+        const blockingAfterEvaluation = getBlockingEvaluation(
+          currentVideo,
+          "after_video",
+        );
+        if (blockingAfterEvaluation) {
+          openEvaluation(blockingAfterEvaluation);
+          return;
+        }
+      }
+
+      const blockingEvaluation = getBlockingEvaluation(video, "before_video");
+      if (blockingEvaluation) {
+        openEvaluation(blockingEvaluation);
+        return;
+      }
+
+      setCurrentVideoId(video._id);
+    },
+    [
+      allVideos,
+      currentVideo,
+      currentVideoIndex,
+      getBlockingEvaluation,
+      openEvaluation,
+    ],
+  );
 
   // Handle section expansion
   const handleSectionToggle = useCallback((sectionId: string) => {
@@ -206,10 +338,28 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
 
   // Handle next video
   const handleNextVideo = useCallback(() => {
+    const blockingAfterEvaluation = getBlockingEvaluation(
+      currentVideo,
+      "after_video",
+    );
+    if (blockingAfterEvaluation) {
+      openEvaluation(blockingAfterEvaluation);
+      return;
+    }
+
+    const blockingBeforeEvaluation = getBlockingEvaluation(
+      nextVideo,
+      "before_video",
+    );
+    if (blockingBeforeEvaluation) {
+      openEvaluation(blockingBeforeEvaluation);
+      return;
+    }
+
     if (nextVideo && !nextVideo.isLocked) {
       setCurrentVideoId(nextVideo._id);
     }
-  }, [nextVideo]);
+  }, [currentVideo, getBlockingEvaluation, nextVideo, openEvaluation]);
 
   // Handle previous video
   const handlePreviousVideo = useCallback(() => {
@@ -227,9 +377,39 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
           [currentVideo._id]: progress,
         }));
         onVideoProgress?.(currentVideo._id, progress);
+
+        if (!activeEvaluation) {
+          const currentSecond = currentVideo.duration * progress;
+          const dueEvaluation = getVideoEvaluations(
+            currentVideo._id,
+            "during_video",
+          ).find(
+            (evaluation) =>
+              !triggeredEvaluationIds.has(evaluation._id) &&
+              !isEvaluationCompleted(evaluation) &&
+              currentSecond >= (evaluation.triggerTimeSeconds || 0),
+          );
+
+          if (dueEvaluation) {
+            setTriggeredEvaluationIds((prev) => {
+              const next = new Set(prev);
+              next.add(dueEvaluation._id);
+              return next;
+            });
+            openEvaluation(dueEvaluation);
+          }
+        }
       }
     },
-    [currentVideo, onVideoProgress],
+    [
+      activeEvaluation,
+      currentVideo,
+      getVideoEvaluations,
+      isEvaluationCompleted,
+      onVideoProgress,
+      openEvaluation,
+      triggeredEvaluationIds,
+    ],
   );
 
   // Handle video end
@@ -239,14 +419,39 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
       currentVideo.isCompleted = true;
       onVideoComplete?.(currentVideo._id);
 
+      const blockingEvaluation = getBlockingEvaluation(
+        currentVideo,
+        "after_video",
+      );
+      if (blockingEvaluation) {
+        openEvaluation(blockingEvaluation);
+        return;
+      }
+
       // Auto-advance to next video after a delay
       setTimeout(() => {
+        const blockingBeforeEvaluation = getBlockingEvaluation(
+          nextVideo,
+          "before_video",
+        );
+        if (blockingBeforeEvaluation) {
+          openEvaluation(blockingBeforeEvaluation);
+          return;
+        }
+
         if (nextVideo && !nextVideo.isLocked) {
           handleNextVideo();
         }
       }, 2000);
     }
-  }, [currentVideo, nextVideo, handleNextVideo, onVideoComplete]);
+  }, [
+    currentVideo,
+    getBlockingEvaluation,
+    handleNextVideo,
+    nextVideo,
+    onVideoComplete,
+    openEvaluation,
+  ]);
 
   // Expand all sections initially
   React.useEffect(() => {
@@ -256,6 +461,112 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
       );
     }
   }, [course?.sections]);
+
+  React.useEffect(() => {
+    const loadEvaluations = async () => {
+      if (!course?._id || course.evaluations?.length) {
+        setFetchedEvaluations([]);
+        return;
+      }
+
+      try {
+        const evaluations = await evaluationService.getCourseEvaluations(
+          course._id,
+        );
+        setFetchedEvaluations(evaluations);
+      } catch {
+        setFetchedEvaluations([]);
+      }
+    };
+
+    loadEvaluations();
+  }, [course?._id, course.evaluations?.length]);
+
+  React.useEffect(() => {
+    setCompletedEvaluationIds(
+      new Set(
+        allEvaluations
+          .filter((evaluation) => evaluation.isCompleted)
+          .map((evaluation) => evaluation._id),
+      ),
+    );
+  }, [allEvaluations]);
+
+  const certificationEvaluations = allEvaluations.filter(
+    (evaluation) => evaluation.kind === "certificacion",
+  );
+  const canOpenCertification =
+    allVideos.length > 0 && allVideos.every((video) => video.isCompleted);
+
+  const handleEvaluationAnswerChange = (
+    question: EvaluationQuestion,
+    answer: string | boolean,
+  ) => {
+    const questionId = question._id || String(question.order);
+    setEvaluationAnswers((prev) => ({
+      ...prev,
+      [questionId]: answer,
+    }));
+  };
+
+  const handleSubmitEvaluation = async () => {
+    if (!activeEvaluation) {
+      return;
+    }
+
+    const missingAnswer = activeEvaluation.questions.some((question) => {
+      const value = getQuestionAnswerValue(question);
+      return value === undefined || value === "";
+    });
+
+    if (missingAnswer) {
+      setEvaluationError("Responde todas las preguntas antes de continuar");
+      return;
+    }
+
+    const answers: EvaluationAnswerInput[] = activeEvaluation.questions.map(
+      (question) => ({
+        questionId: question._id || String(question.order),
+        answer: getQuestionAnswerValue(question) ?? "",
+      }),
+    );
+
+    try {
+      setIsSubmittingEvaluation(true);
+      setEvaluationError(null);
+      const result = await evaluationService.submitEvaluation(
+        course._id,
+        activeEvaluation._id,
+        answers,
+      );
+      if (result.passed || !activeEvaluation.isRequired) {
+        setCompletedEvaluationIds((prev) => {
+          const next = new Set(prev);
+          next.add(activeEvaluation._id);
+          return next;
+        });
+      }
+      setEvaluationResult(
+        `Resultado: ${result.score}% (${result.correctAnswers}/${result.totalQuestions})`,
+      );
+    } catch {
+      setEvaluationError("No se pudo enviar la evaluación");
+    } finally {
+      setIsSubmittingEvaluation(false);
+    }
+  };
+
+  const handleCloseEvaluation = () => {
+    if (activeEvaluation?.isRequired && !completedEvaluationIds.has(activeEvaluation._id)) {
+      setEvaluationError("Esta evaluación es obligatoria para continuar");
+      return;
+    }
+
+    setActiveEvaluation(null);
+    setEvaluationAnswers({});
+    setEvaluationResult(null);
+    setEvaluationError(null);
+  };
 
   return (
     <Box
@@ -351,6 +662,34 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
             <Typography variant="body2" color="text.secondary" paragraph>
               {currentVideo?.description}
             </Typography>
+
+            {currentVideo &&
+              getVideoEvaluations(currentVideo._id, "before_video")
+                .concat(getVideoEvaluations(currentVideo._id, "during_video"))
+                .concat(getVideoEvaluations(currentVideo._id, "after_video"))
+                .length > 0 && (
+                <Box display="flex" gap={1} flexWrap="wrap" mb={2}>
+                  {getVideoEvaluations(currentVideo._id, "before_video")
+                    .concat(getVideoEvaluations(currentVideo._id, "during_video"))
+                    .concat(getVideoEvaluations(currentVideo._id, "after_video"))
+                    .map((evaluation) => (
+                      <Chip
+                        key={evaluation._id}
+                        label={`${evaluation.title}${evaluation.isRequired ? " (obligatoria)" : ""}`}
+                        color={
+                          isEvaluationCompleted(evaluation)
+                            ? "success"
+                            : evaluation.isRequired
+                              ? "error"
+                              : "default"
+                        }
+                        variant="outlined"
+                        size="small"
+                        onClick={() => openEvaluation(evaluation)}
+                      />
+                    ))}
+                </Box>
+              )}
 
             {/* Progress Bar */}
             <Box sx={{ mb: 2 }}>
@@ -476,6 +815,12 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
                         <Typography variant="caption" color="text.secondary">
                           {(section.videos || []).length} lecciones •{" "}
                           {(section.resources || []).length} recursos •{" "}
+                          {
+                            allEvaluations.filter(
+                              (evaluation) => evaluation.sectionId === section._id,
+                            ).length
+                          }{" "}
+                          evaluaciones •{" "}
                           {formatDuration(
                             (section.videos || []).reduce(
                               (sum, v) => sum + v.duration,
@@ -664,6 +1009,21 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
 
           {/* Sidebar Footer */}
           <Box sx={{ p: 2, borderTop: 1, borderColor: "divider" }}>
+            {certificationEvaluations.length > 0 && (
+              <Button
+                variant="contained"
+                startIcon={<Assessment />}
+                fullWidth
+                size="small"
+                sx={{ mb: 1 }}
+                disabled={!canOpenCertification}
+                onClick={() => openEvaluation(certificationEvaluations[0])}
+              >
+                {canOpenCertification
+                  ? "Evaluación de certificación"
+                  : "Certificación bloqueada"}
+              </Button>
+            )}
             <Button
               variant="outlined"
               startIcon={<Book />}
@@ -676,6 +1036,107 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
           </Box>
         </Paper>
       </Box>
+
+      <Dialog
+        open={!!activeEvaluation}
+        onClose={handleCloseEvaluation}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>{activeEvaluation?.title}</DialogTitle>
+        <DialogContent>
+          {activeEvaluation?.description && (
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              {activeEvaluation.description}
+            </Typography>
+          )}
+          {activeEvaluation?.isRequired && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              Esta evaluación es obligatoria para continuar.
+            </Alert>
+          )}
+          {evaluationError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {evaluationError}
+            </Alert>
+          )}
+          {evaluationResult && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              {evaluationResult}
+            </Alert>
+          )}
+          <Box display="flex" flexDirection="column" gap={2}>
+            {activeEvaluation?.questions.map((question, index) => (
+              <Box key={question._id || question.order}>
+                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                  {index + 1}. {question.prompt}
+                </Typography>
+                {question.type === "multiple_choice" && (
+                  <TextField
+                    select
+                    fullWidth
+                    label="Selecciona una respuesta"
+                    value={String(getQuestionAnswerValue(question) || "")}
+                    onChange={(event) =>
+                      handleEvaluationAnswerChange(question, event.target.value)
+                    }
+                    disabled={!!evaluationResult}
+                  >
+                    {(question.options || []).map((option, optionIndex) => (
+                      <MenuItem key={option._id || optionIndex} value={option.text}>
+                        {option.text}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                )}
+                {question.type === "input" && (
+                  <TextField
+                    fullWidth
+                    label="Tu respuesta"
+                    value={String(getQuestionAnswerValue(question) || "")}
+                    onChange={(event) =>
+                      handleEvaluationAnswerChange(question, event.target.value)
+                    }
+                    disabled={!!evaluationResult}
+                  />
+                )}
+                {question.type === "true_false" && (
+                  <TextField
+                    select
+                    fullWidth
+                    label="Selecciona una respuesta"
+                    value={String(getQuestionAnswerValue(question) ?? "")}
+                    onChange={(event) =>
+                      handleEvaluationAnswerChange(
+                        question,
+                        event.target.value === "true",
+                      )
+                    }
+                    disabled={!!evaluationResult}
+                  >
+                    <MenuItem value="true">Verdadero</MenuItem>
+                    <MenuItem value="false">Falso</MenuItem>
+                  </TextField>
+                )}
+              </Box>
+            ))}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseEvaluation} disabled={isSubmittingEvaluation}>
+            {evaluationResult ? "Cerrar" : "Cancelar"}
+          </Button>
+          {!evaluationResult && (
+            <Button
+              variant="contained"
+              onClick={handleSubmitEvaluation}
+              disabled={isSubmittingEvaluation}
+            >
+              {isSubmittingEvaluation ? "Enviando..." : "Enviar Evaluación"}
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

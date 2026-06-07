@@ -1,4 +1,5 @@
 import { apiService } from "./api";
+import type { CourseEvaluation } from "./evaluationService";
 
 export interface Video {
   _id: string;
@@ -51,6 +52,7 @@ export interface Course {
   totalStudents: number;
   totalDuration: number;
   sections: Section[];
+  evaluations?: CourseEvaluation[];
   price: number;
   isVisible: boolean;
   isPurchased?: boolean;
@@ -360,6 +362,7 @@ class CourseService {
               })),
             };
           }),
+          evaluations: (courseData.evaluations as CourseEvaluation[]) || [],
           price: courseData.price as number,
           isVisible: courseData.isVisible as boolean,
           isPurchased: responseData.canViewVideos || false,

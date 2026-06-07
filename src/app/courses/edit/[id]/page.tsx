@@ -22,6 +22,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  FormControlLabel,
+  Checkbox,
   MenuItem,
   Stepper,
   Step,
@@ -50,6 +52,7 @@ import {
   Image,
   Slideshow,
   Article,
+  Quiz,
 } from "@mui/icons-material";
 import { useRouter, useParams } from "next/navigation";
 import {
@@ -61,6 +64,15 @@ import {
   Video,
   CreateCourseRequest,
 } from "../../../services/courseService";
+import {
+  CourseEvaluation,
+  EvaluationKind,
+  EvaluationQuestion,
+  EvaluationQuestionType,
+  EvaluationTrigger,
+  SaveEvaluationRequest,
+  evaluationService,
+} from "../../../services/evaluationService";
 import { Navbar } from "../../../components/Navigation/Navbar";
 
 type EditableVideo = Omit<Video, "_id"> & { _id?: string };
@@ -70,6 +82,30 @@ type EditableSection = Omit<Section, "_id"> & {
   videos: EditableVideo[];
   resources: EditableCourseResource[];
 };
+
+type EvaluationFormState = SaveEvaluationRequest;
+
+const createDefaultQuestion = (order: number): EvaluationQuestion => ({
+  prompt: "",
+  type: "multiple_choice",
+  options: [
+    { text: "Opción 1", isCorrect: true },
+    { text: "Opción 2", isCorrect: false },
+  ],
+  correctAnswer: "",
+  order,
+});
+
+const createDefaultEvaluationForm = (order: number): EvaluationFormState => ({
+  title: "Nueva evaluación",
+  description: "",
+  kind: "acompanamiento",
+  trigger: "after_video",
+  isRequired: false,
+  passingScore: 70,
+  questions: [createDefaultQuestion(1)],
+  order,
+});
 
 export default function EditCoursePage() {
   const router = useRouter();
@@ -106,6 +142,14 @@ export default function EditCoursePage() {
   const [newResourceType, setNewResourceType] =
     useState<CourseResourceType>("pdf");
   const [isDraggingResourceFile, setIsDraggingResourceFile] = useState(false);
+  const [evaluations, setEvaluations] = useState<CourseEvaluation[]>([]);
+  const [showEvaluationDialog, setShowEvaluationDialog] = useState(false);
+  const [editingEvaluation, setEditingEvaluation] =
+    useState<CourseEvaluation | null>(null);
+  const [evaluationForm, setEvaluationForm] = useState<EvaluationFormState>(
+    createDefaultEvaluationForm(1),
+  );
+  const [evaluationDialogError, setEvaluationDialogError] = useState("");
   const [showReplaceVideoDialog, setShowReplaceVideoDialog] = useState(false);
   const [videoToReplace, setVideoToReplace] = useState<{
     sectionId: string;
@@ -125,6 +169,7 @@ export default function EditCoursePage() {
 
   const syncCourseState = useCallback((courseData: Course) => {
     setCourse(courseData);
+    setEvaluations(courseData.evaluations || []);
     setFormData({
       title: courseData.title,
       description: courseData.description,
@@ -327,6 +372,335 @@ export default function EditCoursePage() {
     handleResourceFileChange(event.dataTransfer.files?.[0] ?? null);
   };
 
+  const getEvaluationKindLabel = (kind: EvaluationKind) =>
+    kind === "certificacion" ? "Certificación" : "Acompañamiento";
+
+  const getEvaluationTriggerLabel = (trigger: EvaluationTrigger) => {
+    const labels: Record<EvaluationTrigger, string> = {
+      before_video: "Antes del video",
+      during_video: "Durante el video",
+      after_video: "Después del video",
+      after_course: "Al finalizar el curso",
+    };
+
+    return labels[trigger];
+  };
+
+  const getQuestionTypeLabel = (type: EvaluationQuestionType) => {
+    const labels: Record<EvaluationQuestionType, string> = {
+      multiple_choice: "Opción múltiple",
+      input: "Respuesta escrita",
+      true_false: "Verdadero o falso",
+    };
+
+    return labels[type];
+  };
+
+  const getVideoTitle = (videoId?: string) => {
+    if (!videoId) {
+      return "Sin video asignado";
+    }
+
+    for (const section of (formData.sections || []) as EditableSection[]) {
+      const video = section.videos?.find((item) => item._id === videoId);
+      if (video) {
+        return video.title;
+      }
+    }
+
+    return "Video no encontrado";
+  };
+
+  const handleOpenAddEvaluation = () => {
+    setEditingEvaluation(null);
+    setEvaluationForm(createDefaultEvaluationForm(evaluations.length + 1));
+    setEvaluationDialogError("");
+    setShowEvaluationDialog(true);
+  };
+
+  const handleOpenEditEvaluation = (evaluation: CourseEvaluation) => {
+    setEditingEvaluation(evaluation);
+    setEvaluationForm({
+      title: evaluation.title,
+      description: evaluation.description || "",
+      kind: evaluation.kind,
+      trigger: evaluation.trigger,
+      triggerTimeSeconds: evaluation.triggerTimeSeconds,
+      sectionId: evaluation.sectionId,
+      videoId: evaluation.videoId,
+      isRequired: evaluation.isRequired,
+      passingScore: evaluation.passingScore || 70,
+      questions: evaluation.questions?.length
+        ? evaluation.questions
+        : [createDefaultQuestion(1)],
+      order: evaluation.order || 1,
+    });
+    setEvaluationDialogError("");
+    setShowEvaluationDialog(true);
+  };
+
+  const handleEvaluationFieldChange = <K extends keyof EvaluationFormState>(
+    field: K,
+    value: EvaluationFormState[K],
+  ) => {
+    setEvaluationDialogError("");
+    setEvaluationForm((prev) => {
+      const next = { ...prev, [field]: value };
+
+      if (field === "kind" && value === "certificacion") {
+        next.trigger = "after_course";
+        next.sectionId = undefined;
+        next.videoId = undefined;
+        next.triggerTimeSeconds = undefined;
+      }
+
+      if (field === "trigger" && value !== "during_video") {
+        next.triggerTimeSeconds = undefined;
+      }
+
+      return next;
+    });
+  };
+
+  const handleQuestionChange = (
+    questionIndex: number,
+    updates: Partial<EvaluationQuestion>,
+  ) => {
+    setEvaluationDialogError("");
+    setEvaluationForm((prev) => ({
+      ...prev,
+      questions: prev.questions.map((question, index) =>
+        index === questionIndex ? { ...question, ...updates } : question,
+      ),
+    }));
+  };
+
+  const handleQuestionTypeChange = (
+    questionIndex: number,
+    type: EvaluationQuestionType,
+  ) => {
+    const updates: Partial<EvaluationQuestion> = { type };
+
+    if (type === "multiple_choice") {
+      updates.options = [
+        { text: "", isCorrect: true },
+        { text: "", isCorrect: false },
+      ];
+      updates.correctAnswer = "";
+    }
+
+    if (type === "input") {
+      updates.options = [];
+      updates.correctAnswer = "";
+    }
+
+    if (type === "true_false") {
+      updates.options = [];
+      updates.correctAnswer = true;
+    }
+
+    handleQuestionChange(questionIndex, updates);
+  };
+
+  const handleOptionChange = (
+    questionIndex: number,
+    optionIndex: number,
+    text: string,
+  ) => {
+    const question = evaluationForm.questions[questionIndex];
+    const options = [...(question.options || [])];
+    options[optionIndex] = { ...options[optionIndex], text };
+    handleQuestionChange(questionIndex, { options });
+  };
+
+  const handleCorrectOptionChange = (
+    questionIndex: number,
+    optionIndex: number,
+  ) => {
+    const question = evaluationForm.questions[questionIndex];
+    const options = (question.options || []).map((option, index) => ({
+      ...option,
+      isCorrect: index === optionIndex,
+    }));
+    handleQuestionChange(questionIndex, {
+      options,
+      correctAnswer: options[optionIndex]?.text || "",
+    });
+  };
+
+  const handleAddOption = (questionIndex: number) => {
+    const question = evaluationForm.questions[questionIndex];
+    handleQuestionChange(questionIndex, {
+      options: [...(question.options || []), { text: "", isCorrect: false }],
+    });
+  };
+
+  const handleRemoveOption = (questionIndex: number, optionIndex: number) => {
+    const question = evaluationForm.questions[questionIndex];
+    const options = (question.options || []).filter(
+      (_, index) => index !== optionIndex,
+    );
+    handleQuestionChange(questionIndex, { options });
+  };
+
+  const handleAddQuestion = () => {
+    setEvaluationForm((prev) => ({
+      ...prev,
+      questions: [
+        ...prev.questions,
+        createDefaultQuestion(prev.questions.length + 1),
+      ],
+    }));
+  };
+
+  const handleRemoveQuestion = (questionIndex: number) => {
+    setEvaluationForm((prev) => ({
+      ...prev,
+      questions: prev.questions
+        .filter((_, index) => index !== questionIndex)
+        .map((question, index) => ({ ...question, order: index + 1 })),
+    }));
+  };
+
+  const validateEvaluationForm = () => {
+    if (
+      evaluationForm.kind === "acompanamiento" &&
+      !evaluationForm.videoId &&
+      evaluationForm.trigger !== "after_course"
+    ) {
+      return "Selecciona el video donde aparecerá la evaluación";
+    }
+
+    if (
+      evaluationForm.trigger === "during_video" &&
+      (evaluationForm.triggerTimeSeconds === undefined ||
+        evaluationForm.triggerTimeSeconds < 0)
+    ) {
+      return "Indica el segundo del video donde aparecerá la evaluación";
+    }
+
+    if (!evaluationForm.questions.length) {
+      return "Agrega al menos una pregunta";
+    }
+
+    for (const [index, question] of evaluationForm.questions.entries()) {
+      if (!question.prompt.trim()) {
+        return `La pregunta ${index + 1} necesita texto`;
+      }
+
+      if (question.type === "multiple_choice") {
+        const options = question.options || [];
+        if (options.length < 2) {
+          return `La pregunta ${index + 1} necesita al menos dos opciones`;
+        }
+        if (!options.some((option) => option.isCorrect)) {
+          return `Selecciona la respuesta correcta de la pregunta ${index + 1}`;
+        }
+      }
+
+      if (question.type === "input" && !String(question.correctAnswer || "").trim()) {
+        return `Agrega la respuesta correcta de la pregunta ${index + 1}`;
+      }
+    }
+
+    return "";
+  };
+
+  const handleSaveEvaluation = async () => {
+    const validationMessage = validateEvaluationForm();
+    if (validationMessage) {
+      setEvaluationDialogError(validationMessage);
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setError("");
+      setEvaluationDialogError("");
+      setSuccess("");
+
+      const normalizedQuestions = evaluationForm.questions.map(
+        (question, index) => {
+          const options =
+            question.type === "multiple_choice"
+              ? (question.options || []).map((option, optionIndex) => ({
+                  ...option,
+                  text: option.text.trim() || `Opción ${optionIndex + 1}`,
+                }))
+              : [];
+          const correctOption = options.find((option) => option.isCorrect);
+
+          return {
+            ...question,
+            prompt: question.prompt.trim(),
+            options,
+            correctAnswer:
+              question.type === "multiple_choice"
+                ? correctOption?.text || options[0]?.text || ""
+                : question.correctAnswer,
+            order: index + 1,
+          };
+        },
+      );
+
+      const payload: SaveEvaluationRequest = {
+        ...evaluationForm,
+        title:
+          evaluationForm.title.trim() ||
+          (evaluationForm.kind === "certificacion"
+            ? "Evaluación de certificación"
+            : "Evaluación de acompañamiento"),
+        description: evaluationForm.description?.trim() || undefined,
+        questions: normalizedQuestions,
+      };
+
+      if (editingEvaluation) {
+        await evaluationService.updateEvaluation(
+          courseId,
+          editingEvaluation._id,
+          payload,
+        );
+      } else {
+        await evaluationService.createEvaluation(courseId, payload);
+      }
+
+      const courseEvaluations =
+        await evaluationService.getCourseEvaluations(courseId);
+      setEvaluations(courseEvaluations);
+      setShowEvaluationDialog(false);
+      setEditingEvaluation(null);
+      setEvaluationForm(createDefaultEvaluationForm(courseEvaluations.length + 1));
+      setSuccess(
+        editingEvaluation
+          ? "Evaluación actualizada correctamente"
+          : "Evaluación creada correctamente",
+      );
+    } catch (error) {
+      setEvaluationDialogError(
+        getErrorMessage(error, "Error al guardar la evaluación"),
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteEvaluation = async (evaluationId: string) => {
+    try {
+      setIsSaving(true);
+      setError("");
+      setSuccess("");
+      await evaluationService.deleteEvaluation(courseId, evaluationId);
+      setEvaluations((prev) =>
+        prev.filter((evaluation) => evaluation._id !== evaluationId),
+      );
+      setSuccess("Evaluación eliminada correctamente");
+    } catch (error) {
+      setError(getErrorMessage(error, "Error al eliminar la evaluación"));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   useEffect(() => {
     const fetchCourseData = async () => {
       try {
@@ -334,6 +708,13 @@ export default function EditCoursePage() {
         const courseData = await courseService.getCourse(courseId);
         if (courseData) {
           syncCourseState(courseData);
+          if (!courseData.evaluations?.length) {
+            try {
+              const courseEvaluations =
+                await evaluationService.getCourseEvaluations(courseId);
+              setEvaluations(courseEvaluations);
+            } catch {}
+          }
         } else {
           setError("Curso no encontrado");
         }
@@ -731,6 +1112,11 @@ export default function EditCoursePage() {
       label: "Secciones y Recursos",
       description: "Organiza el contenido del curso",
       icon: <VideoLibrary />,
+    },
+    {
+      label: "Evaluaciones",
+      description: "Configura surveys y certificación",
+      icon: <Quiz />,
     },
     {
       label: "Configuración",
@@ -1228,6 +1614,173 @@ export default function EditCoursePage() {
 
           {activeStep === 2 && (
             <Paper sx={{ p: 4 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 3,
+                }}
+              >
+                <Box>
+                  <Typography
+                    variant="h5"
+                    component="h2"
+                    sx={{ fontWeight: 600 }}
+                  >
+                    Evaluaciones
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Crea evaluaciones de acompañamiento por video o una
+                    evaluación de certificación al finalizar el curso.
+                  </Typography>
+                </Box>
+                <Button
+                  variant="contained"
+                  startIcon={<Add />}
+                  onClick={handleOpenAddEvaluation}
+                  disabled={isSaving}
+                >
+                  Agregar Evaluación
+                </Button>
+              </Box>
+
+              {evaluations.length > 0 ? (
+                <Box display="flex" flexDirection="column" gap={2}>
+                  {evaluations.map((evaluation) => (
+                    <Card key={evaluation._id}>
+                      <CardContent>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            gap: 2,
+                          }}
+                        >
+                          <Box sx={{ flex: 1 }}>
+                            <Box
+                              display="flex"
+                              alignItems="center"
+                              gap={1}
+                              flexWrap="wrap"
+                              mb={1}
+                            >
+                              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                {evaluation.title}
+                              </Typography>
+                              <Chip
+                                label={getEvaluationKindLabel(evaluation.kind)}
+                                color={
+                                  evaluation.kind === "certificacion"
+                                    ? "secondary"
+                                    : "primary"
+                                }
+                                size="small"
+                              />
+                              <Chip
+                                label={
+                                  evaluation.isRequired
+                                    ? "Obligatoria"
+                                    : "Opcional"
+                                }
+                                color={
+                                  evaluation.isRequired ? "error" : "default"
+                                }
+                                size="small"
+                                variant="outlined"
+                              />
+                            </Box>
+                            {evaluation.description && (
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                sx={{ mb: 1 }}
+                              >
+                                {evaluation.description}
+                              </Typography>
+                            )}
+                            <Box display="flex" gap={1} flexWrap="wrap">
+                              <Chip
+                                label={getEvaluationTriggerLabel(
+                                  evaluation.trigger,
+                                )}
+                                size="small"
+                              />
+                              {evaluation.videoId && (
+                                <Chip
+                                  label={getVideoTitle(evaluation.videoId)}
+                                  size="small"
+                                  variant="outlined"
+                                />
+                              )}
+                              {evaluation.trigger === "during_video" && (
+                                <Chip
+                                  label={`${evaluation.triggerTimeSeconds || 0}s`}
+                                  size="small"
+                                  variant="outlined"
+                                />
+                              )}
+                              <Chip
+                                label={`${evaluation.questions.length} pregunta(s)`}
+                                size="small"
+                                variant="outlined"
+                              />
+                              <Chip
+                                label={`Aprobación ${evaluation.passingScore || 70}%`}
+                                size="small"
+                                variant="outlined"
+                              />
+                            </Box>
+                          </Box>
+                          <Box display="flex" gap={1}>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleOpenEditEvaluation(evaluation)}
+                              disabled={isSaving}
+                            >
+                              <Edit />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() =>
+                                handleDeleteEvaluation(evaluation._id)
+                              }
+                              disabled={isSaving}
+                            >
+                              <Delete />
+                            </IconButton>
+                          </Box>
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </Box>
+              ) : (
+                <Box sx={{ textAlign: "center", py: 5 }}>
+                  <Quiz sx={{ fontSize: 60, color: "text.secondary", mb: 2 }} />
+                  <Typography variant="h6" color="text.secondary">
+                    No hay evaluaciones configuradas
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" mb={2}>
+                    Agrega preguntas de acompañamiento o certificación para tus
+                    alumnos.
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    startIcon={<Add />}
+                    onClick={handleOpenAddEvaluation}
+                    disabled={isSaving}
+                  >
+                    Agregar Primera Evaluación
+                  </Button>
+                </Box>
+              )}
+            </Paper>
+          )}
+
+          {activeStep === 3 && (
+            <Paper sx={{ p: 4 }}>
               <Typography
                 variant="h5"
                 component="h2"
@@ -1400,6 +1953,338 @@ export default function EditCoursePage() {
           </Button>
         </Box>
       </Container>
+
+      <Dialog
+        open={showEvaluationDialog}
+        onClose={() => {
+          if (!isSaving) {
+            setShowEvaluationDialog(false);
+            setEditingEvaluation(null);
+            setEvaluationDialogError("");
+          }
+        }}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          {editingEvaluation ? "Editar Evaluación" : "Agregar Evaluación"}
+        </DialogTitle>
+        <DialogContent>
+          <Box display="flex" flexDirection="column" gap={2} sx={{ mt: 1 }}>
+            {evaluationDialogError && (
+              <Alert severity="error">{evaluationDialogError}</Alert>
+            )}
+            <TextField
+              fullWidth
+              label="Título"
+              value={evaluationForm.title}
+              onChange={(event) =>
+                handleEvaluationFieldChange("title", event.target.value)
+              }
+              required
+            />
+            <TextField
+              fullWidth
+              multiline
+              rows={2}
+              label="Descripción (opcional)"
+              value={evaluationForm.description || ""}
+              onChange={(event) =>
+                handleEvaluationFieldChange("description", event.target.value)
+              }
+            />
+            <Box display="flex" gap={2} flexWrap="wrap">
+              <TextField
+                select
+                label="Tipo de evaluación"
+                value={evaluationForm.kind}
+                onChange={(event) =>
+                  handleEvaluationFieldChange(
+                    "kind",
+                    event.target.value as EvaluationKind,
+                  )
+                }
+                sx={{ flex: 1, minWidth: 220 }}
+              >
+                <MenuItem value="acompanamiento">Acompañamiento</MenuItem>
+                <MenuItem value="certificacion">Certificación</MenuItem>
+              </TextField>
+              <TextField
+                select
+                label="Momento"
+                value={evaluationForm.trigger}
+                onChange={(event) =>
+                  handleEvaluationFieldChange(
+                    "trigger",
+                    event.target.value as EvaluationTrigger,
+                  )
+                }
+                disabled={evaluationForm.kind === "certificacion"}
+                sx={{ flex: 1, minWidth: 220 }}
+              >
+                <MenuItem value="before_video">Antes del video</MenuItem>
+                <MenuItem value="during_video">Durante el video</MenuItem>
+                <MenuItem value="after_video">Después del video</MenuItem>
+                <MenuItem value="after_course">Al finalizar el curso</MenuItem>
+              </TextField>
+            </Box>
+            {evaluationForm.kind === "acompanamiento" && (
+              <Box display="flex" gap={2} flexWrap="wrap">
+                <TextField
+                  select
+                  label="Video"
+                  value={evaluationForm.videoId || ""}
+                  onChange={(event) => {
+                    const videoId = event.target.value;
+                    const section = (
+                      (formData.sections || []) as EditableSection[]
+                    ).find((item) =>
+                      item.videos?.some((video) => video._id === videoId),
+                    );
+                    handleEvaluationFieldChange("videoId", videoId);
+                    handleEvaluationFieldChange("sectionId", section?._id);
+                  }}
+                  sx={{ flex: 2, minWidth: 260 }}
+                >
+                  {((formData.sections || []) as EditableSection[]).flatMap((section) =>
+                    (section.videos || []).map((video) => (
+                      <MenuItem key={video._id} value={video._id}>
+                        {section.title} - {video.title}
+                      </MenuItem>
+                    )),
+                  )}
+                </TextField>
+                {evaluationForm.trigger === "during_video" && (
+                  <TextField
+                    type="number"
+                    label="Segundo"
+                    value={evaluationForm.triggerTimeSeconds || 0}
+                    onChange={(event) =>
+                      handleEvaluationFieldChange(
+                        "triggerTimeSeconds",
+                        Math.max(0, parseInt(event.target.value) || 0),
+                      )
+                    }
+                    sx={{ flex: 1, minWidth: 140 }}
+                    inputProps={{ min: 0 }}
+                  />
+                )}
+              </Box>
+            )}
+            <Box display="flex" gap={2} flexWrap="wrap" alignItems="center">
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={evaluationForm.isRequired}
+                    onChange={(event) =>
+                      handleEvaluationFieldChange(
+                        "isRequired",
+                        event.target.checked,
+                      )
+                    }
+                  />
+                }
+                label={
+                  evaluationForm.kind === "certificacion"
+                    ? "Certificación obligatoria para finalizar"
+                    : "Bloqueante para avanzar"
+                }
+              />
+              <TextField
+                type="number"
+                label="Puntaje mínimo (%)"
+                value={evaluationForm.passingScore || 70}
+                onChange={(event) =>
+                  handleEvaluationFieldChange(
+                    "passingScore",
+                    Math.min(100, Math.max(0, parseInt(event.target.value) || 0)),
+                  )
+                }
+                sx={{ width: 180 }}
+                inputProps={{ min: 0, max: 100 }}
+              />
+            </Box>
+
+            <Box display="flex" justifyContent="space-between" alignItems="center">
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Preguntas
+              </Typography>
+              <Button startIcon={<Add />} onClick={handleAddQuestion}>
+                Agregar Pregunta
+              </Button>
+            </Box>
+
+            {evaluationForm.questions.map((question, questionIndex) => (
+              <Card key={questionIndex} variant="outlined">
+                <CardContent>
+                  <Box
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    mb={2}
+                  >
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                      Pregunta {questionIndex + 1}
+                    </Typography>
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => handleRemoveQuestion(questionIndex)}
+                      disabled={evaluationForm.questions.length === 1}
+                    >
+                      <Delete />
+                    </IconButton>
+                  </Box>
+                  <TextField
+                    fullWidth
+                    label="Texto de la pregunta"
+                    value={question.prompt}
+                    onChange={(event) =>
+                      handleQuestionChange(questionIndex, {
+                        prompt: event.target.value,
+                      })
+                    }
+                    sx={{ mb: 2 }}
+                  />
+                  <TextField
+                    select
+                    fullWidth
+                    label="Tipo de respuesta"
+                    value={question.type}
+                    onChange={(event) =>
+                      handleQuestionTypeChange(
+                        questionIndex,
+                        event.target.value as EvaluationQuestionType,
+                      )
+                    }
+                    sx={{ mb: 2 }}
+                  >
+                    <MenuItem value="multiple_choice">Opción múltiple</MenuItem>
+                    <MenuItem value="input">Respuesta escrita</MenuItem>
+                    <MenuItem value="true_false">Verdadero o falso</MenuItem>
+                  </TextField>
+
+                  {question.type === "multiple_choice" && (
+                    <Box display="flex" flexDirection="column" gap={1}>
+                      <Typography variant="subtitle2">
+                        Opciones y respuesta correcta
+                      </Typography>
+                      {(question.options || []).map((option, optionIndex) => (
+                        <Box
+                          key={optionIndex}
+                          display="flex"
+                          gap={1}
+                          alignItems="center"
+                        >
+                          <Checkbox
+                            checked={!!option.isCorrect}
+                            onChange={() =>
+                              handleCorrectOptionChange(
+                                questionIndex,
+                                optionIndex,
+                              )
+                            }
+                          />
+                          <TextField
+                            fullWidth
+                            label={`Opción ${optionIndex + 1}`}
+                            value={option.text}
+                            onChange={(event) =>
+                              handleOptionChange(
+                                questionIndex,
+                                optionIndex,
+                                event.target.value,
+                              )
+                            }
+                          />
+                          <IconButton
+                            color="error"
+                            onClick={() =>
+                              handleRemoveOption(questionIndex, optionIndex)
+                            }
+                            disabled={(question.options || []).length <= 2}
+                          >
+                            <Delete />
+                          </IconButton>
+                        </Box>
+                      ))}
+                      <Button
+                        size="small"
+                        startIcon={<Add />}
+                        onClick={() => handleAddOption(questionIndex)}
+                      >
+                        Agregar opción
+                      </Button>
+                    </Box>
+                  )}
+
+                  {question.type === "input" && (
+                    <TextField
+                      fullWidth
+                      label="Respuesta correcta"
+                      value={String(question.correctAnswer || "")}
+                      onChange={(event) =>
+                        handleQuestionChange(questionIndex, {
+                          correctAnswer: event.target.value,
+                        })
+                      }
+                    />
+                  )}
+
+                  {question.type === "true_false" && (
+                    <TextField
+                      select
+                      fullWidth
+                      label="Respuesta correcta"
+                      value={String(question.correctAnswer ?? true)}
+                      onChange={(event) =>
+                        handleQuestionChange(questionIndex, {
+                          correctAnswer: event.target.value === "true",
+                        })
+                      }
+                    >
+                      <MenuItem value="true">Verdadero</MenuItem>
+                      <MenuItem value="false">Falso</MenuItem>
+                    </TextField>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </Box>
+        </DialogContent>
+        <DialogActions
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "stretch",
+            gap: 1,
+          }}
+        >
+          {evaluationDialogError && (
+            <Alert severity="error">{evaluationDialogError}</Alert>
+          )}
+          <Box display="flex" justifyContent="flex-end" gap={1}>
+            <Button
+              onClick={() => {
+                setShowEvaluationDialog(false);
+                setEditingEvaluation(null);
+                setEvaluationDialogError("");
+              }}
+              disabled={isSaving}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleSaveEvaluation}
+              disabled={isSaving}
+              startIcon={isSaving ? <CircularProgress size={20} /> : <Save />}
+            >
+              {isSaving ? "Guardando..." : "Guardar Evaluación"}
+            </Button>
+          </Box>
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={showAddSectionDialog}
