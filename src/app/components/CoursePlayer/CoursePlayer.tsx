@@ -101,8 +101,11 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
   const [isSubmittingEvaluation, setIsSubmittingEvaluation] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [resourceSearchTerm, setResourceSearchTerm] = useState("");
+  const [sidebarView, setSidebarView] = useState<"content" | "resources">(
+    "content",
+  );
   const [showStatsPanel, setShowStatsPanel] = useState(false);
-  const [resourcesDialogOpen, setResourcesDialogOpen] = useState(false);
   const lastPersistedProgressRef = useRef<
     Record<string, { progress: number; savedAt: number }>
   >({});
@@ -186,7 +189,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
     return `${minutes}m`;
   };
 
-  const getResourceTypeLabel = (type: CourseResourceType) => {
+  const getResourceTypeLabel = useCallback((type: CourseResourceType) => {
     const labels: Record<CourseResourceType, string> = {
       powerpoint: "PowerPoint",
       docx: "Documento",
@@ -195,7 +198,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
     };
 
     return labels[type];
-  };
+  }, []);
 
   const getResourceIcon = (resource: CourseResource) => {
     if (resource.isLocked) {
@@ -320,6 +323,41 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
     matchesSearch,
     normalizedSearchTerm,
   ]);
+
+  const normalizedResourceSearchTerm = resourceSearchTerm.trim().toLowerCase();
+  const filteredResources = useMemo(() => {
+    if (!normalizedResourceSearchTerm) {
+      return allResources;
+    }
+
+    return allResources.filter((resource) =>
+      [
+        resource.title,
+        resource.description,
+        resource.fileName,
+        getResourceTypeLabel(resource.type),
+      ].some((value) =>
+        (value || "").toLowerCase().includes(normalizedResourceSearchTerm),
+      ),
+    );
+  }, [allResources, getResourceTypeLabel, normalizedResourceSearchTerm]);
+
+  const resourcesByType = useMemo(() => {
+    return filteredResources.reduce(
+      (groups, resource) => {
+        groups[resource.type] = [...(groups[resource.type] || []), resource];
+        return groups;
+      },
+      {} as Partial<Record<CourseResourceType, CourseResource[]>>,
+    );
+  }, [filteredResources]);
+
+  const resourceTypeOrder: CourseResourceType[] = [
+    "pdf",
+    "powerpoint",
+    "docx",
+    "image",
+  ];
 
   const openEvaluation = useCallback((evaluation: CourseEvaluation) => {
     setActiveEvaluation(evaluation);
@@ -868,7 +906,11 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
               alignItems="center"
               mb={1}
             >
-              <Typography variant="h6">Contenido del curso</Typography>
+              <Typography variant="h6">
+                {sidebarView === "resources"
+                  ? "Recursos del curso"
+                  : "Contenido del curso"}
+              </Typography>
               <Box display="flex" gap={1}>
                 <IconButton
                   size="small"
@@ -888,18 +930,28 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
             </Box>
             <Box display="flex" alignItems="center" gap={1}>
               <Typography variant="body2" color="text.secondary">
-                {completedVideosCount} de {allVideos.length} lecciones
-                completadas •{" "}
-                {allResources.length} recursos
+                {sidebarView === "resources"
+                  ? `${filteredResources.length} de ${allResources.length} recursos`
+                  : `${completedVideosCount} de ${allVideos.length} lecciones completadas • ${allResources.length} recursos`}
               </Typography>
             </Box>
-            {isSearchOpen && (
+            {(isSearchOpen || sidebarView === "resources") && (
               <TextField
                 fullWidth
                 size="small"
-                placeholder="Buscar lecciones, recursos o evaluaciones..."
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder={
+                  sidebarView === "resources"
+                    ? "Buscar recursos..."
+                    : "Buscar lecciones, recursos o evaluaciones..."
+                }
+                value={
+                  sidebarView === "resources" ? resourceSearchTerm : searchTerm
+                }
+                onChange={(event) =>
+                  sidebarView === "resources"
+                    ? setResourceSearchTerm(event.target.value)
+                    : setSearchTerm(event.target.value)
+                }
                 sx={{ mt: 2 }}
                 InputProps={{
                   startAdornment: <Search fontSize="small" sx={{ mr: 1 }} />,
@@ -969,7 +1021,118 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
 
           {/* Course Sections */}
           <Box sx={{ flex: 1, overflow: "auto" }}>
-            {visibleSections.length > 0 ? (
+            {sidebarView === "resources" ? (
+              filteredResources.length > 0 ? (
+                resourceTypeOrder.map((type) => {
+                  const resources = resourcesByType[type] || [];
+
+                  if (resources.length === 0) {
+                    return null;
+                  }
+
+                  return (
+                    <Box
+                      key={type}
+                      sx={{ borderBottom: 1, borderColor: "divider" }}
+                    >
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                          px: 2,
+                          py: 1.5,
+                          bgcolor: "action.hover",
+                        }}
+                      >
+                        {getResourceIcon({
+                          _id: type,
+                          title: type,
+                          url: "",
+                          type,
+                          order: 0,
+                        })}
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                          {getResourceTypeLabel(type)}
+                        </Typography>
+                        <Chip
+                          label={resources.length}
+                          size="small"
+                          variant="outlined"
+                        />
+                      </Box>
+                      <List dense sx={{ p: 0 }}>
+                        {resources.map((resource) => (
+                          <ListItem key={resource._id} disablePadding>
+                            <ListItemButton
+                              onClick={() => handleResourceDownload(resource)}
+                              disabled={resource.isLocked || !resource.url}
+                              sx={{ px: 2 }}
+                            >
+                              <ListItemIcon sx={{ minWidth: 38 }}>
+                                {getResourceIcon(resource)}
+                              </ListItemIcon>
+                              <ListItemText
+                                primary={
+                                  <Typography
+                                    variant="body2"
+                                    sx={{
+                                      color: resource.isLocked
+                                        ? "text.disabled"
+                                        : "text.primary",
+                                      fontWeight: 500,
+                                    }}
+                                  >
+                                    {resource.title}
+                                  </Typography>
+                                }
+                                secondary={
+                                  <Box
+                                    display="flex"
+                                    alignItems="center"
+                                    gap={1}
+                                    flexWrap="wrap"
+                                  >
+                                    {resource.fileName && (
+                                      <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                      >
+                                        {resource.fileName}
+                                      </Typography>
+                                    )}
+                                    {resource.description && (
+                                      <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                      >
+                                        {resource.description}
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                }
+                                secondaryTypographyProps={{ component: "div" }}
+                              />
+                              {!resource.isLocked && resource.url && (
+                                <Download fontSize="small" color="action" />
+                              )}
+                            </ListItemButton>
+                          </ListItem>
+                        ))}
+                      </List>
+                    </Box>
+                  );
+                })
+              ) : (
+                <Box sx={{ p: 3, textAlign: "center" }}>
+                  <Typography variant="body2" color="text.secondary">
+                    {normalizedResourceSearchTerm
+                      ? "No hay recursos para tu búsqueda"
+                      : "Este curso no tiene recursos disponibles"}
+                  </Typography>
+                </Box>
+              )
+            ) : visibleSections.length > 0 ? (
               visibleSections.map((section) => {
                 const sectionMatches = matchesSearch(
                   section.title,
@@ -1240,73 +1403,23 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
             )}
             <Button
               variant="outlined"
-              startIcon={<Book />}
+              startIcon={sidebarView === "resources" ? <VideoLibrary /> : <Book />}
               fullWidth
               size="small"
               disabled={allResources.length === 0}
-              onClick={() => setResourcesDialogOpen(true)}
+              onClick={() =>
+                setSidebarView((currentView) =>
+                  currentView === "resources" ? "content" : "resources",
+                )
+              }
             >
-              Recursos del curso ({allResources.length})
+              {sidebarView === "resources"
+                ? "Contenido del curso"
+                : `Recursos del curso (${allResources.length})`}
             </Button>
           </Box>
         </Paper>
       </Box>
-
-      <Dialog
-        open={resourcesDialogOpen}
-        onClose={() => setResourcesDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Recursos del curso</DialogTitle>
-        <DialogContent>
-          {allResources.length === 0 ? (
-            <Typography variant="body2" color="text.secondary">
-              Este curso no tiene recursos disponibles.
-            </Typography>
-          ) : (
-            <List dense>
-              {allResources.map((resource) => (
-                <ListItem key={resource._id} disablePadding>
-                  <ListItemButton
-                    onClick={() => handleResourceDownload(resource)}
-                    disabled={resource.isLocked || !resource.url}
-                  >
-                    <ListItemIcon sx={{ minWidth: 40 }}>
-                      {getResourceIcon(resource)}
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={resource.title}
-                      secondary={
-                        <Box display="flex" gap={1} flexWrap="wrap">
-                          <Typography variant="caption" color="text.secondary">
-                            {getResourceTypeLabel(resource.type)}
-                          </Typography>
-                          {resource.description && (
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {resource.description}
-                            </Typography>
-                          )}
-                        </Box>
-                      }
-                      secondaryTypographyProps={{ component: "div" }}
-                    />
-                    {!resource.isLocked && resource.url && (
-                      <Download fontSize="small" color="action" />
-                    )}
-                  </ListItemButton>
-                </ListItem>
-              ))}
-            </List>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setResourcesDialogOpen(false)}>Cerrar</Button>
-        </DialogActions>
-      </Dialog>
 
       <Dialog
         open={!!activeEvaluation}
