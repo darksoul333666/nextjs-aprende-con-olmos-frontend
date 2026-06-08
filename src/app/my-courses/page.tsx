@@ -54,6 +54,10 @@ export default function MyCoursesPage() {
         // Obtener progreso para cada curso
         const progressData: Record<string, CourseProgress> = {};
         for (const course of courses) {
+          if (!course._id) {
+            continue;
+          }
+
           try {
             const progress = await progressService.getCourseProgress(
               course._id,
@@ -81,12 +85,16 @@ export default function MyCoursesPage() {
   };
 
   const calculateProgress = (course: Course): number => {
+    if (!course._id) return 0;
+
     const progress = courseProgress[course._id];
     if (!progress) return 0;
     return progress.progress;
   };
 
   const handleContinueCourse = (courseId: string) => {
+    if (!courseId) return;
+
     router.push(`/course/${courseId}`);
   };
 
@@ -259,6 +267,15 @@ export default function MyCoursesPage() {
               {userCourses.map((course) => {
                 const progress = calculateProgress(course);
                 const isCompleted = progress === 100;
+                const sectionsCount =
+                  course.sectionsCount ?? course.sections?.length;
+                const contentLabel =
+                  typeof sectionsCount === "number" && sectionsCount > 0
+                    ? `${sectionsCount} secciones`
+                    : typeof course.videosCount === "number" &&
+                        course.videosCount > 0
+                      ? `${course.videosCount} videos`
+                      : "Contenido disponible";
 
                 return (
                   <Card
@@ -387,7 +404,7 @@ export default function MyCoursesPage() {
                             <Box display="flex" alignItems="center" gap={0.5}>
                               <School fontSize="small" />
                               <Typography variant="caption">
-                                {course.sections.length} secciones
+                                {contentLabel}
                               </Typography>
                             </Box>
                           </Box>

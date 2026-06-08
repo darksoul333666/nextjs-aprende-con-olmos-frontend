@@ -163,7 +163,14 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage = "home" }) => {
                   onClick={() => handleNavigation("/courses")}
                   startIcon={<Book />}
                 >
-                  Cursos
+                  Explorar cursos
+                </Button>
+                <Button
+                  color={currentPage === "my-courses" ? "primary" : "inherit"}
+                  onClick={() => handleNavigation("/my-courses")}
+                  startIcon={<School />}
+                >
+                  Mis cursos
                 </Button>
                 <Button
                   color={currentPage === "my-purchases" ? "primary" : "inherit"}

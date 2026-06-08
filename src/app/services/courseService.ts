@@ -53,6 +53,8 @@ export interface Course {
   totalStudents: number;
   totalDuration: number;
   sections: Section[];
+  sectionsCount?: number;
+  videosCount?: number;
   evaluations?: CourseEvaluation[];
   price: number;
   isVisible: boolean;
@@ -115,7 +117,7 @@ export interface UploadCourseVideoRequest {
   description: string;
   duration: number;
   order?: number;
-  thumbnail?: string;
+  thumbnail?: File | string;
 }
 
 export interface ReplaceCourseVideoRequest {
@@ -123,6 +125,18 @@ export interface ReplaceCourseVideoRequest {
   sectionId: string;
   videoId: string;
   file: File;
+}
+
+export interface UpdateVideoThumbnailRequest {
+  courseId: string;
+  sectionId: string;
+  videoId: string;
+  thumbnail: File;
+}
+
+export interface UpdateCourseThumbnailRequest {
+  courseId: string;
+  thumbnail: File;
 }
 
 export interface UploadCourseResourceRequest {
@@ -156,6 +170,10 @@ interface ResourceUploadResponse {
 
 interface SectionResponse {
   section?: Section;
+  course?: Course;
+}
+
+interface CourseResponse {
   course?: Course;
 }
 
@@ -301,6 +319,58 @@ class CourseService {
     return [];
   }
 
+  private normalizePurchasedCourse(item: unknown): Course | null {
+    if (!item || typeof item !== "object") {
+      return null;
+    }
+
+    const record = item as Record<string, unknown>;
+    const nestedCourse =
+      typeof record.courseId === "object" && record.courseId
+        ? (record.courseId as Record<string, unknown>)
+        : typeof record.course === "object" && record.course
+          ? (record.course as Record<string, unknown>)
+          : record;
+    const id =
+      (nestedCourse._id as string) ||
+      (nestedCourse.id as string) ||
+      (typeof record.courseId === "string" ? record.courseId : "") ||
+      (record.course_id as string);
+
+    if (!id) {
+      return null;
+    }
+
+    return {
+      ...(nestedCourse as Partial<Course>),
+      _id: id,
+      title: (nestedCourse.title as string) || "Curso sin título",
+      description: (nestedCourse.description as string) || "",
+      thumbnail: nestedCourse.thumbnail as string,
+      rating: (nestedCourse.rating as number) || 0,
+      totalStudents: (nestedCourse.totalStudents as number) || 0,
+      totalDuration: (nestedCourse.totalDuration as number) || 0,
+      sectionsCount:
+        (nestedCourse.sectionsCount as number) ||
+        (nestedCourse.sectionCount as number) ||
+        (nestedCourse.totalSections as number),
+      videosCount:
+        (nestedCourse.videosCount as number) ||
+        (nestedCourse.videoCount as number) ||
+        (nestedCourse.totalVideos as number),
+      sections: Array.isArray(nestedCourse.sections)
+        ? (nestedCourse.sections as Section[])
+        : [],
+      price:
+        (nestedCourse.price as number) ||
+        (record.price as number) ||
+        (record.totalAmount as number) ||
+        0,
+      isVisible: (nestedCourse.isVisible as boolean) ?? true,
+      isPurchased: true,
+    };
+  }
+
   // Obtener lista de cursos (público) - GET /api/courses
   async getCourses(filters?: CourseFilters): Promise<Course[]> {
     try {
@@ -408,6 +478,31 @@ class CourseService {
     }
   }
 
+  // Actualizar miniatura del curso - PATCH /api/courses/:courseId/thumbnail
+  async updateCourseThumbnail({
+    courseId,
+    thumbnail,
+  }: UpdateCourseThumbnailRequest): Promise<Course | null> {
+    try {
+      const formData = new FormData();
+      formData.append("thumbnail", thumbnail);
+
+      const response = await apiService.patch<Course | CourseResponse>(
+        `/courses/${courseId}/thumbnail`,
+        formData,
+      );
+      const responseData = response.data;
+
+      if (responseData && "course" in responseData) {
+        return responseData.course || null;
+      }
+
+      return (responseData as Course) || null;
+    } catch {
+      return null;
+    }
+  }
+
   // Crear sección dentro de un curso - POST /api/courses/:courseId/sections
   async createCourseSection({
     courseId,
@@ -482,8 +577,16 @@ class CourseService {
   async getPurchasedCourses(): Promise<Course[]> {
     try {
       const response = await apiService.get<Course[]>("/courses/purchased");
-      const courses = this.ensureArray<Course>(response.data || response);
-      return courses;
+      const items = this.ensureArray<Record<string, unknown>>(
+        response.data || response,
+      );
+      const courseItems = items.flatMap((item) =>
+        Array.isArray(item.courses) ? item.courses : [item],
+      );
+
+      return courseItems
+        .map((item) => this.normalizePurchasedCourse(item))
+        .filter((course): course is Course => Boolean(course));
     } catch {
       return [];
     }
@@ -603,6 +706,28 @@ class CourseService {
 
     if (!response.data?.video) {
       throw new Error(response.message || "Error al reemplazar video");
+    }
+
+    return response.data.video;
+  }
+
+  // Actualizar miniatura de video - PATCH /api/courses/:courseId/sections/:sectionId/videos/:videoId/thumbnail
+  async updateVideoThumbnail({
+    courseId,
+    sectionId,
+    videoId,
+    thumbnail,
+  }: UpdateVideoThumbnailRequest): Promise<Video> {
+    const formData = new FormData();
+    formData.append("thumbnail", thumbnail);
+
+    const response = await apiService.patch<VideoUploadResponse>(
+      `/courses/${courseId}/sections/${sectionId}/videos/${videoId}/thumbnail`,
+      formData,
+    );
+
+    if (!response.data?.video) {
+      throw new Error(response.message || "Error al actualizar miniatura");
     }
 
     return response.data.video;

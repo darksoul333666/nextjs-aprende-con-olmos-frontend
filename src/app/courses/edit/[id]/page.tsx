@@ -111,7 +111,10 @@ export default function EditCoursePage() {
   const router = useRouter();
   const params = useParams();
   const courseId = params.id as string;
+  const courseThumbnailInputRef = useRef<HTMLInputElement | null>(null);
   const videoFileInputRef = useRef<HTMLInputElement | null>(null);
+  const videoThumbnailInputRef = useRef<HTMLInputElement | null>(null);
+  const existingVideoThumbnailInputRef = useRef<HTMLInputElement | null>(null);
   const resourceFileInputRef = useRef<HTMLInputElement | null>(null);
   const [course, setCourse] = useState<Course | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -119,6 +122,10 @@ export default function EditCoursePage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [editMode, setEditMode] = useState(false);
+  const [courseThumbnailFile, setCourseThumbnailFile] = useState<File | null>(
+    null,
+  );
+  const [courseThumbnailPreview, setCourseThumbnailPreview] = useState("");
   const [showAddSectionDialog, setShowAddSectionDialog] = useState(false);
   const [showAddVideoDialog, setShowAddVideoDialog] = useState(false);
   const [selectedSection, setSelectedSection] =
@@ -127,7 +134,9 @@ export default function EditCoursePage() {
   const [newVideoTitle, setNewVideoTitle] = useState("");
   const [newVideoDescription, setNewVideoDescription] = useState("");
   const [newVideoFile, setNewVideoFile] = useState<File | null>(null);
-  const [newVideoThumbnail, setNewVideoThumbnail] = useState("");
+  const [newVideoThumbnailFile, setNewVideoThumbnailFile] =
+    useState<File | null>(null);
+  const [newVideoThumbnailPreview, setNewVideoThumbnailPreview] = useState("");
   const [newVideoMinutes, setNewVideoMinutes] = useState("");
   const [newVideoSeconds, setNewVideoSeconds] = useState("");
   const [isReadingVideoDuration, setIsReadingVideoDuration] = useState(false);
@@ -158,6 +167,17 @@ export default function EditCoursePage() {
   } | null>(null);
   const [replacementVideoFile, setReplacementVideoFile] =
     useState<File | null>(null);
+  const [showUpdateThumbnailDialog, setShowUpdateThumbnailDialog] =
+    useState(false);
+  const [videoToUpdateThumbnail, setVideoToUpdateThumbnail] = useState<{
+    sectionId: string;
+    videoId: string;
+    title: string;
+    currentThumbnail?: string;
+  } | null>(null);
+  const [updatedThumbnailFile, setUpdatedThumbnailFile] =
+    useState<File | null>(null);
+  const [updatedThumbnailPreview, setUpdatedThumbnailPreview] = useState("");
   const [activeStep, setActiveStep] = useState(0);
 
   const [formData, setFormData] = useState<Partial<CreateCourseRequest>>({
@@ -170,6 +190,8 @@ export default function EditCoursePage() {
   const syncCourseState = useCallback((courseData: Course) => {
     setCourse(courseData);
     setEvaluations(courseData.evaluations || []);
+    setCourseThumbnailFile(null);
+    setCourseThumbnailPreview(courseData.thumbnail || "");
     setFormData({
       title: courseData.title,
       description: courseData.description,
@@ -190,7 +212,8 @@ export default function EditCoursePage() {
     setNewVideoTitle("");
     setNewVideoDescription("");
     setNewVideoFile(null);
-    setNewVideoThumbnail("");
+    setNewVideoThumbnailFile(null);
+    setNewVideoThumbnailPreview("");
     setNewVideoMinutes("");
     setNewVideoSeconds("");
     setIsReadingVideoDuration(false);
@@ -335,6 +358,38 @@ export default function EditCoursePage() {
     } finally {
       setIsReadingVideoDuration(false);
     }
+  };
+
+  const handleVideoThumbnailFileChange = (file: File | null) => {
+    if (file && !file.type.startsWith("image/")) {
+      setError("Selecciona una imagen válida para la miniatura");
+      return;
+    }
+
+    setNewVideoThumbnailFile(file);
+    setNewVideoThumbnailPreview(file ? URL.createObjectURL(file) : "");
+  };
+
+  const handleCourseThumbnailFileChange = (file: File | null) => {
+    if (file && !file.type.startsWith("image/")) {
+      setError("Selecciona una imagen válida para la miniatura del curso");
+      return;
+    }
+
+    setCourseThumbnailFile(file);
+    setCourseThumbnailPreview(
+      file ? URL.createObjectURL(file) : course?.thumbnail || "",
+    );
+  };
+
+  const handleUpdatedThumbnailFileChange = (file: File | null) => {
+    if (file && !file.type.startsWith("image/")) {
+      setError("Selecciona una imagen válida para la miniatura");
+      return;
+    }
+
+    setUpdatedThumbnailFile(file);
+    setUpdatedThumbnailPreview(file ? URL.createObjectURL(file) : "");
   };
 
   const handleVideoDrop = (event: React.DragEvent<HTMLDivElement>) => {
@@ -730,6 +785,30 @@ export default function EditCoursePage() {
     }
   }, [courseId, syncCourseState]);
 
+  useEffect(() => {
+    return () => {
+      if (newVideoThumbnailPreview.startsWith("blob:")) {
+        URL.revokeObjectURL(newVideoThumbnailPreview);
+      }
+    };
+  }, [newVideoThumbnailPreview]);
+
+  useEffect(() => {
+    return () => {
+      if (courseThumbnailPreview.startsWith("blob:")) {
+        URL.revokeObjectURL(courseThumbnailPreview);
+      }
+    };
+  }, [courseThumbnailPreview]);
+
+  useEffect(() => {
+    return () => {
+      if (updatedThumbnailPreview.startsWith("blob:")) {
+        URL.revokeObjectURL(updatedThumbnailPreview);
+      }
+    };
+  }, [updatedThumbnailPreview]);
+
   const handleInputChange =
     (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
       setFormData((prev) => ({
@@ -747,11 +826,20 @@ export default function EditCoursePage() {
 
       if (!course) return;
 
-      const updatedCourse = await courseService.updateCourse(courseId, {
+      let updatedCourse = await courseService.updateCourse(courseId, {
         title: formData.title,
         description: formData.description,
         price: formData.price,
       });
+
+      if (updatedCourse && courseThumbnailFile) {
+        const courseWithThumbnail = await courseService.updateCourseThumbnail({
+          courseId,
+          thumbnail: courseThumbnailFile,
+        });
+        updatedCourse = (await refreshCourse()) || courseWithThumbnail;
+      }
+
       if (updatedCourse) {
         syncCourseState(updatedCourse);
         setEditMode(false);
@@ -896,7 +984,7 @@ export default function EditCoursePage() {
         description: newVideoDescription.trim(),
         duration: totalSeconds,
         order: (selectedSection.videos?.length || 0) + 1,
-        thumbnail: newVideoThumbnail.trim() || undefined,
+        thumbnail: newVideoThumbnailFile || undefined,
       });
 
       const refreshedCourse = await refreshCourse();
@@ -1093,6 +1181,62 @@ export default function EditCoursePage() {
     }
   };
 
+  const handleOpenUpdateThumbnailDialog = (
+    section: EditableSection,
+    video: EditableVideo,
+  ) => {
+    if (!section._id || !video._id) {
+      setError("No se encontró el identificador del video para editar miniatura");
+      return;
+    }
+
+    setVideoToUpdateThumbnail({
+      sectionId: section._id,
+      videoId: video._id,
+      title: video.title,
+      currentThumbnail: video.thumbnail,
+    });
+    setUpdatedThumbnailFile(null);
+    setUpdatedThumbnailPreview(video.thumbnail || "");
+    setShowUpdateThumbnailDialog(true);
+  };
+
+  const handleUpdateVideoThumbnail = async () => {
+    if (!videoToUpdateThumbnail || !updatedThumbnailFile) {
+      setError("Selecciona una imagen para actualizar la miniatura");
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setError("");
+      setSuccess("");
+
+      await courseService.updateVideoThumbnail({
+        courseId,
+        sectionId: videoToUpdateThumbnail.sectionId,
+        videoId: videoToUpdateThumbnail.videoId,
+        thumbnail: updatedThumbnailFile,
+      });
+
+      const refreshedCourse = await refreshCourse();
+      if (refreshedCourse) {
+        setSuccess("Miniatura actualizada correctamente");
+      } else {
+        setError("Miniatura actualizada, pero no se pudo refrescar el curso");
+      }
+
+      setShowUpdateThumbnailDialog(false);
+      setVideoToUpdateThumbnail(null);
+      setUpdatedThumbnailFile(null);
+      setUpdatedThumbnailPreview("");
+    } catch (error) {
+      setError(getErrorMessage(error, "Error al actualizar la miniatura"));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const formatDuration = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -1250,6 +1394,102 @@ export default function EditCoursePage() {
               </Box>
 
               <Box display="flex" flexDirection="column" gap={3}>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                    Miniatura del curso
+                  </Typography>
+                  <Box
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => {
+                      if (editMode && !isSaving) {
+                        courseThumbnailInputRef.current?.click();
+                      }
+                    }}
+                    onKeyDown={(event) => {
+                      if (
+                        (event.key === "Enter" || event.key === " ") &&
+                        editMode &&
+                        !isSaving
+                      ) {
+                        event.preventDefault();
+                        courseThumbnailInputRef.current?.click();
+                      }
+                    }}
+                    sx={{
+                      border: "2px dashed",
+                      borderColor: editMode ? "divider" : "transparent",
+                      borderRadius: 2,
+                      cursor: editMode && !isSaving ? "pointer" : "default",
+                      overflow: "hidden",
+                      textAlign: "center",
+                      bgcolor: "background.paper",
+                    }}
+                  >
+                    {courseThumbnailPreview ? (
+                      <Box
+                        component="img"
+                        src={courseThumbnailPreview}
+                        alt="Miniatura del curso"
+                        sx={{
+                          display: "block",
+                          width: "100%",
+                          maxHeight: 280,
+                          objectFit: "cover",
+                        }}
+                      />
+                    ) : (
+                      <Box sx={{ p: 4 }}>
+                        <Image color="primary" sx={{ fontSize: 48, mb: 1 }} />
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                          {editMode
+                            ? "Selecciona una imagen para el curso"
+                            : "Sin miniatura configurada"}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Formatos recomendados: JPG, PNG o WebP.
+                        </Typography>
+                      </Box>
+                    )}
+                    <input
+                      ref={courseThumbnailInputRef}
+                      hidden
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) =>
+                        handleCourseThumbnailFileChange(
+                          e.target.files?.[0] ?? null,
+                        )
+                      }
+                    />
+                  </Box>
+                  {editMode && (
+                    <Box
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="space-between"
+                      gap={2}
+                      sx={{ mt: 1 }}
+                    >
+                      <Typography variant="caption" color="text.secondary">
+                        {courseThumbnailFile
+                          ? `Nueva miniatura: ${courseThumbnailFile.name}`
+                          : "Haz click en el recuadro para seleccionar una imagen."}
+                      </Typography>
+                      {courseThumbnailFile && (
+                        <Button
+                          size="small"
+                          color="inherit"
+                          onClick={() => handleCourseThumbnailFileChange(null)}
+                          disabled={isSaving}
+                        >
+                          Quitar
+                        </Button>
+                      )}
+                    </Box>
+                  )}
+                </Box>
+
                 <TextField
                   fullWidth
                   label="Título del Curso"
@@ -1443,6 +1683,20 @@ export default function EditCoursePage() {
                                     }
                                   />
                                   <ListItemSecondaryAction>
+                                    <IconButton
+                                      edge="end"
+                                      size="small"
+                                      onClick={() =>
+                                        handleOpenUpdateThumbnailDialog(
+                                          section as EditableSection,
+                                          video as EditableVideo,
+                                        )
+                                      }
+                                      disabled={isSaving}
+                                      color="primary"
+                                    >
+                                      <Image />
+                                    </IconButton>
                                     <IconButton
                                       edge="end"
                                       size="small"
@@ -2433,14 +2687,89 @@ export default function EditCoursePage() {
             onChange={(e) => setNewVideoDescription(e.target.value)}
             sx={{ mb: 2 }}
           />
-          <TextField
-            fullWidth
-            label="Miniatura (opcional)"
-            value={newVideoThumbnail}
-            onChange={(e) => setNewVideoThumbnail(e.target.value)}
-            placeholder="https://example.com/thumbnail.jpg"
-            sx={{ mb: 2 }}
-          />
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+              Miniatura del video (opcional)
+            </Typography>
+            <Box
+              role="button"
+              tabIndex={0}
+              onClick={() => {
+                if (!isSaving) {
+                  videoThumbnailInputRef.current?.click();
+                }
+              }}
+              onKeyDown={(event) => {
+                if ((event.key === "Enter" || event.key === " ") && !isSaving) {
+                  event.preventDefault();
+                  videoThumbnailInputRef.current?.click();
+                }
+              }}
+              sx={{
+                border: "2px dashed",
+                borderColor: "divider",
+                borderRadius: 2,
+                cursor: isSaving ? "not-allowed" : "pointer",
+                overflow: "hidden",
+                textAlign: "center",
+                bgcolor: "background.paper",
+              }}
+            >
+              {newVideoThumbnailPreview ? (
+                <Box
+                  component="img"
+                  src={newVideoThumbnailPreview}
+                  alt="Vista previa de miniatura"
+                  sx={{
+                    display: "block",
+                    width: "100%",
+                    maxHeight: 220,
+                    objectFit: "cover",
+                  }}
+                />
+              ) : (
+                <Box sx={{ p: 3 }}>
+                  <Image color="primary" sx={{ fontSize: 42, mb: 1 }} />
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    Selecciona una imagen para la miniatura
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Formatos recomendados: JPG, PNG o WebP.
+                  </Typography>
+                </Box>
+              )}
+              <input
+                ref={videoThumbnailInputRef}
+                hidden
+                type="file"
+                accept="image/*"
+                onChange={(e) =>
+                  handleVideoThumbnailFileChange(e.target.files?.[0] ?? null)
+                }
+              />
+            </Box>
+            {newVideoThumbnailFile && (
+              <Box
+                display="flex"
+                alignItems="center"
+                justifyContent="space-between"
+                gap={2}
+                sx={{ mt: 1 }}
+              >
+                <Typography variant="caption" color="text.secondary">
+                  Miniatura seleccionada: {newVideoThumbnailFile.name}
+                </Typography>
+                <Button
+                  size="small"
+                  color="inherit"
+                  onClick={() => handleVideoThumbnailFileChange(null)}
+                  disabled={isSaving}
+                >
+                  Quitar
+                </Button>
+              </Box>
+            )}
+          </Box>
           <Box sx={{ display: "flex", gap: 2 }}>
             <TextField
               fullWidth
@@ -2713,6 +3042,115 @@ export default function EditCoursePage() {
             }
           >
             {isSaving ? "Reemplazando..." : "Reemplazar"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={showUpdateThumbnailDialog}
+        onClose={() => {
+          if (!isSaving) {
+            setShowUpdateThumbnailDialog(false);
+            setVideoToUpdateThumbnail(null);
+            setUpdatedThumbnailFile(null);
+            setUpdatedThumbnailPreview("");
+          }
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Editar miniatura</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Selecciona una nueva imagen para &quot;
+            {videoToUpdateThumbnail?.title}&quot;.
+          </Typography>
+          <Box
+            role="button"
+            tabIndex={0}
+            onClick={() => {
+              if (!isSaving) {
+                existingVideoThumbnailInputRef.current?.click();
+              }
+            }}
+            onKeyDown={(event) => {
+              if ((event.key === "Enter" || event.key === " ") && !isSaving) {
+                event.preventDefault();
+                existingVideoThumbnailInputRef.current?.click();
+              }
+            }}
+            sx={{
+              border: "2px dashed",
+              borderColor: "divider",
+              borderRadius: 2,
+              cursor: isSaving ? "not-allowed" : "pointer",
+              overflow: "hidden",
+              textAlign: "center",
+              bgcolor: "background.paper",
+            }}
+          >
+            {updatedThumbnailPreview ? (
+              <Box
+                component="img"
+                src={updatedThumbnailPreview}
+                alt="Vista previa de miniatura"
+                sx={{
+                  display: "block",
+                  width: "100%",
+                  maxHeight: 240,
+                  objectFit: "cover",
+                }}
+              />
+            ) : (
+              <Box sx={{ p: 3 }}>
+                <Image color="primary" sx={{ fontSize: 42, mb: 1 }} />
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  Selecciona una imagen
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Formatos recomendados: JPG, PNG o WebP.
+                </Typography>
+              </Box>
+            )}
+            <input
+              ref={existingVideoThumbnailInputRef}
+              hidden
+              type="file"
+              accept="image/*"
+              onChange={(e) =>
+                handleUpdatedThumbnailFileChange(e.target.files?.[0] ?? null)
+              }
+            />
+          </Box>
+          {updatedThumbnailFile && (
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ mt: 1, display: "block" }}
+            >
+              Nueva miniatura: {updatedThumbnailFile.name}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setShowUpdateThumbnailDialog(false);
+              setVideoToUpdateThumbnail(null);
+              setUpdatedThumbnailFile(null);
+              setUpdatedThumbnailPreview("");
+            }}
+            disabled={isSaving}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleUpdateVideoThumbnail}
+            variant="contained"
+            disabled={isSaving || !updatedThumbnailFile}
+            startIcon={isSaving ? <CircularProgress size={20} /> : <Image />}
+          >
+            {isSaving ? "Guardando..." : "Guardar miniatura"}
           </Button>
         </DialogActions>
       </Dialog>

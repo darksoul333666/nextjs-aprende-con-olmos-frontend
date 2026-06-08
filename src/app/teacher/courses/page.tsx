@@ -477,16 +477,31 @@ export default function TeacherCoursesPage() {
                         <Box
                           sx={{
                             height: 200,
-                            background:
-                              "linear-gradient(45deg, #667eea 30%, #764ba2 90%)",
+                            background: course.thumbnail
+                              ? "transparent"
+                              : "linear-gradient(45deg, #667eea 30%, #764ba2 90%)",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
                             color: "white",
                             position: "relative",
+                            overflow: "hidden",
                           }}
                         >
-                          <School sx={{ fontSize: 60 }} />
+                          {course.thumbnail ? (
+                            <Box
+                              component="img"
+                              src={course.thumbnail}
+                              alt={course.title}
+                              sx={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                              }}
+                            />
+                          ) : (
+                            <School sx={{ fontSize: 60 }} />
+                          )}
                           <Chip
                             label={`$${course.price || 0}`}
                             color="primary"
