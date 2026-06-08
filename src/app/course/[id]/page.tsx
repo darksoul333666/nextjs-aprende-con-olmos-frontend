@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Container,
   CircularProgress,
@@ -12,7 +12,7 @@ import {
 import { Edit } from "@mui/icons-material";
 import { CoursePlayer } from "../../components/CoursePlayer/CoursePlayer";
 import { courseService, Course } from "../../services/courseService";
-import { progressService } from "../../services/progressService";
+import { CourseProgress, progressService } from "../../services/progressService";
 import { useAuth } from "../../contexts/AuthContext";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Navbar } from "../../components/Navigation/Navbar";
@@ -24,12 +24,122 @@ export default function CoursePage() {
   const courseId = params.id as string;
   const { isAuthenticated, user } = useAuth();
   const [course, setCourse] = useState<Course | null>(null);
+  const [initialVideoId, setInitialVideoId] = useState<string | undefined>();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
 
   // Detectar si está en modo preview
   const isPreviewMode = searchParams.get("preview") === "true";
+
+  const getEntityId = useCallback((value: unknown) => {
+    if (!value) {
+      return "";
+    }
+
+    if (typeof value === "string") {
+      return value;
+    }
+
+    if (typeof value === "object") {
+      const record = value as Record<string, unknown>;
+      return String(record._id || record.id || "");
+    }
+
+    return String(value);
+  }, []);
+
+  const applyProgressToCourse = useCallback(
+    (courseData: Course, progress: CourseProgress): Course => {
+      const completedVideoIds = new Set(
+        (progress.completedVideos || []).map((videoId) => getEntityId(videoId)),
+      );
+      const videoProgressById = new Map(
+        (progress.videoProgress || []).map((item) => [
+          getEntityId(item.videoId),
+          item,
+        ]),
+      );
+      const completedEvaluationIds = new Set(
+        (progress.completedEvaluations || []).map((evaluationId) =>
+          getEntityId(evaluationId),
+        ),
+      );
+      const passedEvaluationIds = new Set(
+        (progress.evaluationAttempts || [])
+          .filter((attempt) => attempt.passed)
+          .map((attempt) => getEntityId(attempt.evaluationId)),
+      );
+
+      return {
+        ...courseData,
+        sections: courseData.sections.map((section) => ({
+          ...section,
+          videos: section.videos.map((video) => {
+            const persistedProgress = videoProgressById.get(video._id);
+            const isCompleted =
+              video.isCompleted ||
+              completedVideoIds.has(video._id) ||
+              persistedProgress?.completed ||
+              persistedProgress?.progress === 1;
+
+            return {
+              ...video,
+              isCompleted,
+              progress: persistedProgress?.progress ?? video.progress ?? 0,
+            };
+          }),
+        })),
+        evaluations: courseData.evaluations?.map((evaluation) => ({
+          ...evaluation,
+          isCompleted:
+            evaluation.isCompleted ||
+            completedEvaluationIds.has(evaluation._id) ||
+            passedEvaluationIds.has(evaluation._id),
+        })),
+      };
+    },
+    [getEntityId],
+  );
+
+  const getResumeVideoId = useCallback(
+    (courseData: Course, progress?: CourseProgress): string | undefined => {
+      const videos = courseData.sections.flatMap(
+        (section) => section.videos || [],
+      );
+      if (!videos.length) {
+        return undefined;
+      }
+
+      const existingVideoIds = new Set(videos.map((video) => video._id));
+      const backendVideoId =
+        getEntityId(progress?.currentVideoId) ||
+        getEntityId(progress?.lastVideoId);
+
+      if (backendVideoId && existingVideoIds.has(backendVideoId)) {
+        return backendVideoId;
+      }
+
+      const latestProgressVideo = [...(progress?.videoProgress || [])]
+        .filter((item) => existingVideoIds.has(getEntityId(item.videoId)))
+        .sort((a, b) => {
+          const aDate = a.lastWatchedAt
+            ? new Date(a.lastWatchedAt).getTime()
+            : 0;
+          const bDate = b.lastWatchedAt
+            ? new Date(b.lastWatchedAt).getTime()
+            : 0;
+          return bDate - aDate;
+        })[0];
+
+      if (latestProgressVideo) {
+        return getEntityId(latestProgressVideo.videoId);
+      }
+
+      return videos.find((video) => !video.isCompleted)?._id || videos[0]._id;
+    },
+    [getEntityId],
+  );
 
   // Handle SSR - only render after mount
   useEffect(() => {
@@ -42,6 +152,23 @@ export default function CoursePage() {
         setIsLoading(true);
         setError(null);
         const courseData = await courseService.getCourse(courseId);
+        if (!courseData) {
+          setCourse(null);
+          setInitialVideoId(undefined);
+          return;
+        }
+
+        if (isAuthenticated && !isPreviewMode) {
+          try {
+            const progress = await progressService.getCourseProgress(courseId);
+            const courseWithProgress = applyProgressToCourse(courseData, progress);
+            setInitialVideoId(getResumeVideoId(courseWithProgress, progress));
+            setCourse(courseWithProgress);
+            return;
+          } catch {}
+        }
+
+        setInitialVideoId(getResumeVideoId(courseData));
         setCourse(courseData);
       } catch {
         setError("No se pudo cargar el curso");
@@ -53,7 +180,13 @@ export default function CoursePage() {
     if (courseId) {
       fetchCourse();
     }
-  }, [courseId]);
+  }, [
+    applyProgressToCourse,
+    courseId,
+    getResumeVideoId,
+    isAuthenticated,
+    isPreviewMode,
+  ]);
 
   const handleVideoComplete = async (videoId: string) => {
     // No guardar progreso en modo preview
@@ -61,6 +194,21 @@ export default function CoursePage() {
 
     try {
       await progressService.markVideoCompleted(course._id, videoId);
+      setCourse((prev) =>
+        prev
+          ? {
+              ...prev,
+              sections: prev.sections.map((section) => ({
+                ...section,
+                videos: section.videos.map((video) =>
+                  video._id === videoId
+                    ? { ...video, isCompleted: true, progress: 1 }
+                    : video,
+                ),
+              })),
+            }
+          : prev,
+      );
     } catch {}
   };
 
@@ -157,6 +305,7 @@ export default function CoursePage() {
         <CoursePlayer
           course={course}
           isPreviewMode={isPreviewMode}
+          initialVideoId={initialVideoId}
           onVideoComplete={handleVideoComplete}
           onVideoProgress={handleVideoProgress}
         />

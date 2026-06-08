@@ -7,6 +7,11 @@ export interface CourseProgress {
   completedVideos: string[];
   progress: number;
   lastAccessedAt: string;
+  currentVideoId?: string;
+  lastVideoId?: string;
+  videoProgress?: VideoProgress[];
+  completedEvaluations?: string[];
+  evaluationAttempts?: EvaluationAttempt[];
 }
 
 export interface VideoProgress {
@@ -14,6 +19,13 @@ export interface VideoProgress {
   completed: boolean;
   progress: number;
   lastWatchedAt?: string;
+}
+
+export interface EvaluationAttempt {
+  evaluationId: string;
+  score: number;
+  passed: boolean;
+  completedAt: string;
 }
 
 class ProgressService {

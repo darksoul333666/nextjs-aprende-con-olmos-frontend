@@ -9,6 +9,7 @@ export interface Video {
   duration: number;
   thumbnail?: string;
   order: number;
+  progress?: number;
   isCompleted?: boolean;
   isLocked?: boolean;
 }
@@ -254,6 +255,7 @@ class CourseService {
       duration: (video.duration as number) || 0,
       thumbnail: video.thumbnail as string,
       order: (video.order as number) || 0,
+      progress: (video.progress as number) || 0,
       isCompleted: (video.isCompleted as boolean) || false,
       isLocked: (video.isLocked as boolean) || false,
     };

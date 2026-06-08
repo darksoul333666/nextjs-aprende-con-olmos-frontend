@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useRef } from "react";
 import {
   Box,
   Paper,
@@ -61,6 +61,7 @@ import {
 interface CoursePlayerProps {
   course: Course;
   isPreviewMode?: boolean;
+  initialVideoId?: string;
   onVideoComplete?: (videoId: string) => void;
   onVideoProgress?: (videoId: string, progress: number) => void;
   className?: string;
@@ -69,6 +70,7 @@ interface CoursePlayerProps {
 export const CoursePlayer: React.FC<CoursePlayerProps> = ({
   course,
   isPreviewMode = false,
+  initialVideoId,
   onVideoComplete,
   onVideoProgress,
   className,
@@ -97,6 +99,13 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
     CourseEvaluation[]
   >([]);
   const [isSubmittingEvaluation, setIsSubmittingEvaluation] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showStatsPanel, setShowStatsPanel] = useState(false);
+  const [resourcesDialogOpen, setResourcesDialogOpen] = useState(false);
+  const lastPersistedProgressRef = useRef<
+    Record<string, { progress: number; savedAt: number }>
+  >({});
 
   // Get all videos from all sections
   const allVideos = useMemo(() => {
@@ -120,11 +129,9 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
   // Get current video
   const currentVideo = useMemo(() => {
     if (!currentVideoId) {
-      return allVideos[0];
+      return undefined;
     }
-    return (
-      allVideos.find((video) => video._id === currentVideoId) || allVideos[0]
-    );
+    return allVideos.find((video) => video._id === currentVideoId);
   }, [currentVideoId, allVideos]);
 
   // Debug: Log current video info
@@ -267,6 +274,53 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
     [getVideoEvaluations, isEvaluationCompleted],
   );
 
+  const normalizedSearchTerm = searchTerm.trim().toLowerCase();
+  const matchesSearch = useCallback(
+    (...values: Array<string | undefined>) => {
+      if (!normalizedSearchTerm) {
+        return true;
+      }
+
+      return values.some((value) =>
+        (value || "").toLowerCase().includes(normalizedSearchTerm),
+      );
+    },
+    [normalizedSearchTerm],
+  );
+
+  const visibleSections = useMemo(() => {
+    if (!course?.sections || !Array.isArray(course.sections)) {
+      return [];
+    }
+
+    if (!normalizedSearchTerm) {
+      return course.sections;
+    }
+
+    return course.sections.filter((section) => {
+      const sectionMatches = matchesSearch(section.title, section.description);
+      const videosMatch = (section.videos || []).some((video) =>
+        matchesSearch(video.title, video.description),
+      );
+      const resourcesMatch = (section.resources || []).some((resource) =>
+        matchesSearch(resource.title, resource.description, resource.fileName),
+      );
+      const evaluationsMatch = allEvaluations.some(
+        (evaluation) =>
+          getEntityId(evaluation.sectionId) === section._id &&
+          matchesSearch(evaluation.title, evaluation.description),
+      );
+
+      return sectionMatches || videosMatch || resourcesMatch || evaluationsMatch;
+    });
+  }, [
+    allEvaluations,
+    course?.sections,
+    getEntityId,
+    matchesSearch,
+    normalizedSearchTerm,
+  ]);
+
   const openEvaluation = useCallback((evaluation: CourseEvaluation) => {
     setActiveEvaluation(evaluation);
     setEvaluationAnswers({});
@@ -376,7 +430,23 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
           ...prev,
           [currentVideo._id]: progress,
         }));
-        onVideoProgress?.(currentVideo._id, progress);
+
+        const lastPersisted = lastPersistedProgressRef.current[
+          currentVideo._id
+        ] || { progress: 0, savedAt: 0 };
+        const now = Date.now();
+        const enoughTimePassed = now - lastPersisted.savedAt >= 10000;
+        const enoughProgressChanged =
+          progress > lastPersisted.progress &&
+          Math.abs(progress - lastPersisted.progress) >= 0.05;
+
+        if (enoughTimePassed || enoughProgressChanged || progress >= 0.95) {
+          lastPersistedProgressRef.current[currentVideo._id] = {
+            progress,
+            savedAt: now,
+          };
+          onVideoProgress?.(currentVideo._id, progress);
+        }
 
         if (!activeEvaluation) {
           const currentSecond = currentVideo.duration * progress;
@@ -417,6 +487,10 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
     if (currentVideo) {
       // Mark video as completed
       currentVideo.isCompleted = true;
+      lastPersistedProgressRef.current[currentVideo._id] = {
+        progress: 1,
+        savedAt: Date.now(),
+      };
       onVideoComplete?.(currentVideo._id);
 
       const blockingEvaluation = getBlockingEvaluation(
@@ -456,11 +530,55 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
   // Expand all sections initially
   React.useEffect(() => {
     if (course?.sections && Array.isArray(course.sections)) {
+      const videos = course.sections.flatMap((section) => section.videos || []);
+      const persistedProgress = Object.fromEntries(
+        videos
+          .filter((video) => video.progress && video.progress > 0)
+          .map((video) => [video._id, video.progress || 0]),
+      );
+
       setExpandedSections(
         new Set(course.sections.map((section) => section._id)),
       );
+      setVideoProgress(persistedProgress);
+      lastPersistedProgressRef.current = Object.fromEntries(
+        videos.map((video) => [
+          video._id,
+          { progress: video.progress || 0, savedAt: Date.now() },
+        ]),
+      );
+
+      setCurrentVideoId((previousVideoId) => {
+        if (
+          previousVideoId &&
+          videos.some((video) => video._id === previousVideoId)
+        ) {
+          return previousVideoId;
+        }
+
+        const initialVideo = videos.find(
+          (video) => video._id === initialVideoId && !video.isLocked,
+        );
+        const inProgressVideo = videos.find((video) => {
+          const progress = video.progress || 0;
+          return progress > 0 && progress < 1 && !video.isLocked;
+        });
+        const firstIncompleteVideo = videos.find(
+          (video) => !video.isCompleted && !video.isLocked,
+        );
+        const firstUnlockedVideo = videos.find((video) => !video.isLocked);
+
+        return (
+          initialVideo?._id ||
+          inProgressVideo?._id ||
+          firstIncompleteVideo?._id ||
+          firstUnlockedVideo?._id ||
+          videos[0]?._id ||
+          null
+        );
+      });
     }
-  }, [course?.sections]);
+  }, [course?.sections, initialVideoId]);
 
   React.useEffect(() => {
     const loadEvaluations = async () => {
@@ -497,6 +615,17 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
   );
   const canOpenCertification =
     allVideos.length > 0 && allVideos.every((video) => video.isCompleted);
+  const completedVideosCount = allVideos.filter((video) => video.isCompleted).length;
+  const completedEvaluationsCount = allEvaluations.filter((evaluation) =>
+    isEvaluationCompleted(evaluation),
+  ).length;
+  const remainingEvaluationsCount = Math.max(
+    0,
+    allEvaluations.length - completedEvaluationsCount,
+  );
+  const requiredRemainingEvaluationsCount = allEvaluations.filter(
+    (evaluation) => evaluation.isRequired && !isEvaluationCompleted(evaluation),
+  ).length;
 
   const handleEvaluationAnswerChange = (
     question: EvaluationQuestion,
@@ -624,8 +753,12 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
           <Box sx={{ flex: 1, p: 2, pb: 1, minHeight: 520 }}>
             {currentVideo?.url ? (
               <VideoPlayer
+                key={currentVideo._id}
                 url={currentVideo.url}
                 title={currentVideo.title}
+                initialProgress={
+                  videoProgress[currentVideo._id] || currentVideo.progress || 0
+                }
                 onNext={handleNextVideo}
                 onPrevious={handlePreviousVideo}
                 hasNext={!!nextVideo && !nextVideo.isLocked}
@@ -691,28 +824,6 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
                 </Box>
               )}
 
-            {/* Progress Bar */}
-            <Box sx={{ mb: 2 }}>
-              <Box
-                display="flex"
-                justifyContent="space-between"
-                alignItems="center"
-                mb={1}
-              >
-                <Typography variant="body2" color="text.secondary">
-                  Progreso del curso
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {Math.round(courseProgress)}%
-                </Typography>
-              </Box>
-              <LinearProgress
-                variant="determinate"
-                value={courseProgress}
-                sx={{ height: 8, borderRadius: 4 }}
-              />
-            </Box>
-
             {/* Navigation Buttons */}
             <Box display="flex" gap={2}>
               <Button
@@ -759,38 +870,138 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
             >
               <Typography variant="h6">Contenido del curso</Typography>
               <Box display="flex" gap={1}>
-                <IconButton size="small">
+                <IconButton
+                  size="small"
+                  color={isSearchOpen ? "primary" : "default"}
+                  onClick={() => setIsSearchOpen((prev) => !prev)}
+                >
                   <Search />
                 </IconButton>
-                <IconButton size="small">
+                <IconButton
+                  size="small"
+                  color={showStatsPanel ? "primary" : "default"}
+                  onClick={() => setShowStatsPanel((prev) => !prev)}
+                >
                   <Assessment />
                 </IconButton>
               </Box>
             </Box>
             <Box display="flex" alignItems="center" gap={1}>
               <Typography variant="body2" color="text.secondary">
-                {allVideos.filter((v) => v.isCompleted).length} de{" "}
-                {allVideos.length} lecciones completadas •{" "}
+                {completedVideosCount} de {allVideos.length} lecciones
+                completadas •{" "}
                 {allResources.length} recursos
               </Typography>
             </Box>
+            {isSearchOpen && (
+              <TextField
+                fullWidth
+                size="small"
+                placeholder="Buscar lecciones, recursos o evaluaciones..."
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                sx={{ mt: 2 }}
+                InputProps={{
+                  startAdornment: <Search fontSize="small" sx={{ mr: 1 }} />,
+                }}
+              />
+            )}
+            {showStatsPanel && (
+              <Paper variant="outlined" sx={{ mt: 2, p: 2 }}>
+                <Box display="flex" justifyContent="space-between" mb={1}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                    Progreso general
+                  </Typography>
+                  <Typography variant="subtitle2" color="primary">
+                    {Math.round(courseProgress)}%
+                  </Typography>
+                </Box>
+                <LinearProgress
+                  variant="determinate"
+                  value={courseProgress}
+                  sx={{ height: 8, borderRadius: 4, mb: 2 }}
+                />
+                <Box display="flex" flexDirection="column" gap={1}>
+                  <Box display="flex" justifyContent="space-between">
+                    <Typography variant="body2" color="text.secondary">
+                      Lecciones completadas
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {completedVideosCount}/{allVideos.length}
+                    </Typography>
+                  </Box>
+                  <Box display="flex" justifyContent="space-between">
+                    <Typography variant="body2" color="text.secondary">
+                      Evaluaciones completadas
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {completedEvaluationsCount}/{allEvaluations.length}
+                    </Typography>
+                  </Box>
+                  <Box display="flex" justifyContent="space-between">
+                    <Typography variant="body2" color="text.secondary">
+                      Evaluaciones restantes
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {remainingEvaluationsCount}
+                    </Typography>
+                  </Box>
+                  <Box display="flex" justifyContent="space-between">
+                    <Typography variant="body2" color="text.secondary">
+                      Obligatorias pendientes
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      color={
+                        requiredRemainingEvaluationsCount > 0
+                          ? "error"
+                          : "success.main"
+                      }
+                      sx={{ fontWeight: 600 }}
+                    >
+                      {requiredRemainingEvaluationsCount}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Paper>
+            )}
           </Box>
 
           {/* Course Sections */}
           <Box sx={{ flex: 1, overflow: "auto" }}>
-            {course?.sections && Array.isArray(course.sections) ? (
-              course.sections.map((section) => (
-                <Accordion
-                  key={section._id}
-                  expanded={expandedSections.has(section._id)}
-                  onChange={() => handleSectionToggle(section._id)}
-                  sx={{
-                    "&:before": { display: "none" },
-                    boxShadow: "none",
-                    borderBottom: 1,
-                    borderColor: "divider",
-                  }}
-                >
+            {visibleSections.length > 0 ? (
+              visibleSections.map((section) => {
+                const sectionMatches = matchesSearch(
+                  section.title,
+                  section.description,
+                );
+                const visibleVideos = (section.videos || []).filter(
+                  (video) =>
+                    sectionMatches ||
+                    matchesSearch(video.title, video.description),
+                );
+                const visibleResources = (section.resources || []).filter(
+                  (resource) =>
+                    sectionMatches ||
+                    matchesSearch(
+                      resource.title,
+                      resource.description,
+                      resource.fileName,
+                    ),
+                );
+
+                return (
+                  <Accordion
+                    key={section._id}
+                    expanded={expandedSections.has(section._id)}
+                    onChange={() => handleSectionToggle(section._id)}
+                    sx={{
+                      "&:before": { display: "none" },
+                      boxShadow: "none",
+                      borderBottom: 1,
+                      borderColor: "divider",
+                    }}
+                  >
                   <AccordionSummary
                     expandIcon={<ExpandMore />}
                     sx={{
@@ -833,7 +1044,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
                   </AccordionSummary>
                   <AccordionDetails sx={{ p: 0 }}>
                     <List dense sx={{ p: 0 }}>
-                      {(section.videos || []).map((video) => {
+                      {visibleVideos.map((video) => {
                         const isCurrentVideo = video._id === currentVideo?._id;
                         const progress = videoProgress[video._id] || 0;
 
@@ -909,7 +1120,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
                         );
                       })}
                     </List>
-                    {(section.resources || []).length > 0 && (
+                    {visibleResources.length > 0 && (
                       <Box sx={{ borderTop: 1, borderColor: "divider" }}>
                         <Typography
                           variant="caption"
@@ -926,7 +1137,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
                           Recursos descargables
                         </Typography>
                         <List dense sx={{ p: 0 }}>
-                          {(section.resources || []).map((resource) => (
+                          {visibleResources.map((resource) => (
                             <ListItem
                               key={resource._id}
                               disablePadding
@@ -996,12 +1207,15 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
                       </Box>
                     )}
                   </AccordionDetails>
-                </Accordion>
-              ))
+                  </Accordion>
+                );
+              })
             ) : (
               <Box sx={{ p: 3, textAlign: "center" }}>
                 <Typography variant="body2" color="text.secondary">
-                  No hay contenido disponible para este curso
+                  {normalizedSearchTerm
+                    ? "No hay resultados para tu búsqueda"
+                    : "No hay contenido disponible para este curso"}
                 </Typography>
               </Box>
             )}
@@ -1030,12 +1244,69 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
               fullWidth
               size="small"
               disabled={allResources.length === 0}
+              onClick={() => setResourcesDialogOpen(true)}
             >
               Recursos del curso ({allResources.length})
             </Button>
           </Box>
         </Paper>
       </Box>
+
+      <Dialog
+        open={resourcesDialogOpen}
+        onClose={() => setResourcesDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Recursos del curso</DialogTitle>
+        <DialogContent>
+          {allResources.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              Este curso no tiene recursos disponibles.
+            </Typography>
+          ) : (
+            <List dense>
+              {allResources.map((resource) => (
+                <ListItem key={resource._id} disablePadding>
+                  <ListItemButton
+                    onClick={() => handleResourceDownload(resource)}
+                    disabled={resource.isLocked || !resource.url}
+                  >
+                    <ListItemIcon sx={{ minWidth: 40 }}>
+                      {getResourceIcon(resource)}
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={resource.title}
+                      secondary={
+                        <Box display="flex" gap={1} flexWrap="wrap">
+                          <Typography variant="caption" color="text.secondary">
+                            {getResourceTypeLabel(resource.type)}
+                          </Typography>
+                          {resource.description && (
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              {resource.description}
+                            </Typography>
+                          )}
+                        </Box>
+                      }
+                      secondaryTypographyProps={{ component: "div" }}
+                    />
+                    {!resource.isLocked && resource.url && (
+                      <Download fontSize="small" color="action" />
+                    )}
+                  </ListItemButton>
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setResourcesDialogOpen(false)}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={!!activeEvaluation}

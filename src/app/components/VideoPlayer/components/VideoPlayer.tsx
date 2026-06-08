@@ -32,6 +32,7 @@ interface VideoPlayerProps {
   hasPrevious?: boolean;
   onProgress?: (progress: number) => void;
   onEnded?: () => void;
+  initialProgress?: number;
   autoPlay?: boolean;
   showControls?: boolean;
   className?: string;
@@ -65,6 +66,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   hasPrevious = false,
   onProgress,
   onEnded,
+  initialProgress = 0,
   autoPlay = false,
   showControls = true,
   className,
@@ -72,6 +74,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // Debug: Log video URL
   const videoRef = useRef<MediaPlayerElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const hasAppliedInitialProgressRef = useRef(false);
   const [playing, setPlaying] = useState(autoPlay);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(1);
@@ -98,8 +101,30 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       setIsLoading(true);
       setIsSeeking(false); // Reset seeking state when URL changes
       setPlaying(autoPlay);
+      setCurrentTime(0);
+      setDuration(1);
+      hasAppliedInitialProgressRef.current = false;
     }
   }, [autoPlay, url]);
+
+  const applyInitialProgress = useCallback(() => {
+    const player = videoRef.current;
+    const safeInitialProgress = Math.max(0, Math.min(initialProgress, 0.95));
+
+    if (
+      !player ||
+      hasAppliedInitialProgressRef.current ||
+      safeInitialProgress <= 0 ||
+      !player.duration
+    ) {
+      return;
+    }
+
+    const startTime = player.duration * safeInitialProgress;
+    player.currentTime = startTime;
+    setCurrentTime(startTime);
+    hasAppliedInitialProgressRef.current = true;
+  }, [initialProgress]);
 
   // Handle buffering using standard ReactPlayer events
   const handleBuffer = useCallback(() => {
@@ -181,8 +206,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     if (videoRef.current) {
       setDuration(videoRef.current.duration);
       setIsLoading(false);
+      applyInitialProgress();
     }
-  }, []);
+  }, [applyInitialProgress]);
 
   // Handle ended
   const handleEnded = useCallback(() => {
@@ -307,7 +333,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       onMouseLeave={handleMouseLeave}
     >
       {isMounted ? (
-        <div>
+        <div
+          onClick={handlePlayPause}
+          style={{ width: "100%", height: "100%" }}
+        >
           {React.createElement(PlayerComponent, {
             ref: videoRef,
             width: "100%",
@@ -342,6 +371,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               if (!player) return;
 
               setDuration(player.duration);
+              applyInitialProgress();
             },
             onProgress: () => {
               const player = videoRef.current;
@@ -364,7 +394,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             },
             onCanPlay: () => {
               setIsLoading(false);
+              applyInitialProgress();
             },
+            onLoadedMetadata: handleLoadedMetadata,
           })}
         </div>
       ) : (
@@ -416,7 +448,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           }}
         >
           <IconButton
-            onClick={handlePlayPause}
+            onClick={(event) => {
+              event.stopPropagation();
+              handlePlayPause();
+            }}
             sx={{
               bgcolor: "rgba(0,0,0,0.7)",
               color: "white",
@@ -437,6 +472,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         <Fade in={showControlsOverlay}>
           <Box
             className="controls-overlay"
+            onClick={(event) => event.stopPropagation()}
             sx={{
               position: "absolute",
               bottom: 0,

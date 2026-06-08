@@ -242,7 +242,123 @@ Si el backend no incluye `course.evaluations`, el frontend intentará usar `GET 
 
 ## Persistencia de progreso
 
-Se recomienda guardar intentos:
+El reproductor del alumno necesita reconstruir sus estadísticas después de recargar la app. Para eso el backend debe persistir y devolver progreso de videos y evaluaciones.
+
+El frontend ya usa estos endpoints:
+
+```http
+GET /api/progress/:courseId
+POST /api/progress/:courseId/video/:videoId
+PATCH /api/progress/:courseId/video/:videoId
+POST /api/courses/:courseId/evaluations/:evaluationId/submit
+```
+
+### Extender `GET /api/progress/:courseId`
+
+Este endpoint ya existe y se usa en la pantalla `Mis cursos`, por lo que debe conservar los campos actuales:
+
+```ts
+{
+  _id: string;
+  userId: string;
+  courseId: string;
+  completedVideos: string[];
+  progress: number;
+  lastAccessedAt: string;
+}
+```
+
+Agregar campos nuevos opcionales para el reproductor:
+
+```ts
+{
+  videoProgress: Array<{
+    videoId: string;
+    completed: boolean;
+    progress: number; // 0 a 1
+    lastWatchedAt?: string;
+  }>;
+  completedEvaluations: string[];
+  evaluationAttempts: Array<{
+    evaluationId: string;
+    score: number;
+    passed: boolean;
+    completedAt: string;
+  }>;
+}
+```
+
+Respuesta esperada:
+
+```json
+{
+  "success": true,
+  "data": {
+    "_id": "progress_id",
+    "userId": "student_id",
+    "courseId": "course_id",
+    "completedVideos": ["video_id_1"],
+    "progress": 50,
+    "lastAccessedAt": "2026-06-08T00:00:00.000Z",
+    "videoProgress": [
+      {
+        "videoId": "video_id_1",
+        "completed": true,
+        "progress": 1,
+        "lastWatchedAt": "2026-06-08T00:00:00.000Z"
+      },
+      {
+        "videoId": "video_id_2",
+        "completed": false,
+        "progress": 0.42,
+        "lastWatchedAt": "2026-06-08T00:10:00.000Z"
+      }
+    ],
+    "completedEvaluations": ["evaluation_id_1"],
+    "evaluationAttempts": [
+      {
+        "evaluationId": "evaluation_id_1",
+        "score": 100,
+        "passed": true,
+        "completedAt": "2026-06-08T00:05:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+### Reglas para guardar progreso de videos
+
+`PATCH /api/progress/:courseId/video/:videoId`
+
+Body actual:
+
+```json
+{
+  "progress": 0.42
+}
+```
+
+Debe guardar:
+
+- `videoId`
+- `progress` entre `0` y `1`
+- `completed: false` mientras no llegue a completado
+- `lastWatchedAt`
+
+`POST /api/progress/:courseId/video/:videoId`
+
+Debe marcar el video como completado:
+
+- agregar `videoId` a `completedVideos`
+- actualizar/crear entrada en `videoProgress` con `completed: true`, `progress: 1`
+- recalcular `progress` global del curso
+
+### Reglas para guardar progreso de evaluaciones
+
+`POST /api/courses/:courseId/evaluations/:evaluationId/submit`
+
+Además de responder el resultado, debe persistir el intento:
 
 ```ts
 interface EvaluationAttempt {
@@ -260,11 +376,26 @@ interface EvaluationAttempt {
 }
 ```
 
-El endpoint de curso/evaluaciones puede devolver:
+Si `passed === true`, agregar `evaluationId` a `completedEvaluations`.
+
+Si la evaluación es opcional, también puede considerarse completada al enviarla, aunque no alcance puntaje mínimo. Si es obligatoria, debe contar como completada solo si `passed === true`.
+
+### Marcar estado en evaluaciones
+
+Cuando `GET /api/courses/:courseId/evaluations` devuelva evaluaciones para un estudiante, debe incluir:
 
 ```ts
 isCompleted: boolean;
 isLocked: boolean;
 ```
 
-para que el frontend pinte el estado correcto.
+`isCompleted` debe ser `true` si:
+
+- `evaluationId` está en `completedEvaluations`, o
+- existe un intento aprobado para esa evaluación.
+
+`isLocked` puede ser `true` cuando:
+
+- el alumno no ha comprado el curso,
+- la certificación aún no se desbloquea,
+- hay reglas de secuencia que impiden abrir esa evaluación.
