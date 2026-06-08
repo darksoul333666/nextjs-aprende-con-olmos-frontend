@@ -232,6 +232,13 @@ export default function TeacherPage() {
                 </Button>
                 <Button
                   variant="contained"
+                  startIcon={<Group />}
+                  onClick={() => router.push("/teacher/users")}
+                >
+                  Gestionar estudiantes
+                </Button>
+                <Button
+                  variant="contained"
                   startIcon={<Edit />}
                   onClick={() => router.push("/teacher/edit")}
                   sx={{

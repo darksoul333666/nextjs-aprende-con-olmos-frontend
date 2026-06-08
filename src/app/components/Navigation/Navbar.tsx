@@ -25,6 +25,7 @@ import {
   Login,
   ShoppingCart,
   LocalOffer,
+  People,
 } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../contexts/AuthContext";
@@ -129,6 +130,15 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage = "home" }) => {
                   startIcon={<LocalOffer />}
                 >
                   Promociones
+                </Button>
+                <Button
+                  color={
+                    currentPage === "teacher-users" ? "primary" : "inherit"
+                  }
+                  onClick={() => handleNavigation("/teacher/users")}
+                  startIcon={<People />}
+                >
+                  Estudiantes
                 </Button>
                 <Button
                   color={currentPage === "teacher-edit" ? "primary" : "inherit"}
