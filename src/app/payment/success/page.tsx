@@ -1,6 +1,12 @@
 "use client";
 
-import React, { Suspense, useCallback, useEffect, useState } from "react";
+import React, {
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   Container,
   Typography,
@@ -91,11 +97,18 @@ const getSession = (session: unknown): PaymentSession | undefined => {
 function PaymentSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const sessionId = searchParams.get("session_id");
   const { isAuthenticated } = useAuth();
   const { clearCart } = useCart();
+  const clearCartRef = useRef(clearCart);
+  const processedSessionRef = useRef<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [purchase, setPurchase] = useState<PaymentSummary | null>(null);
+
+  useEffect(() => {
+    clearCartRef.current = clearCart;
+  }, [clearCart]);
 
   const handlePurchaseSuccess = useCallback(
     async (purchaseData: PaymentSummary) => {
@@ -104,12 +117,12 @@ function PaymentSuccessContent() {
 
       // Limpiar el carrito después de una compra exitosa
       try {
-        await clearCart();
+        await clearCartRef.current();
       } catch {
         // No mostrar error al usuario, solo log
       }
     },
-    [clearCart],
+    [],
   );
 
   const verifyPayment = useCallback(async (sessionId: string) => {
@@ -201,14 +214,18 @@ function PaymentSuccessContent() {
   }, [handlePurchaseSuccess]);
 
   useEffect(() => {
-    const sessionIdParam = searchParams.get("session_id");
-    if (sessionIdParam) {
-      verifyPayment(sessionIdParam);
+    if (sessionId) {
+      if (processedSessionRef.current === sessionId) {
+        return;
+      }
+
+      processedSessionRef.current = sessionId;
+      verifyPayment(sessionId);
     } else {
       setError("No se encontró el ID de sesión");
       setIsLoading(false);
     }
-  }, [searchParams, verifyPayment]);
+  }, [sessionId, verifyPayment]);
 
   const handleContinueCourse = () => {
     // Para compras individuales

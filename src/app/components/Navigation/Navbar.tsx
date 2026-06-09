@@ -10,8 +10,6 @@ import {
   Menu,
   MenuItem,
   Box,
-  IconButton,
-  Badge,
   Divider,
 } from "@mui/material";
 import {
@@ -21,7 +19,6 @@ import {
   Home,
   ContactSupport,
   ExitToApp,
-  Notifications,
   Login,
   ShoppingCart,
   LocalOffer,
@@ -40,8 +37,6 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage = "home" }) => {
   const router = useRouter();
   const { user, logout, isAuthenticated } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [notificationAnchor, setNotificationAnchor] =
-    useState<null | HTMLElement>(null);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -50,14 +45,6 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage = "home" }) => {
 
   const handleMenuClose = () => {
     setAnchorEl(null);
-  };
-
-  const handleNotificationOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setNotificationAnchor(event.currentTarget);
-  };
-
-  const handleNotificationClose = () => {
-    setNotificationAnchor(null);
   };
 
   const handleNavigation = (path: string) => {
@@ -122,9 +109,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage = "home" }) => {
                 </Button>
                 <Button
                   color={
-                    currentPage === "teacher-promotions"
-                      ? "primary"
-                      : "inherit"
+                    currentPage === "teacher-promotions" ? "primary" : "inherit"
                   }
                   onClick={() => handleNavigation("/teacher/promotions")}
                   startIcon={<LocalOffer />}
@@ -184,19 +169,6 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage = "home" }) => {
           </Box>
         )}
 
-        {/* Notificaciones - Solo para usuarios autenticados */}
-        {isAuthenticated && (
-          <IconButton
-            color="inherit"
-            onClick={handleNotificationOpen}
-            sx={{ mr: 1 }}
-          >
-            <Badge badgeContent={3} color="error">
-              <Notifications />
-            </Badge>
-          </IconButton>
-        )}
-
         {/* Carrito - Solo para estudiantes */}
         {isAuthenticated && user?.role === "estudiante" && (
           <CartIcon onClick={handleCartOpen} />
@@ -229,32 +201,6 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage = "home" }) => {
           </Button>
         )}
 
-        {/* Menú de Notificaciones */}
-        <Menu
-          anchorEl={notificationAnchor}
-          open={Boolean(notificationAnchor)}
-          onClose={handleNotificationClose}
-          PaperProps={{
-            sx: { minWidth: 300, mt: 1 },
-          }}
-        >
-          <MenuItem onClick={handleNotificationClose}>
-            <Typography variant="body2">
-              Nuevo curso disponible: Álgebra Avanzada
-            </Typography>
-          </MenuItem>
-          <MenuItem onClick={handleNotificationClose}>
-            <Typography variant="body2">
-              Progreso guardado en Geometría
-            </Typography>
-          </MenuItem>
-          <MenuItem onClick={handleNotificationClose}>
-            <Typography variant="body2">
-              Mensaje del maestro: ¡Excelente progreso!
-            </Typography>
-          </MenuItem>
-        </Menu>
-
         {/* Menú de Usuario */}
         <Menu
           anchorEl={anchorEl}
@@ -272,6 +218,22 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage = "home" }) => {
               {user?.role === "maestro" ? "Maestro" : "Estudiante"}
             </Typography>
           </Box>
+          <Divider />
+          <MenuItem
+            selected={
+              user?.role === "maestro"
+                ? currentPage === "teacher-tickets"
+                : currentPage === "tickets"
+            }
+            onClick={() =>
+              handleNavigation(
+                user?.role === "maestro" ? "/teacher/tickets" : "/tickets",
+              )
+            }
+          >
+            <ContactSupport sx={{ mr: 2 }} />
+            {user?.role === "maestro" ? "Tickets" : "Soporte"}
+          </MenuItem>
           <Divider />
           <MenuItem onClick={handleLogout}>
             <ExitToApp sx={{ mr: 2 }} />
