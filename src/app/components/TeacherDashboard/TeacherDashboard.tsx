@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Box,
   Typography,
@@ -11,6 +11,8 @@ import {
   CircularProgress,
   Alert,
   Button,
+  Chip,
+  Divider,
 } from "@mui/material";
 import {
   Dashboard,
@@ -21,21 +23,48 @@ import {
   Refresh,
   TrendingUp,
   School,
-  Edit,
+  Forum,
 } from "@mui/icons-material";
+import { useRouter } from "next/navigation";
 import {
   teacherStatsService,
   TeacherDashboardData,
-  VideoStat,
 } from "../../services/teacherStatsService";
+import {
+  Ticket,
+  TicketStatus,
+  ticketService,
+} from "../../services/ticketService";
+
+const getTicketStatusLabel = (status: TicketStatus) => {
+  const labels: Record<TicketStatus, string> = {
+    open: "Abierto",
+    in_progress: "En revisión",
+    resolved: "Resuelto",
+    closed: "Cerrado",
+  };
+  return labels[status];
+};
+
+const getFeedbackPreview = (ticket: Ticket) => {
+  const studentMessages = [...(ticket.messages || [])]
+    .reverse()
+    .find((message) => message.authorRole === "estudiante");
+
+  return studentMessages?.message || ticket.description;
+};
 
 export const TeacherDashboard: React.FC = () => {
+  const router = useRouter();
   const [dashboardData, setDashboardData] =
     useState<TeacherDashboardData | null>(null);
+  const [feedbackTickets, setFeedbackTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFeedbackLoading, setIsFeedbackLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -46,11 +75,28 @@ export const TeacherDashboard: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  const fetchFeedbackTickets = useCallback(async () => {
+    try {
+      setIsFeedbackLoading(true);
+      setFeedbackError(null);
+      const tickets = await ticketService.getTickets({
+        status: "all",
+        priority: "all",
+      });
+      setFeedbackTickets(tickets.slice(0, 5));
+    } catch {
+      setFeedbackError("No se pudo cargar la retroalimentación de alumnos");
+    } finally {
+      setIsFeedbackLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+    fetchFeedbackTickets();
+  }, [fetchDashboardData, fetchFeedbackTickets]);
 
   if (isLoading) {
     return (
@@ -98,7 +144,7 @@ export const TeacherDashboard: React.FC = () => {
       <Box sx={{ mb: 4, display: "flex", alignItems: "center", gap: 2 }}>
         <Dashboard color="primary" sx={{ fontSize: 32 }} />
         <Typography variant="h3" component="h1" sx={{ fontWeight: 700 }}>
-          Dashboard del Maestro
+          Área del instructor
         </Typography>
       </Box>
 
@@ -142,7 +188,7 @@ export const TeacherDashboard: React.FC = () => {
                   {dashboardData.kpis.totalSubscribers.toLocaleString()}
                 </Typography>
                 <Typography variant="h6" sx={{ opacity: 0.9 }}>
-                  Suscriptores Totales
+                  Estudiantes Inscritos
                 </Typography>
               </Box>
             </Box>
@@ -162,7 +208,7 @@ export const TeacherDashboard: React.FC = () => {
                   ${dashboardData.kpis.totalIncome.toLocaleString()}
                 </Typography>
                 <Typography variant="h6" sx={{ opacity: 0.9 }}>
-                  Ingresos Totales
+                  Ventas Totales
                 </Typography>
               </Box>
             </Box>
@@ -225,6 +271,127 @@ export const TeacherDashboard: React.FC = () => {
           </CardContent>
         </Card>
       </Box>
+
+      {/* Retroalimentación de alumnos */}
+      <Paper sx={{ p: 4, mb: 4 }}>
+        <Box
+          sx={{
+            mb: 3,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 2,
+            flexWrap: "wrap",
+          }}
+        >
+          <Box display="flex" alignItems="center" gap={2}>
+            <Forum color="primary" sx={{ fontSize: 28 }} />
+            <Box>
+              <Typography variant="h4" component="h2" sx={{ fontWeight: 600 }}>
+                Retroalimentación de alumnos
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Últimos comentarios, dudas o reportes recibidos desde soporte.
+              </Typography>
+            </Box>
+          </Box>
+          <Button
+            variant="outlined"
+            onClick={() => router.push("/teacher/tickets")}
+          >
+            Ver todos
+          </Button>
+        </Box>
+
+        {isFeedbackLoading ? (
+          <Box display="flex" justifyContent="center" py={4}>
+            <CircularProgress />
+          </Box>
+        ) : feedbackError ? (
+          <Alert
+            severity="warning"
+            action={
+              <Button
+                color="inherit"
+                size="small"
+                onClick={fetchFeedbackTickets}
+              >
+                Reintentar
+              </Button>
+            }
+          >
+            {feedbackError}
+          </Alert>
+        ) : feedbackTickets.length === 0 ? (
+          <Box textAlign="center" py={4}>
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              Aún no hay retroalimentación
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Cuando un alumno abra un ticket o deje un mensaje, aparecerá aquí.
+            </Typography>
+          </Box>
+        ) : (
+          <Box display="flex" flexDirection="column">
+            {feedbackTickets.map((ticket, index) => (
+              <Box key={ticket._id}>
+                <Box
+                  sx={{
+                    py: 2,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 2,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <Box sx={{ flex: 1, minWidth: 240 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                      {ticket.subject}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {ticket.student?.name ||
+                        ticket.student?.email ||
+                        "Estudiante"}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        mt: 1,
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {getFeedbackPreview(ticket)}
+                    </Typography>
+                  </Box>
+                  <Box
+                    display="flex"
+                    gap={1}
+                    alignItems="flex-start"
+                    flexWrap="wrap"
+                  >
+                    <Chip
+                      label={getTicketStatusLabel(ticket.status)}
+                      size="small"
+                      color={ticket.status === "open" ? "warning" : "default"}
+                    />
+                    {ticket.courseTitle && (
+                      <Chip
+                        label={ticket.courseTitle}
+                        size="small"
+                        variant="outlined"
+                      />
+                    )}
+                  </Box>
+                </Box>
+                {index < feedbackTickets.length - 1 && <Divider />}
+              </Box>
+            ))}
+          </Box>
+        )}
+      </Paper>
 
       {/* Estadísticas por Video */}
       <Paper sx={{ p: 4 }}>
