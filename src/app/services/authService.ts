@@ -29,10 +29,19 @@ export interface RegisterRequest {
   password: string;
 }
 
+export interface GoogleLoginRequest {
+  credential: string;
+}
+
 export interface AuthResponse {
   user: User;
   token: string;
 }
+
+const saveAuthData = (user: User, token: string) => {
+  localStorage.setItem("token", token);
+  localStorage.setItem("user", JSON.stringify(user));
+};
 
 class AuthService {
   async login(
@@ -50,8 +59,7 @@ class AuthService {
       response.data.user &&
       response.data.token
     ) {
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("user", JSON.stringify(response.data.user));
+      saveAuthData(response.data.user, response.data.token);
       return { user: response.data.user, token: response.data.token };
     } else {
       throw new Error(
@@ -76,13 +84,36 @@ class AuthService {
       response.data.user &&
       response.data.token
     ) {
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("user", JSON.stringify(response.data.user));
+      saveAuthData(response.data.user, response.data.token);
       return { user: response.data.user, token: response.data.token };
     } else {
       throw new Error(
         response.message ||
           "Respuesta de registro inválida - estructura de datos incorrecta",
+      );
+    }
+  }
+
+  async googleLogin(
+    googleData: GoogleLoginRequest,
+  ): Promise<{ user: User; token: string }> {
+    const response = await apiService.post<AuthResponse>(
+      "/auth/google",
+      googleData,
+    );
+
+    if (
+      response.success &&
+      response.data &&
+      response.data.user &&
+      response.data.token
+    ) {
+      saveAuthData(response.data.user, response.data.token);
+      return { user: response.data.user, token: response.data.token };
+    } else {
+      throw new Error(
+        response.message ||
+          "Respuesta de Google login inválida - estructura de datos incorrecta",
       );
     }
   }

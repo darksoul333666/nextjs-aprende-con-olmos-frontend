@@ -14,6 +14,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (credential: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
@@ -85,6 +86,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const loginWithGoogle = async (credential: string) => {
+    try {
+      setIsLoading(true);
+      const response = await authService.googleLogin({ credential });
+
+      if (response.user) {
+        setUser(response.user);
+        await loadStudentScholarship(response.user);
+      } else {
+        throw new Error(
+          "Respuesta de Google login inválida - estructura de datos incorrecta",
+        );
+      }
+    } catch (error) {
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const register = async (email: string, password: string) => {
     try {
       setIsLoading(true);
@@ -115,6 +136,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user: isMounted ? user : null,
     isLoading: isMounted ? isLoading : true,
     login,
+    loginWithGoogle,
     register,
     logout,
     isAuthenticated: isMounted ? !!user : false,

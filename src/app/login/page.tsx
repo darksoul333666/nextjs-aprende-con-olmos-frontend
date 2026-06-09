@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
 import {
   Container,
   Paper,
@@ -19,7 +20,8 @@ import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, register, isLoading } = useAuth();
+  const { login, loginWithGoogle, register, isLoading } = useAuth();
+  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [formData, setFormData] = useState({
     email: "",
@@ -52,6 +54,28 @@ export default function LoginPage() {
         [field]: e.target.value,
       }));
     };
+
+  const handleGoogleSuccess = async (
+    credentialResponse: CredentialResponse,
+  ) => {
+    setError("");
+
+    if (!credentialResponse.credential) {
+      setError("No se pudo obtener la credencial de Google");
+      return;
+    }
+
+    try {
+      await loginWithGoogle(credentialResponse.credential);
+      router.push("/");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Ocurrió un error");
+    }
+  };
+
+  const handleGoogleError = () => {
+    setError("No se pudo iniciar sesión con Google");
+  };
 
   return (
     <Box
@@ -143,6 +167,23 @@ export default function LoginPage() {
                 o
               </Typography>
             </Divider>
+
+            <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
+              {googleClientId && !isLoading ? (
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  text={isLoginMode ? "signin_with" : "signup_with"}
+                  width="360"
+                />
+              ) : (
+                <Button fullWidth variant="outlined" disabled>
+                  {googleClientId
+                    ? "Continuar con Google"
+                    : "Google no configurado"}
+                </Button>
+              )}
+            </Box>
 
             <Button
               fullWidth
