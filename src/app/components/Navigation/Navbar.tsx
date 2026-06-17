@@ -38,6 +38,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../contexts/AuthContext";
 import { CartIcon } from "../Cart/CartIcon";
 import { CartDrawer } from "../Cart/CartDrawer";
+import { AppVersionLabel } from "../AppVersionLabel/AppVersionLabel";
 
 interface NavbarProps {
   currentPage?: string;
@@ -197,7 +198,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage = "home" }) => {
           </IconButton>
         )}
 
-        <Box display="flex" alignItems="center" sx={{ flexGrow: 1, minWidth: 0 }}>
+        <Box display="flex" alignItems="center" sx={{ flexGrow: 1, minWidth: 0, gap: 1 }}>
           <School
             sx={{ mr: 1, color: "primary.main", flexShrink: 0 }}
           />
@@ -212,6 +213,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage = "home" }) => {
           >
             Aprende con Olmos
           </Typography>
+          <AppVersionLabel />
         </Box>
 
         {isAuthenticated && !isMobile && (

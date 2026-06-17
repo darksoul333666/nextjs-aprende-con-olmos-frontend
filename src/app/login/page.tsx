@@ -17,6 +17,7 @@ import {
 import { School, Visibility, VisibilityOff } from "@mui/icons-material";
 import { useAuth } from "../contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import { AppVersionLabel } from "../components/AppVersionLabel/AppVersionLabel";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -123,6 +124,9 @@ export default function LoginPage() {
                 ? "Inicia sesión en tu cuenta"
                 : "Crea tu cuenta de estudiante"}
             </Typography>
+            <Box sx={{ mt: 1.5, display: "flex", justifyContent: "center" }}>
+              <AppVersionLabel />
+            </Box>
           </Box>
 
           {/* Formulario */}
