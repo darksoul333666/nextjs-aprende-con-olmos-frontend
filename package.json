@@ -6,7 +6,9 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "release": "commit-and-tag-version",
+    "release:first": "commit-and-tag-version --first-release"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -14,6 +16,7 @@
     "@fontsource/roboto": "^5.2.6",
     "@mui/icons-material": "^7.2.0",
     "@mui/material": "^7.2.0",
+    "@react-oauth/google": "^0.13.5",
     "@stripe/stripe-js": "^7.9.0",
     "@types/screenfull": "^4.0.0",
     "next": "15.4.8",
@@ -29,6 +32,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "commit-and-tag-version": "^12.7.3",
     "eslint": "^9",
     "eslint-config-next": "15.4.5",
     "prettier": "^3.6.2",

@@ -184,12 +184,16 @@ export default function MyPurchasesPage() {
   return (
     <Box sx={{ minHeight: "100vh", backgroundColor: "#f8f9fa" }}>
       <Navbar />
-      <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 2, md: 4 }, px: { xs: 2, md: 3 } }}>
         <Typography
           variant="h4"
           component="h1"
           gutterBottom
-          sx={{ fontWeight: 700, mb: 4 }}
+          sx={{
+            fontWeight: 700,
+            mb: 4,
+            fontSize: { xs: "1.5rem", sm: "2rem", md: "2.125rem" },
+          }}
         >
           Mis Compras
         </Typography>
@@ -238,8 +242,10 @@ export default function MyPurchasesPage() {
                 >
                   <Box
                     display="flex"
+                    flexDirection={{ xs: "column", sm: "row" }}
                     justifyContent="space-between"
-                    alignItems="center"
+                    alignItems={{ xs: "flex-start", sm: "center" }}
+                    gap={2}
                   >
                     <Box>
                       <Typography variant="h6" sx={{ fontWeight: 600 }}>
@@ -292,7 +298,7 @@ export default function MyPurchasesPage() {
                       key={courseItem.id}
                       sx={{
                         display: "flex",
-                        flexDirection: "row",
+                        flexDirection: { xs: "column", sm: "row" },
                         transition: "transform 0.2s, box-shadow 0.2s",
                         "&:hover": {
                           transform: "translateY(-2px)",
@@ -303,10 +309,11 @@ export default function MyPurchasesPage() {
                       {/* Imagen del curso */}
                       <Box
                         sx={{
-                          width: 280,
-                          height: 200,
+                          width: { xs: "100%", sm: 280 },
+                          height: { xs: 180, sm: 200 },
                           position: "relative",
                           overflow: "hidden",
+                          flexShrink: 0,
                         }}
                       >
                         {courseItem.courseId.thumbnail ? (

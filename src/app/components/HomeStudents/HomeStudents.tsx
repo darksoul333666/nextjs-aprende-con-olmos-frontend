@@ -97,7 +97,7 @@ export const HomeStudents: React.FC<HomeStudentsProps> = ({
         sx={{
           background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
           color: "white",
-          py: 8,
+          py: { xs: 5, md: 8 },
           mb: 4,
         }}
       >
@@ -113,7 +113,10 @@ export const HomeStudents: React.FC<HomeStudentsProps> = ({
                 variant="h2"
                 component="h1"
                 gutterBottom
-                sx={{ fontWeight: 700 }}
+                sx={{
+                  fontWeight: 700,
+                  fontSize: { xs: "2rem", sm: "2.5rem", md: "3.75rem" },
+                }}
               >
                 Matemáticas
               </Typography>
@@ -160,7 +163,7 @@ export const HomeStudents: React.FC<HomeStudentsProps> = ({
                 flex: 1,
               }}
             >
-              <School sx={{ fontSize: 200, opacity: 0.3 }} />
+              <School sx={{ fontSize: { xs: 120, md: 200 }, opacity: 0.3 }} />
             </Box>
           </Box>
         </Container>
@@ -172,8 +175,10 @@ export const HomeStudents: React.FC<HomeStudentsProps> = ({
           <Box sx={{ mb: 6 }}>
             <Box
               display="flex"
-              alignItems="center"
+              flexDirection={{ xs: "column", sm: "row" }}
+              alignItems={{ xs: "flex-start", sm: "center" }}
               justifyContent="space-between"
+              gap={2}
               mb={3}
             >
               <Typography variant="h4" component="h2" sx={{ fontWeight: 600 }}>
@@ -248,7 +253,8 @@ export const HomeStudents: React.FC<HomeStudentsProps> = ({
               display="grid"
               gridTemplateColumns={{
                 xs: "1fr",
-                md: "repeat(auto-fit, minmax(400px, 1fr))",
+                sm: "repeat(auto-fit, minmax(280px, 1fr))",
+                lg: "repeat(auto-fit, minmax(400px, 1fr))",
               }}
               gap={3}
             >

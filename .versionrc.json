@@ -1,0 +1,18 @@
+{
+  "types": [
+    { "type": "feat", "section": "Nuevas funcionalidades" },
+    { "type": "fix", "section": "Correcciones" },
+    { "type": "perf", "section": "Rendimiento" },
+    { "type": "refactor", "section": "Refactorización" },
+    { "type": "docs", "section": "Documentación" },
+    { "type": "build", "section": "Build" },
+    { "type": "ci", "section": "CI" },
+    { "type": "chore", "hidden": true },
+    { "type": "style", "hidden": true },
+    { "type": "test", "hidden": true }
+  ],
+  "skip": {
+    "commit": false,
+    "tag": false
+  }
+}

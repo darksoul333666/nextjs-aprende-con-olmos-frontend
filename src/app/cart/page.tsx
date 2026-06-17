@@ -83,7 +83,7 @@ export default function CartPage() {
     return (
       <Box sx={{ minHeight: "100vh", backgroundColor: "#f8f9fa" }}>
         <Navbar currentPage="cart" />
-        <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Container maxWidth="lg" sx={{ py: { xs: 2, md: 4 }, px: { xs: 2, md: 3 } }}>
           <Box
             sx={{
               display: "flex",
@@ -103,7 +103,7 @@ export default function CartPage() {
     <Box sx={{ minHeight: "100vh", backgroundColor: "#f8f9fa" }}>
       <Navbar currentPage="cart" />
 
-      <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 2, md: 4 }, px: { xs: 2, md: 3 } }}>
         {/* Breadcrumbs */}
         <Breadcrumbs sx={{ mb: 3 }}>
           <Link
@@ -127,7 +127,10 @@ export default function CartPage() {
             variant="h3"
             component="h1"
             gutterBottom
-            sx={{ fontWeight: 700 }}
+            sx={{
+              fontWeight: 700,
+              fontSize: { xs: "1.75rem", sm: "2.125rem", md: "3rem" },
+            }}
           >
             Carrito de Compras
           </Typography>
@@ -180,15 +183,19 @@ export default function CartPage() {
                 {cart.items.map((item) => (
                   <Card
                     key={item.courseId._id}
-                    sx={{ display: "flex", flexDirection: "row" }}
+                    sx={{
+                      display: "flex",
+                      flexDirection: { xs: "column", sm: "row" },
+                    }}
                   >
                     {/* Course Image */}
                     <Box
                       sx={{
-                        width: 200,
-                        height: 150,
+                        width: { xs: "100%", sm: 200 },
+                        height: { xs: 160, sm: 150 },
                         position: "relative",
                         overflow: "hidden",
+                        flexShrink: 0,
                       }}
                     >
                       {item.courseId.thumbnail ? (

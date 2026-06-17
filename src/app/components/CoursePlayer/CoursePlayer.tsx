@@ -1,8 +1,12 @@
+"use client";
+
 import React, { useState, useMemo, useCallback, useRef } from "react";
 import {
   Box,
   Paper,
   Typography,
+  useMediaQuery,
+  useTheme,
   List,
   ListItem,
   ListItemButton,
@@ -75,6 +79,8 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
   onVideoProgress,
   className,
 }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [currentVideoId, setCurrentVideoId] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(),
@@ -738,13 +744,18 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
   return (
     <Box
       className={className}
-      sx={{ height: "100vh", display: "flex", flexDirection: "column" }}
+      sx={{
+        minHeight: { xs: "auto", md: "100vh" },
+        height: { md: "100vh" },
+        display: "flex",
+        flexDirection: "column",
+      }}
     >
       {/* Header */}
       <Paper
         elevation={1}
         sx={{
-          p: 2,
+          p: { xs: 1.5, md: 2 },
           borderBottom: 1,
           borderColor: "divider",
           backgroundColor: "background.paper",
@@ -752,7 +763,11 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
       >
         <Box>
           <Box display="flex" alignItems="center" gap={1.5} flexWrap="wrap">
-            <Typography variant="h5" component="h1">
+            <Typography
+              variant="h5"
+              component="h1"
+              sx={{ fontSize: { xs: "1.1rem", sm: "1.5rem" } }}
+            >
               {course.title}
             </Typography>
             {isPreviewMode && (
@@ -784,11 +799,32 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
       </Paper>
 
       {/* Main Content */}
-      <Box sx={{ flex: 1, display: "flex", overflow: "hidden" }}>
+      <Box
+        sx={{
+          flex: 1,
+          display: "flex",
+          flexDirection: { xs: "column", md: "row" },
+          overflow: { xs: "visible", md: "hidden" },
+        }}
+      >
         {/* Video Player Section */}
-        <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        <Box
+          sx={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            minWidth: 0,
+          }}
+        >
           {/* Video Player */}
-          <Box sx={{ flex: 1, p: 2, pb: 1, minHeight: 520 }}>
+          <Box
+            sx={{
+              flex: 1,
+              p: { xs: 1, md: 2 },
+              pb: 1,
+              minHeight: { xs: 200, sm: 280, md: 520 },
+            }}
+          >
             {currentVideo?.url ? (
               <VideoPlayer
                 key={currentVideo._id}
@@ -826,7 +862,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
           </Box>
 
           {/* Video Info */}
-          <Paper sx={{ m: 2, mt: 0, p: 2 }}>
+          <Paper sx={{ m: { xs: 1, md: 2 }, mt: 0, p: { xs: 1.5, md: 2 } }}>
             <Typography variant="h6" gutterBottom>
               {currentVideo?.title}
             </Typography>
@@ -863,7 +899,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
               )}
 
             {/* Navigation Buttons */}
-            <Box display="flex" gap={2}>
+            <Box display="flex" flexDirection={{ xs: "column", sm: "row" }} gap={2}>
               <Button
                 variant="outlined"
                 startIcon={<KeyboardArrowUp />}
@@ -890,12 +926,16 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
         <Paper
           elevation={1}
           sx={{
-            width: 400,
-            borderLeft: 1,
+            width: { xs: "100%", md: 400 },
+            flexShrink: 0,
+            borderLeft: { md: 1 },
+            borderTop: { xs: 1, md: 0 },
             borderColor: "divider",
             display: "flex",
             flexDirection: "column",
             backgroundColor: "background.paper",
+            maxHeight: { xs: "none", md: "100%" },
+            minHeight: { xs: 300, md: 0 },
           }}
         >
           {/* Sidebar Header */}
@@ -1426,6 +1466,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
         onClose={handleCloseEvaluation}
         maxWidth="sm"
         fullWidth
+        fullScreen={isMobile}
       >
         <DialogTitle>{activeEvaluation?.title}</DialogTitle>
         <DialogContent>

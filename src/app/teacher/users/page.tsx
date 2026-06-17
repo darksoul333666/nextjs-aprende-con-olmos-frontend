@@ -20,6 +20,8 @@ import {
   Paper,
   TextField,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import {
   Add,
@@ -57,6 +59,8 @@ const defaultForm: StudentFormState = {
 
 export default function TeacherUsersPage() {
   const router = useRouter();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const { user } = useAuth();
   const [students, setStudents] = useState<StudentUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -235,25 +239,43 @@ export default function TeacherUsersPage() {
   return (
     <Box sx={{ minHeight: "100vh", backgroundColor: "#f8f9fa" }}>
       <Navbar currentPage="teacher-users" />
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box sx={{ mb: 4, display: "flex", alignItems: "center", gap: 2 }}>
-          <IconButton onClick={() => router.push("/teacher")}>
-            <ArrowBack />
-          </IconButton>
-          <People color="primary" sx={{ fontSize: 36 }} />
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="h3" component="h1" sx={{ fontWeight: 700 }}>
-              Gestión de Estudiantes
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Altas, bajas por desactivación, reactivaciones y modificaciones
-              de usuarios estudiantes.
-            </Typography>
+      <Container maxWidth="lg" sx={{ py: { xs: 2, md: 4 }, px: { xs: 2, md: 3 } }}>
+        <Box
+          sx={{
+            mb: 4,
+            display: "flex",
+            flexDirection: { xs: "column", sm: "row" },
+            alignItems: { xs: "flex-start", sm: "center" },
+            gap: 2,
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2, flex: 1 }}>
+            <IconButton onClick={() => router.push("/teacher")}>
+              <ArrowBack />
+            </IconButton>
+            <People color="primary" sx={{ fontSize: { xs: 28, sm: 36 } }} />
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography
+                variant="h3"
+                component="h1"
+                sx={{
+                  fontWeight: 700,
+                  fontSize: { xs: "1.5rem", sm: "2rem", md: "3rem" },
+                }}
+              >
+                Gestión de Estudiantes
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                Altas, bajas por desactivación, reactivaciones y modificaciones
+                de usuarios estudiantes.
+              </Typography>
+            </Box>
           </Box>
           <Button
             variant="contained"
             startIcon={<Add />}
             onClick={openCreateDialog}
+            fullWidth={isMobile}
           >
             Nuevo Estudiante
           </Button>
@@ -281,7 +303,7 @@ export default function TeacherUsersPage() {
               placeholder="Nombre o correo"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              sx={{ flex: 2, minWidth: 260 }}
+              sx={{ flex: { xs: "1 1 100%", sm: 2 }, minWidth: { xs: 0, sm: 260 } }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">

@@ -89,17 +89,33 @@ export default function CreateCoursePage() {
     <Box sx={{ minHeight: "100vh", backgroundColor: "#f8f9fa" }}>
       <Navbar currentPage="teacher" />
 
-      <Container maxWidth="md" sx={{ py: 4 }}>
+      <Container maxWidth="md" sx={{ py: { xs: 2, md: 4 }, px: { xs: 2, md: 3 } }}>
         {/* Header */}
-        <Box sx={{ mb: 4, display: "flex", alignItems: "center", gap: 2 }}>
+        <Box
+          sx={{
+            mb: 4,
+            display: "flex",
+            flexDirection: { xs: "column", sm: "row" },
+            alignItems: { xs: "stretch", sm: "center" },
+            gap: 2,
+          }}
+        >
           <Button
             variant="outlined"
             startIcon={<ArrowBack />}
             onClick={() => router.push("/teacher/courses")}
+            sx={{ alignSelf: { xs: "flex-start", sm: "center" } }}
           >
             Volver
           </Button>
-          <Typography variant="h3" component="h1" sx={{ fontWeight: 700 }}>
+          <Typography
+            variant="h3"
+            component="h1"
+            sx={{
+              fontWeight: 700,
+              fontSize: { xs: "1.5rem", sm: "2rem", md: "3rem" },
+            }}
+          >
             Crear Nuevo Curso
           </Typography>
         </Box>
@@ -116,7 +132,7 @@ export default function CreateCoursePage() {
           </Alert>
         )}
 
-        <Paper sx={{ p: 4 }}>
+        <Paper sx={{ p: { xs: 2, md: 4 } }}>
           <Typography
             variant="h5"
             component="h2"
@@ -162,7 +178,14 @@ export default function CreateCoursePage() {
             />
           </Box>
 
-          <Box sx={{ display: "flex", gap: 2, mt: 4 }}>
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: { xs: "column", sm: "row" },
+              gap: 2,
+              mt: 4,
+            }}
+          >
             <Button
               variant="outlined"
               onClick={() => router.push("/teacher/courses")}

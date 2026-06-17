@@ -10,9 +10,15 @@ import {
   Menu,
   MenuItem,
   Box,
-  IconButton,
-  Badge,
   Divider,
+  IconButton,
+  Drawer,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import {
   School,
@@ -21,28 +27,38 @@ import {
   Home,
   ContactSupport,
   ExitToApp,
-  Notifications,
   Login,
   ShoppingCart,
   LocalOffer,
   People,
+  Menu as MenuIcon,
+  Close,
 } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../contexts/AuthContext";
 import { CartIcon } from "../Cart/CartIcon";
 import { CartDrawer } from "../Cart/CartDrawer";
+import { AppVersionLabel } from "../AppVersionLabel/AppVersionLabel";
 
 interface NavbarProps {
   currentPage?: string;
 }
 
+interface NavItem {
+  label: string;
+  path: string;
+  icon: React.ReactNode;
+  pageKey: string;
+}
+
 export const Navbar: React.FC<NavbarProps> = ({ currentPage = "home" }) => {
   const router = useRouter();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const { user, logout, isAuthenticated } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [notificationAnchor, setNotificationAnchor] =
-    useState<null | HTMLElement>(null);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -52,22 +68,16 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage = "home" }) => {
     setAnchorEl(null);
   };
 
-  const handleNotificationOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setNotificationAnchor(event.currentTarget);
-  };
-
-  const handleNotificationClose = () => {
-    setNotificationAnchor(null);
-  };
-
   const handleNavigation = (path: string) => {
     router.push(path);
     handleMenuClose();
+    setMobileNavOpen(false);
   };
 
   const handleLogout = () => {
     logout();
     handleMenuClose();
+    setMobileNavOpen(false);
     router.push("/");
   };
 
@@ -83,126 +93,141 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage = "home" }) => {
     setCartDrawerOpen(false);
   };
 
+  const teacherNavItems: NavItem[] = [
+    { label: "Inicio", path: "/", icon: <Home />, pageKey: "home" },
+    {
+      label: "Gestionar Cursos",
+      path: "/teacher/courses",
+      icon: <Book />,
+      pageKey: "teacher-courses",
+    },
+    {
+      label: "Promociones",
+      path: "/teacher/promotions",
+      icon: <LocalOffer />,
+      pageKey: "teacher-promotions",
+    },
+    {
+      label: "Estudiantes",
+      path: "/teacher/users",
+      icon: <People />,
+      pageKey: "teacher-users",
+    },
+    {
+      label: "Mi Perfil",
+      path: "/teacher/edit",
+      icon: <Person />,
+      pageKey: "teacher-edit",
+    },
+    {
+      label: "Tickets",
+      path: "/teacher/tickets",
+      icon: <ContactSupport />,
+      pageKey: "teacher-tickets",
+    },
+  ];
+
+  const studentNavItems: NavItem[] = [
+    { label: "Inicio", path: "/", icon: <Home />, pageKey: "home" },
+    {
+      label: "Explorar cursos",
+      path: "/courses",
+      icon: <Book />,
+      pageKey: "courses",
+    },
+    {
+      label: "Mis cursos",
+      path: "/my-courses",
+      icon: <School />,
+      pageKey: "my-courses",
+    },
+    {
+      label: "Mis Compras",
+      path: "/my-purchases",
+      icon: <ShoppingCart />,
+      pageKey: "my-purchases",
+    },
+    {
+      label: "Soporte",
+      path: "/tickets",
+      icon: <ContactSupport />,
+      pageKey: "tickets",
+    },
+  ];
+
+  const navItems =
+    user?.role === "maestro" ? teacherNavItems : studentNavItems;
+
+  const renderNavButton = (item: NavItem) => (
+    <Button
+      key={item.path}
+      color={currentPage === item.pageKey ? "primary" : "inherit"}
+      onClick={() => handleNavigation(item.path)}
+      startIcon={item.icon}
+    >
+      {item.label}
+    </Button>
+  );
+
+  const renderMobileNavItem = (item: NavItem) => (
+    <ListItemButton
+      key={item.path}
+      selected={currentPage === item.pageKey}
+      onClick={() => handleNavigation(item.path)}
+    >
+      <ListItemIcon>{item.icon}</ListItemIcon>
+      <ListItemText primary={item.label} />
+    </ListItemButton>
+  );
+
   return (
     <AppBar
       position="static"
       elevation={1}
       sx={{ backgroundColor: "white", color: "text.primary" }}
     >
-      <Toolbar>
-        {/* Logo y Título */}
-        <Box display="flex" alignItems="center" sx={{ flexGrow: 1 }}>
-          <School sx={{ mr: 1, color: "primary.main" }} />
-          <Typography variant="h6" component="div" sx={{ fontWeight: 600 }}>
-            Aprende con Olmos
-          </Typography>
-        </Box>
-
-        {/* Navegación Principal */}
-        {isAuthenticated && (
-          <Box display="flex" gap={1} sx={{ mr: 2 }}>
-            {user?.role === "maestro" ? (
-              // Navegación para Maestros
-              <>
-                <Button
-                  color={currentPage === "home" ? "primary" : "inherit"}
-                  onClick={() => handleNavigation("/")}
-                  startIcon={<Home />}
-                >
-                  Inicio
-                </Button>
-                <Button
-                  color={
-                    currentPage === "teacher-courses" ? "primary" : "inherit"
-                  }
-                  onClick={() => handleNavigation("/teacher/courses")}
-                  startIcon={<Book />}
-                >
-                  Gestionar Cursos
-                </Button>
-                <Button
-                  color={
-                    currentPage === "teacher-promotions"
-                      ? "primary"
-                      : "inherit"
-                  }
-                  onClick={() => handleNavigation("/teacher/promotions")}
-                  startIcon={<LocalOffer />}
-                >
-                  Promociones
-                </Button>
-                <Button
-                  color={
-                    currentPage === "teacher-users" ? "primary" : "inherit"
-                  }
-                  onClick={() => handleNavigation("/teacher/users")}
-                  startIcon={<People />}
-                >
-                  Estudiantes
-                </Button>
-                <Button
-                  color={currentPage === "teacher-edit" ? "primary" : "inherit"}
-                  onClick={() => handleNavigation("/teacher/edit")}
-                  startIcon={<Person />}
-                >
-                  Mi Perfil
-                </Button>
-              </>
-            ) : (
-              // Navegación para Estudiantes
-              <>
-                <Button
-                  color={currentPage === "home" ? "primary" : "inherit"}
-                  onClick={() => handleNavigation("/")}
-                  startIcon={<Home />}
-                >
-                  Inicio
-                </Button>
-                <Button
-                  color={currentPage === "courses" ? "primary" : "inherit"}
-                  onClick={() => handleNavigation("/courses")}
-                  startIcon={<Book />}
-                >
-                  Explorar cursos
-                </Button>
-                <Button
-                  color={currentPage === "my-courses" ? "primary" : "inherit"}
-                  onClick={() => handleNavigation("/my-courses")}
-                  startIcon={<School />}
-                >
-                  Mis cursos
-                </Button>
-                <Button
-                  color={currentPage === "my-purchases" ? "primary" : "inherit"}
-                  onClick={() => handleNavigation("/my-purchases")}
-                  startIcon={<ShoppingCart />}
-                >
-                  Mis Compras
-                </Button>
-              </>
-            )}
-          </Box>
-        )}
-
-        {/* Notificaciones - Solo para usuarios autenticados */}
-        {isAuthenticated && (
+      <Toolbar sx={{ gap: 1 }}>
+        {isMobile && isAuthenticated && (
           <IconButton
+            edge="start"
             color="inherit"
-            onClick={handleNotificationOpen}
-            sx={{ mr: 1 }}
+            aria-label="abrir menú"
+            onClick={() => setMobileNavOpen(true)}
           >
-            <Badge badgeContent={3} color="error">
-              <Notifications />
-            </Badge>
+            <MenuIcon />
           </IconButton>
         )}
 
-        {/* Carrito - Solo para estudiantes */}
+        <Box display="flex" alignItems="center" sx={{ flexGrow: 1, minWidth: 0, gap: 1 }}>
+          <School
+            sx={{ mr: 1, color: "primary.main", flexShrink: 0 }}
+          />
+          <Typography
+            variant="h6"
+            component="div"
+            noWrap
+            sx={{
+              fontWeight: 600,
+              fontSize: { xs: "0.95rem", sm: "1.25rem" },
+            }}
+          >
+            Aprende con Olmos
+          </Typography>
+          <AppVersionLabel />
+        </Box>
+
+        {isAuthenticated && !isMobile && (
+          <Box display="flex" gap={1} sx={{ mr: 2, flexWrap: "wrap" }}>
+            {navItems
+              .filter((item) => item.pageKey !== "tickets" && item.pageKey !== "teacher-tickets")
+              .map(renderNavButton)}
+          </Box>
+        )}
+
         {isAuthenticated && user?.role === "estudiante" && (
           <CartIcon onClick={handleCartOpen} />
         )}
 
-        {/* Avatar y Menú de Usuario o Botón de Login */}
         {isAuthenticated ? (
           <Box display="flex" alignItems="center">
             <Avatar
@@ -224,38 +249,12 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage = "home" }) => {
             variant="contained"
             startIcon={<Login />}
             onClick={handleLogin}
+            size={isMobile ? "small" : "medium"}
           >
-            Iniciar Sesión
+            {isMobile ? "Entrar" : "Iniciar Sesión"}
           </Button>
         )}
 
-        {/* Menú de Notificaciones */}
-        <Menu
-          anchorEl={notificationAnchor}
-          open={Boolean(notificationAnchor)}
-          onClose={handleNotificationClose}
-          PaperProps={{
-            sx: { minWidth: 300, mt: 1 },
-          }}
-        >
-          <MenuItem onClick={handleNotificationClose}>
-            <Typography variant="body2">
-              Nuevo curso disponible: Álgebra Avanzada
-            </Typography>
-          </MenuItem>
-          <MenuItem onClick={handleNotificationClose}>
-            <Typography variant="body2">
-              Progreso guardado en Geometría
-            </Typography>
-          </MenuItem>
-          <MenuItem onClick={handleNotificationClose}>
-            <Typography variant="body2">
-              Mensaje del maestro: ¡Excelente progreso!
-            </Typography>
-          </MenuItem>
-        </Menu>
-
-        {/* Menú de Usuario */}
         <Menu
           anchorEl={anchorEl}
           open={Boolean(anchorEl)}
@@ -273,6 +272,22 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage = "home" }) => {
             </Typography>
           </Box>
           <Divider />
+          <MenuItem
+            selected={
+              user?.role === "maestro"
+                ? currentPage === "teacher-tickets"
+                : currentPage === "tickets"
+            }
+            onClick={() =>
+              handleNavigation(
+                user?.role === "maestro" ? "/teacher/tickets" : "/tickets",
+              )
+            }
+          >
+            <ContactSupport sx={{ mr: 2 }} />
+            {user?.role === "maestro" ? "Tickets" : "Soporte"}
+          </MenuItem>
+          <Divider />
           <MenuItem onClick={handleLogout}>
             <ExitToApp sx={{ mr: 2 }} />
             Cerrar Sesión
@@ -280,7 +295,41 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage = "home" }) => {
         </Menu>
       </Toolbar>
 
-      {/* Cart Drawer */}
+      <Drawer
+        anchor="left"
+        open={mobileNavOpen}
+        onClose={() => setMobileNavOpen(false)}
+        PaperProps={{ sx: { width: 280 } }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            p: 2,
+            borderBottom: 1,
+            borderColor: "divider",
+          }}
+        >
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Menú
+          </Typography>
+          <IconButton onClick={() => setMobileNavOpen(false)}>
+            <Close />
+          </IconButton>
+        </Box>
+        <List sx={{ pt: 1 }}>
+          {navItems.map(renderMobileNavItem)}
+          <Divider sx={{ my: 1 }} />
+          <ListItemButton onClick={handleLogout}>
+            <ListItemIcon>
+              <ExitToApp />
+            </ListItemIcon>
+            <ListItemText primary="Cerrar Sesión" />
+          </ListItemButton>
+        </List>
+      </Drawer>
+
       <CartDrawer open={cartDrawerOpen} onClose={handleCartClose} />
     </AppBar>
   );

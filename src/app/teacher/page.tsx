@@ -124,7 +124,7 @@ export default function TeacherPage() {
     return (
       <Box sx={{ minHeight: "100vh", backgroundColor: "#f8f9fa" }}>
         <Navbar currentPage="teacher" />
-        <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Container maxWidth="lg" sx={{ py: { xs: 2, md: 4 }, px: { xs: 2, md: 3 } }}>
           <Paper sx={{ p: 6, textAlign: "center" }}>
             <Typography variant="h5" color="text.secondary">
               No se pudo cargar la información del maestro.
@@ -139,7 +139,7 @@ export default function TeacherPage() {
     <Box sx={{ minHeight: "100vh", backgroundColor: "#f8f9fa" }}>
       <Navbar currentPage="teacher" />
 
-      <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 2, md: 4 }, px: { xs: 2, md: 3 } }}>
         {/* Header del Maestro */}
         <Paper sx={{ p: 4, mb: 4, textAlign: "center" }}>
           <Avatar
@@ -163,12 +163,20 @@ export default function TeacherPage() {
             variant="h3"
             component="h1"
             gutterBottom
-            sx={{ fontWeight: 700 }}
+            sx={{
+              fontWeight: 700,
+              fontSize: { xs: "1.75rem", sm: "2.125rem", md: "3rem" },
+            }}
           >
             {teacher.name}
           </Typography>
 
-          <Typography variant="h5" color="primary" gutterBottom>
+          <Typography
+            variant="h5"
+            color="primary"
+            gutterBottom
+            sx={{ fontSize: { xs: "1.1rem", sm: "1.5rem" } }}
+          >
             {teacher.title}
           </Typography>
 

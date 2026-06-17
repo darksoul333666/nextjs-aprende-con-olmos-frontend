@@ -31,6 +31,8 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import {
   Save,
@@ -109,6 +111,8 @@ const createDefaultEvaluationForm = (order: number): EvaluationFormState => ({
 
 export default function EditCoursePage() {
   const router = useRouter();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const params = useParams();
   const courseId = params.id as string;
   const courseThumbnailInputRef = useRef<HTMLInputElement | null>(null);
@@ -1304,12 +1308,28 @@ export default function EditCoursePage() {
     <Box sx={{ minHeight: "100vh", backgroundColor: "#f8f9fa" }}>
       <Navbar currentPage="courses" />
 
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box sx={{ mb: 4, display: "flex", alignItems: "center", gap: 2 }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 2, md: 4 }, px: { xs: 2, md: 3 } }}>
+        <Box
+          sx={{
+            mb: 4,
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            flexWrap: "wrap",
+          }}
+        >
           <IconButton onClick={() => router.push("/teacher/courses")}>
             <ArrowBack />
           </IconButton>
-          <Typography variant="h3" component="h1" sx={{ fontWeight: 700 }}>
+          <Typography
+            variant="h3"
+            component="h1"
+            sx={{
+              fontWeight: 700,
+              fontSize: { xs: "1.25rem", sm: "1.75rem", md: "3rem" },
+              wordBreak: "break-word",
+            }}
+          >
             {courseId === "new"
               ? "Crear Nuevo Curso"
               : `Editar: ${course.title}`}
@@ -1328,8 +1348,11 @@ export default function EditCoursePage() {
           </Alert>
         )}
 
-        <Paper sx={{ p: 3, mb: 4 }}>
-          <Stepper activeStep={activeStep} orientation="horizontal">
+        <Paper sx={{ p: { xs: 2, md: 3 }, mb: 4, overflowX: "auto" }}>
+          <Stepper
+            activeStep={activeStep}
+            orientation={isMobile ? "vertical" : "horizontal"}
+          >
             {steps.map((step, index) => (
               <Step key={step.label}>
                 <StepLabel
@@ -2258,7 +2281,7 @@ export default function EditCoursePage() {
                     event.target.value as EvaluationKind,
                   )
                 }
-                sx={{ flex: 1, minWidth: 220 }}
+                sx={{ flex: 1, minWidth: { xs: "100%", sm: 220 } }}
               >
                 <MenuItem value="acompanamiento">Acompañamiento</MenuItem>
                 <MenuItem value="certificacion">Certificación</MenuItem>
@@ -2274,7 +2297,7 @@ export default function EditCoursePage() {
                   )
                 }
                 disabled={evaluationForm.kind === "certificacion"}
-                sx={{ flex: 1, minWidth: 220 }}
+                sx={{ flex: 1, minWidth: { xs: "100%", sm: 220 } }}
               >
                 <MenuItem value="before_video">Antes del video</MenuItem>
                 <MenuItem value="during_video">Durante el video</MenuItem>

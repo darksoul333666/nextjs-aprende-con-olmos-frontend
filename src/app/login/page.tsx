@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
 import {
   Container,
   Paper,
@@ -16,10 +17,12 @@ import {
 import { School, Visibility, VisibilityOff } from "@mui/icons-material";
 import { useAuth } from "../contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import { AppVersionLabel } from "../components/AppVersionLabel/AppVersionLabel";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, register, isLoading } = useAuth();
+  const { login, loginWithGoogle, register, isLoading } = useAuth();
+  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [formData, setFormData] = useState({
     email: "",
@@ -27,6 +30,21 @@ export default function LoginPage() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const googleButtonRef = useRef<HTMLDivElement>(null);
+  const [googleWidth, setGoogleWidth] = useState(360);
+
+  useEffect(() => {
+    const updateWidth = () => {
+      if (googleButtonRef.current) {
+        const width = googleButtonRef.current.offsetWidth;
+        setGoogleWidth(Math.min(width, 400));
+      }
+    };
+
+    updateWidth();
+    window.addEventListener("resize", updateWidth);
+    return () => window.removeEventListener("resize", updateWidth);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,6 +71,28 @@ export default function LoginPage() {
       }));
     };
 
+  const handleGoogleSuccess = async (
+    credentialResponse: CredentialResponse,
+  ) => {
+    setError("");
+
+    if (!credentialResponse.credential) {
+      setError("No se pudo obtener la credencial de Google");
+      return;
+    }
+
+    try {
+      await loginWithGoogle(credentialResponse.credential);
+      router.push("/");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Ocurrió un error");
+    }
+  };
+
+  const handleGoogleError = () => {
+    setError("No se pudo iniciar sesión con Google");
+  };
+
   return (
     <Box
       sx={{
@@ -63,8 +103,8 @@ export default function LoginPage() {
         py: 4,
       }}
     >
-      <Container maxWidth="sm">
-        <Paper sx={{ p: 4, textAlign: "center" }}>
+      <Container maxWidth="sm" sx={{ px: { xs: 2, sm: 3 } }}>
+        <Paper sx={{ p: { xs: 3, sm: 4 }, textAlign: "center" }}>
           {/* Logo y Título */}
           <Box sx={{ mb: 3 }}>
             <School sx={{ fontSize: 60, color: "primary.main", mb: 2 }} />
@@ -72,7 +112,10 @@ export default function LoginPage() {
               variant="h4"
               component="h1"
               gutterBottom
-              sx={{ fontWeight: 700 }}
+              sx={{
+                fontWeight: 700,
+                fontSize: { xs: "1.5rem", sm: "2.125rem" },
+              }}
             >
               Aprende con Olmos
             </Typography>
@@ -81,6 +124,9 @@ export default function LoginPage() {
                 ? "Inicia sesión en tu cuenta"
                 : "Crea tu cuenta de estudiante"}
             </Typography>
+            <Box sx={{ mt: 1.5, display: "flex", justifyContent: "center" }}>
+              <AppVersionLabel />
+            </Box>
           </Box>
 
           {/* Formulario */}
@@ -143,6 +189,26 @@ export default function LoginPage() {
                 o
               </Typography>
             </Divider>
+
+            <Box
+              ref={googleButtonRef}
+              sx={{ display: "flex", justifyContent: "center", mb: 2, width: "100%" }}
+            >
+              {googleClientId && !isLoading ? (
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  text={isLoginMode ? "signin_with" : "signup_with"}
+                  width={String(googleWidth)}
+                />
+              ) : (
+                <Button fullWidth variant="outlined" disabled>
+                  {googleClientId
+                    ? "Continuar con Google"
+                    : "Google no configurado"}
+                </Button>
+              )}
+            </Box>
 
             <Button
               fullWidth

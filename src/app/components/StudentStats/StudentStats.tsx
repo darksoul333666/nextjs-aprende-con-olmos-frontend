@@ -24,12 +24,15 @@ export const StudentStats: React.FC<StudentStatsProps> = ({
   );
 
   return (
-    <Paper sx={{ p: 4, mb: 6, textAlign: "center" }}>
+    <Paper sx={{ p: { xs: 3, md: 4 }, mb: 6, textAlign: "center" }}>
       <Typography
         variant="h4"
         component="h2"
         gutterBottom
-        sx={{ fontWeight: 600 }}
+        sx={{
+          fontWeight: 600,
+          fontSize: { xs: "1.5rem", md: "2.125rem" },
+        }}
       >
         ¿Por qué elegirnos?
       </Typography>
