@@ -335,17 +335,35 @@ export default function EditCoursePage() {
     <Box sx={{ minHeight: "100vh", backgroundColor: "#f8f9fa" }}>
       <Navbar currentPage="teacher" />
 
-      <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 2, md: 4 }, px: { xs: 2, md: 3 } }}>
         {/* Header */}
-        <Box sx={{ mb: 4, display: "flex", alignItems: "center", gap: 2 }}>
+        <Box
+          sx={{
+            mb: 4,
+            display: "flex",
+            flexDirection: { xs: "column", sm: "row" },
+            alignItems: { xs: "stretch", sm: "center" },
+            gap: 2,
+            flexWrap: "wrap",
+          }}
+        >
           <Button
             variant="outlined"
             startIcon={<ArrowBack />}
             onClick={() => router.push("/teacher/courses")}
+            sx={{ alignSelf: { xs: "flex-start", sm: "center" } }}
           >
             Volver
           </Button>
-          <Typography variant="h3" component="h1" sx={{ fontWeight: 700 }}>
+          <Typography
+            variant="h3"
+            component="h1"
+            sx={{
+              fontWeight: 700,
+              fontSize: { xs: "1.25rem", sm: "1.75rem", md: "3rem" },
+              wordBreak: "break-word",
+            }}
+          >
             Editar Curso: {draftCourse.title}
           </Typography>
         </Box>

@@ -17,6 +17,8 @@ import {
   Paper,
   TextField,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import {
   ArrowBack,
@@ -85,6 +87,8 @@ const getPriorityColor = (
 
 export default function TeacherTicketsPage() {
   const router = useRouter();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const { user } = useAuth();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
@@ -202,19 +206,36 @@ export default function TeacherTicketsPage() {
   return (
     <Box sx={{ minHeight: "100vh", backgroundColor: "#f8f9fa" }}>
       <Navbar currentPage="teacher-tickets" />
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box sx={{ mb: 4, display: "flex", alignItems: "center", gap: 2 }}>
-          <IconButton onClick={() => router.push("/teacher")}>
-            <ArrowBack />
-          </IconButton>
-          <SupportAgent color="primary" sx={{ fontSize: 40 }} />
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="h3" component="h1" sx={{ fontWeight: 700 }}>
-              Tickets de Soporte
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Revisa solicitudes de estudiantes y responde desde un solo lugar.
-            </Typography>
+      <Container maxWidth="lg" sx={{ py: { xs: 2, md: 4 }, px: { xs: 2, md: 3 } }}>
+        <Box
+          sx={{
+            mb: 4,
+            display: "flex",
+            flexDirection: { xs: "column", sm: "row" },
+            alignItems: { xs: "flex-start", sm: "center" },
+            gap: 2,
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2, flex: 1 }}>
+            <IconButton onClick={() => router.push("/teacher")}>
+              <ArrowBack />
+            </IconButton>
+            <SupportAgent color="primary" sx={{ fontSize: { xs: 32, sm: 40 } }} />
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography
+                variant="h3"
+                component="h1"
+                sx={{
+                  fontWeight: 700,
+                  fontSize: { xs: "1.5rem", sm: "2rem", md: "3rem" },
+                }}
+              >
+                Tickets de Soporte
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                Revisa solicitudes de estudiantes y responde desde un solo lugar.
+              </Typography>
+            </Box>
           </Box>
           <Button
             variant="outlined"
@@ -223,6 +244,7 @@ export default function TeacherTicketsPage() {
               loadTickets({ search: search.trim(), status, priority })
             }
             disabled={isLoading}
+            fullWidth={isMobile}
           >
             Actualizar
           </Button>

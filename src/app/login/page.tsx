@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
 import {
   Container,
@@ -29,6 +29,21 @@ export default function LoginPage() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const googleButtonRef = useRef<HTMLDivElement>(null);
+  const [googleWidth, setGoogleWidth] = useState(360);
+
+  useEffect(() => {
+    const updateWidth = () => {
+      if (googleButtonRef.current) {
+        const width = googleButtonRef.current.offsetWidth;
+        setGoogleWidth(Math.min(width, 400));
+      }
+    };
+
+    updateWidth();
+    window.addEventListener("resize", updateWidth);
+    return () => window.removeEventListener("resize", updateWidth);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,8 +102,8 @@ export default function LoginPage() {
         py: 4,
       }}
     >
-      <Container maxWidth="sm">
-        <Paper sx={{ p: 4, textAlign: "center" }}>
+      <Container maxWidth="sm" sx={{ px: { xs: 2, sm: 3 } }}>
+        <Paper sx={{ p: { xs: 3, sm: 4 }, textAlign: "center" }}>
           {/* Logo y Título */}
           <Box sx={{ mb: 3 }}>
             <School sx={{ fontSize: 60, color: "primary.main", mb: 2 }} />
@@ -96,7 +111,10 @@ export default function LoginPage() {
               variant="h4"
               component="h1"
               gutterBottom
-              sx={{ fontWeight: 700 }}
+              sx={{
+                fontWeight: 700,
+                fontSize: { xs: "1.5rem", sm: "2.125rem" },
+              }}
             >
               Aprende con Olmos
             </Typography>
@@ -168,13 +186,16 @@ export default function LoginPage() {
               </Typography>
             </Divider>
 
-            <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
+            <Box
+              ref={googleButtonRef}
+              sx={{ display: "flex", justifyContent: "center", mb: 2, width: "100%" }}
+            >
               {googleClientId && !isLoading ? (
                 <GoogleLogin
                   onSuccess={handleGoogleSuccess}
                   onError={handleGoogleError}
                   text={isLoginMode ? "signin_with" : "signup_with"}
-                  width="360"
+                  width={String(googleWidth)}
                 />
               ) : (
                 <Button fullWidth variant="outlined" disabled>

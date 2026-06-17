@@ -290,12 +290,24 @@ export default function StudentTicketsPage() {
   return (
     <Box sx={{ minHeight: "100vh", backgroundColor: "#f8f9fa" }}>
       <Navbar currentPage="tickets" />
-      <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 2, md: 4 }, px: { xs: 2, md: 3 } }}>
         <Box sx={{ mb: 4 }}>
-          <Box display="flex" alignItems="center" gap={2}>
-            <ConfirmationNumber color="primary" sx={{ fontSize: 40 }} />
+          <Box
+            display="flex"
+            flexDirection={{ xs: "column", sm: "row" }}
+            alignItems={{ xs: "flex-start", sm: "center" }}
+            gap={2}
+          >
+            <ConfirmationNumber color="primary" sx={{ fontSize: { xs: 32, sm: 40 } }} />
             <Box>
-              <Typography variant="h3" component="h1" sx={{ fontWeight: 700 }}>
+              <Typography
+                variant="h3"
+                component="h1"
+                sx={{
+                  fontWeight: 700,
+                  fontSize: { xs: "1.5rem", sm: "2rem", md: "3rem" },
+                }}
+              >
                 Mis Tickets
               </Typography>
               <Typography variant="body1" color="text.secondary">
@@ -373,7 +385,7 @@ export default function StudentTicketsPage() {
                       gap={2}
                       flexWrap="wrap"
                     >
-                      <Box sx={{ flex: 1, minWidth: 220 }}>
+                      <Box sx={{ flex: 1, minWidth: { xs: 0, sm: 220 } }}>
                         <Typography variant="h6" sx={{ fontWeight: 600 }}>
                           {ticket.subject}
                         </Typography>

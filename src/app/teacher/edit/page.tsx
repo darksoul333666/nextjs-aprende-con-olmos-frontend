@@ -246,24 +246,37 @@ export default function EditTeacherPage() {
     <Box sx={{ minHeight: "100vh", backgroundColor: "#f8f9fa" }}>
       <Navbar currentPage="teacher" />
 
-      <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 2, md: 4 }, px: { xs: 2, md: 3 } }}>
         {/* Header */}
-        <Box sx={{ mb: 4, display: "flex", alignItems: "center", gap: 2 }}>
-          <IconButton onClick={() => router.push("/teacher")}>
-            <ArrowBack />
-          </IconButton>
-          <Typography
-            variant="h3"
-            component="h1"
-            sx={{ fontWeight: 700, flex: 1 }}
-          >
-            Editar Perfil del Maestro
-          </Typography>
+        <Box
+          sx={{
+            mb: 4,
+            display: "flex",
+            flexDirection: { xs: "column", sm: "row" },
+            alignItems: { xs: "stretch", sm: "center" },
+            gap: 2,
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2, flex: 1 }}>
+            <IconButton onClick={() => router.push("/teacher")}>
+              <ArrowBack />
+            </IconButton>
+            <Typography
+              variant="h3"
+              component="h1"
+              sx={{
+                fontWeight: 700,
+                flex: 1,
+                fontSize: { xs: "1.5rem", sm: "2rem", md: "3rem" },
+              }}
+            >
+              Editar Perfil del Maestro
+            </Typography>
+          </Box>
           <Button
             variant="outlined"
             startIcon={<Visibility />}
             onClick={() => router.push("/teacher")}
-            sx={{ ml: 2 }}
           >
             Ver como Estudiante
           </Button>

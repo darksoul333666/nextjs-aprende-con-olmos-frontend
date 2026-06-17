@@ -194,14 +194,15 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             }),
           }}
         >
-          <Box display="flex" flexDirection="row">
+          <Box display="flex" flexDirection={{ xs: "column", sm: "row" }}>
             {/* Image */}
             <Box
               sx={{
-                width: 120,
-                height: 90,
+                width: { xs: "100%", sm: 120 },
+                height: { xs: 140, sm: 90 },
                 position: "relative",
                 overflow: "hidden",
+                flexShrink: 0,
               }}
             >
               {course.thumbnail ? (
@@ -348,7 +349,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
                       Continuar Curso
                     </Button>
                   ) : (
-                    <Box display="flex" gap={1} width="100%">
+                    <Box display="flex" flexDirection={{ xs: "column", sm: "row" }} gap={1} width="100%">
                       <Button
                         variant="outlined"
                         startIcon={<AddShoppingCart />}

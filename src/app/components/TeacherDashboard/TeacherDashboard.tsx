@@ -143,7 +143,14 @@ export const TeacherDashboard: React.FC = () => {
     <Box sx={{ mb: 6 }}>
       <Box sx={{ mb: 4, display: "flex", alignItems: "center", gap: 2 }}>
         <Dashboard color="primary" sx={{ fontSize: 32 }} />
-        <Typography variant="h3" component="h1" sx={{ fontWeight: 700 }}>
+        <Typography
+          variant="h3"
+          component="h1"
+          sx={{
+            fontWeight: 700,
+            fontSize: { xs: "1.5rem", sm: "2rem", md: "3rem" },
+          }}
+        >
           Área del instructor
         </Typography>
       </Box>
@@ -164,7 +171,13 @@ export const TeacherDashboard: React.FC = () => {
                 <PersonAdd sx={{ fontSize: 30 }} />
               </Avatar>
               <Box>
-                <Typography variant="h3" sx={{ fontWeight: 700 }}>
+                <Typography
+                  variant="h3"
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: { xs: "1.75rem", md: "3rem" },
+                  }}
+                >
                   {dashboardData.kpis.totalUsers.toLocaleString()}
                 </Typography>
                 <Typography variant="h6" sx={{ opacity: 0.9 }}>
@@ -184,7 +197,13 @@ export const TeacherDashboard: React.FC = () => {
                 <People sx={{ fontSize: 30 }} />
               </Avatar>
               <Box>
-                <Typography variant="h3" sx={{ fontWeight: 700 }}>
+                <Typography
+                  variant="h3"
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: { xs: "1.75rem", md: "3rem" },
+                  }}
+                >
                   {dashboardData.kpis.totalSubscribers.toLocaleString()}
                 </Typography>
                 <Typography variant="h6" sx={{ opacity: 0.9 }}>
@@ -204,7 +223,13 @@ export const TeacherDashboard: React.FC = () => {
                 <MonetizationOn sx={{ fontSize: 30 }} />
               </Avatar>
               <Box>
-                <Typography variant="h3" sx={{ fontWeight: 700 }}>
+                <Typography
+                  variant="h3"
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: { xs: "1.75rem", md: "3rem" },
+                  }}
+                >
                   ${dashboardData.kpis.totalIncome.toLocaleString()}
                 </Typography>
                 <Typography variant="h6" sx={{ opacity: 0.9 }}>
@@ -232,7 +257,13 @@ export const TeacherDashboard: React.FC = () => {
                 <School sx={{ fontSize: 30 }} />
               </Avatar>
               <Box>
-                <Typography variant="h3" sx={{ fontWeight: 700 }}>
+                <Typography
+                  variant="h3"
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: { xs: "1.75rem", md: "3rem" },
+                  }}
+                >
                   {dashboardData.courseStats.totalCourses}
                 </Typography>
                 <Typography variant="h6" sx={{ opacity: 0.9 }}>
@@ -256,7 +287,13 @@ export const TeacherDashboard: React.FC = () => {
                 <TrendingUp sx={{ fontSize: 30 }} />
               </Avatar>
               <Box>
-                <Typography variant="h3" sx={{ fontWeight: 700 }}>
+                <Typography
+                  variant="h3"
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: { xs: "1.75rem", md: "3rem" },
+                  }}
+                >
                   +{dashboardData.growth.recentUsers}
                 </Typography>
                 <Typography variant="h6" sx={{ opacity: 0.9 }}>

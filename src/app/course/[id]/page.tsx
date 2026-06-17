@@ -283,13 +283,27 @@ export default function CoursePage() {
       <Container
         maxWidth={false}
         disableGutters
-        sx={{ height: "calc(100vh - 64px)", position: "relative" }}
+        sx={{
+          minHeight: { xs: "auto", md: "calc(100vh - 64px)" },
+          height: { md: "calc(100vh - 64px)" },
+          position: "relative",
+        }}
       >
-        {/* Botón de Editar - Solo para maestros y NO en modo preview */}
         {user?.role === "maestro" && !isPreviewMode && (
-          <Box sx={{ position: "absolute", top: 16, right: 16, zIndex: 1000 }}>
+          <Box
+            sx={{
+              position: { xs: "static", md: "absolute" },
+              top: { md: 16 },
+              right: { md: 16 },
+              zIndex: 1000,
+              p: { xs: 1, md: 0 },
+              display: "flex",
+              justifyContent: { xs: "flex-end", md: "flex-start" },
+            }}
+          >
             <Button
               variant="contained"
+              size="small"
               startIcon={<Edit />}
               onClick={() => router.push(`/courses/edit/${courseId}`)}
               sx={{

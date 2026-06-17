@@ -223,14 +223,17 @@ export default function CoursesPage() {
     <Box sx={{ minHeight: "100vh", backgroundColor: "#f8f9fa" }}>
       <Navbar currentPage="courses" />
 
-      <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 2, md: 4 }, px: { xs: 2, md: 3 } }}>
         {/* Header */}
         <Box sx={{ mb: 4 }}>
           <Typography
             variant="h3"
             component="h1"
             gutterBottom
-            sx={{ fontWeight: 700 }}
+            sx={{
+              fontWeight: 700,
+              fontSize: { xs: "1.75rem", sm: "2.125rem", md: "3rem" },
+            }}
           >
             Cursos Disponibles
           </Typography>

@@ -289,13 +289,20 @@ export default function TeacherCoursesPage() {
     <Box sx={{ minHeight: "100vh", backgroundColor: "#f8f9fa" }}>
       <Navbar currentPage="teacher" />
 
-      <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 2, md: 4 }, px: { xs: 2, md: 3 } }}>
         {/* Header */}
         <Box sx={{ mb: 4, display: "flex", alignItems: "center", gap: 2 }}>
           <IconButton onClick={() => router.push("/teacher")}>
             <ArrowBack />
           </IconButton>
-          <Typography variant="h3" component="h1" sx={{ fontWeight: 700 }}>
+          <Typography
+            variant="h3"
+            component="h1"
+            sx={{
+              fontWeight: 700,
+              fontSize: { xs: "1.5rem", sm: "2rem", md: "3rem" },
+            }}
+          >
             Mis Cursos
           </Typography>
         </Box>
@@ -326,18 +333,26 @@ export default function TeacherCoursesPage() {
         )}
 
         {/* Acciones */}
-        <Paper sx={{ p: 3, mb: 4 }}>
+        <Paper sx={{ p: { xs: 2, md: 3 }, mb: 4 }}>
           <Box
             sx={{
               display: "flex",
+              flexDirection: { xs: "column", sm: "row" },
               justifyContent: "space-between",
-              alignItems: "center",
+              alignItems: { xs: "stretch", sm: "center" },
+              gap: 2,
             }}
           >
             <Typography variant="h5" component="h2" sx={{ fontWeight: 600 }}>
               Gestionar Cursos
             </Typography>
-            <Box sx={{ display: "flex", gap: 2 }}>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: { xs: "column", sm: "row" },
+                gap: 2,
+              }}
+            >
               <Button
                 variant="outlined"
                 onClick={() => router.push("/teacher/courses/create")}
